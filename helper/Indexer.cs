@@ -12,19 +12,81 @@ namespace WinKeyHelper;
 /// "All apps" list is built from (covers classic and Store apps; every entry can be
 /// launched via "shell:AppsFolder\{id}"). Emits the app list immediately, then
 /// extracts missing icons to a PNG cache and emits per-icon updates as they land.
+///
+/// Read again when apps come and go: installers add and remove shortcuts in the two Start
+/// menu Programs folders, which are watched; Store apps add none, so Electron also asks
+/// again now and then when the launcher opens.
 /// </summary>
 internal static class Indexer
 {
+    private const int SettleMilliseconds = 3000; // an installer writes several shortcuts in a row
+
     /// <summary>Where icon PNGs live; the window list caches executable icons here too.</summary>
     public static string? CacheDir { get; private set; }
+
+    private static int _running;
+    private static bool _again;
+    private static readonly List<FileSystemWatcher> Watchers = new();
+    private static System.Threading.Timer? _settle;
 
     public static void Run(string cacheDir)
     {
         CacheDir = cacheDir;
+        Watch();
+        // One read at a time; a request during one runs once more after it.
+        if (Interlocked.Exchange(ref _running, 1) == 1)
+        {
+            _again = true;
+            return;
+        }
         // Shell COM wants an STA thread.
-        var t = new Thread(() => Index(cacheDir)) { IsBackground = true };
+        var t = new Thread(() =>
+        {
+            do
+            {
+                _again = false;
+                Index(cacheDir);
+            }
+            while (_again);
+            Interlocked.Exchange(ref _running, 0);
+        }) { IsBackground = true };
         t.SetApartmentState(ApartmentState.STA);
         t.Start();
+    }
+
+    private static void Watch()
+    {
+        if (Watchers.Count > 0) return;
+        string[] folders =
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+            Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+        };
+        foreach (var folder in folders.Where(Directory.Exists))
+        {
+            try
+            {
+                var watcher = new FileSystemWatcher(folder) { IncludeSubdirectories = true, NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName };
+                watcher.Created += (_, _) => Changed();
+                watcher.Deleted += (_, _) => Changed();
+                watcher.Renamed += (_, _) => Changed();
+                watcher.EnableRaisingEvents = true;
+                Watchers.Add(watcher);
+            }
+            catch (Exception error)
+            {
+                Program.Emit(new { @event = "log", message = "index: cannot watch " + folder + ": " + error.Message });
+            }
+        }
+    }
+
+    private static void Changed()
+    {
+        _settle ??= new System.Threading.Timer((_) =>
+        {
+            if (CacheDir is not null) Run(CacheDir);
+        });
+        _settle.Change(SettleMilliseconds, Timeout.Infinite);
     }
 
     private sealed record Entry(string Name, string Id, string IconFile, bool HasIcon);

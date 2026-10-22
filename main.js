@@ -236,6 +236,7 @@ function createHomeWindow() {
 
 function showHome() {
   if (!homeWin || homeVisible) return;
+  refreshAppsSometimes();
   homeVisible = true;
   homeWin.setBounds(homeBounds());
   homeWin.show();
@@ -1555,8 +1556,20 @@ function isShellWindowHandle(hwnd) {
   return false;
 }
 
+// The app list is read again in the background when the launcher opens, at most this often:
+// the helper also notices new Start menu shortcuts itself (Indexer.cs), but Store apps add none.
+const APPS_REFRESH_MILLISECONDS = 30000;
+let appsReadAt = 0;
+
+function refreshAppsSometimes() {
+  if (Date.now() - appsReadAt < APPS_REFRESH_MILLISECONDS) return;
+  appsReadAt = Date.now();
+  sendToHelper('index ' + iconCacheDir());
+}
+
 function showMenu(mode = 'launcher') {
   closeTaskbarPanel(false);
+  refreshAppsSometimes();
   menuMode = mode;
   if (DEV) {
     win.show();
@@ -1784,6 +1797,7 @@ function startHelper() {
   if (homeWin) sendToHelper('checkempty');
   applyDesktopBackdrop();
   sendToHelper('index ' + iconCacheDir());
+  appsReadAt = Date.now();
 }
 
 // In dev the hooks start off every launch and the tray toggle is not saved.

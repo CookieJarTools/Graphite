@@ -20,7 +20,9 @@ export async function waitFor(description, check, timeout = 8000, interval = 150
   let last;
   while (Date.now() < deadline) {
     try {
-      last = await check();
+      // A check that never settles (a request to an app that is closing) is cut off at the
+      // deadline, so a run can fail but never hang.
+      last = await Promise.race([check(), sleep(Math.max(0, deadline - Date.now())).then(() => { throw new Error('no answer'); })]);
       if (last) return last;
     } catch (error) {
       last = error;
@@ -112,6 +114,7 @@ async function connect(target) {
   await new Promise((resolve, reject) => {
     socket.onopen = resolve;
     socket.onerror = reject;
+    setTimeout(() => reject(new Error('no connection to ' + target.url)), 10000);
   });
   let id = 0;
   const pending = new Map();
