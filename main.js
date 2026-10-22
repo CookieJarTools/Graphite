@@ -1144,6 +1144,7 @@ ipcMain.on('taskbar-context', (_e, target) => {
       target.folderId
         ? { label: 'Remove from folder', click: () => changeTaskbar((c) => taskbarModel.removeFromFolder(c, target.folderId, app.key)) }
         : { label: app.pinned ? 'Unpin from taskbar' : 'Pin to taskbar', click: () => changeTaskbar((c) => taskbarModel.setPinned(c, app, !app.pinned)) },
+      { label: 'Run as administrator', visible: canRunAsAdmin(app.key), click: () => launchAppAsAdmin(app.key) },
       // Just this app: its windows as separate pills, or back into one.
       {
         label: 'Show windows separately',
@@ -2230,11 +2231,21 @@ ipcMain.on('launch', (e, id) => {
 
 ipcMain.on('launch-admin', (e, id) => {
   finishedWith(e);
-  const target = ('shell:AppsFolder\\' + id).replace(/'/g, "''");
+  launchAppAsAdmin(id);
+});
+
+// Windows asks for elevation (the UAC prompt) and starts the app as administrator.
+function launchAppAsAdmin(id) {
+  // A Start entry id, or (a taskbar app known only by its program) the program's path.
+  const target = (/^[a-z]:\\/i.test(id) ? id : 'shell:AppsFolder\\' + id).replace(/'/g, "''");
   spawn('powershell.exe', ['-NoProfile', '-Command', `Start-Process '${target}' -Verb RunAs`], { windowsHide: true, detached: true }).unref();
   settings.lastUsed[id] = Date.now();
   saveSettings();
-});
+}
+
+// Store apps (an id like "Family!App") cannot run as administrator; desktop apps can. A
+// taskbar app known only by a window handle cannot be started at all.
+const canRunAsAdmin = (id) => typeof id === 'string' && id.length > 0 && !id.includes('!') && !/^\d+$/.test(id);
 
 ipcMain.on('web-search', (e, query) => {
   finishedWith(e);
@@ -2288,6 +2299,15 @@ ipcMain.on('context-menu', (e, id) => {
   const entry = apps.find((candidate) => candidate.id === id);
   const onTaskbar = taskbarConfig().items.some((stored) => stored.type === 'app' && stored.key === id && stored.pinned);
   Menu.buildFromTemplate([
+    {
+      label: 'Run as administrator',
+      visible: canRunAsAdmin(id),
+      click: () => {
+        finishedWith(e);
+        launchAppAsAdmin(id);
+      },
+    },
+    { type: 'separator', visible: canRunAsAdmin(id) },
     {
       label: onTaskbar ? 'Unpin from taskbar' : 'Pin to taskbar',
       click: () => changeTaskbar((c) => taskbarModel.setPinned(c, { key: id, name: entry && entry.name, icon: entry && entry.icon }, !onTaskbar)),
