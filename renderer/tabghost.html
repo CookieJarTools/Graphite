@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:; font-src file:">
+  <title></title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* A Files tab torn off its strip, floating under the pointer (WindowMerge). The
+       window is padded so the overlay shadow has room. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: transparent; }
+    body { display: flex; align-items: flex-start; padding: 16px; font-family: var(--font-sans); }
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      width: 100%;
+      height: 28px;
+      padding: 0 var(--space-3);
+      border-radius: var(--radius-sm);
+      background: var(--surface-200);
+      border: 1px solid var(--glass-edge);
+      box-shadow: var(--shadow-overlay), inset 0 1px 0 var(--glass-sheen);
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      animation: lift var(--duration-fast) var(--ease-enter) both;
+    }
+    .tab span { overflow: hidden; text-overflow: ellipsis; }
+    .glyph { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ink-muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    @keyframes lift { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .tab { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="tab" id="tab">
+    <svg class="glyph" viewBox="0 0 16 16"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>
+    <span id="title"></span>
+  </div>
+  <script src="tabghost.js"></script>
+</body>
+</html>

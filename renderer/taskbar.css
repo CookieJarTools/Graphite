@@ -1,0 +1,533 @@
+/* Taskbar, built to design/graphite-desk/components/Taskbar. The window spans the bottom
+   of the screen and reaches up for popovers and previews; only the bar and those take the
+   mouse (see taskbar.js). */
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+/* Anything marked hidden stays hidden, whatever display a component's own rule sets
+   (an author display: flex otherwise overrides the browser's [hidden] rule). */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; overflow: hidden; background: transparent; }
+
+body { font-family: var(--font-sans); color: var(--ink); cursor: default; }
+
+svg.i {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+button, input { font: inherit; color: inherit; background: none; border: 0; }
+
+.dock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--taskbar-height);
+  min-width: 480px;
+  max-width: 100%;
+  padding: 0 var(--space-2);
+  background: var(--surface-200);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--glass-sheen);
+  font-size: var(--type-strip-size);
+  line-height: var(--type-strip-line);
+  font-weight: var(--type-strip-weight);
+  color: var(--ink-muted);
+  transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
+}
+
+/* Auto-hidden while a window is maximised; the pointer at the screen edge brings it back. */
+.dock.hidden .bar {
+  transform: translateY(calc(100% + var(--space-2)));
+  opacity: 0;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-exit);
+}
+
+.dock.hidden .popover, .dock.hidden .previews { display: none; }
+
+/* ---- pills ---- */
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  min-width: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.item:hover { background: var(--surface-300); color: var(--ink); }
+.item.on { background: var(--surface-300); color: var(--ink); }
+.item.home { padding: 0; justify-content: center; }
+.item.open { background: var(--surface-300); color: var(--ink); }
+
+/* Icons only: square pills. */
+.apps.icons-only .item { padding: 0; width: 40px; justify-content: center; }
+.apps.icons-only .label { display: none; }
+
+.item img { width: 24px; height: 24px; flex: none; }
+
+.letter {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--surface-100);
+  border: 1px solid var(--glass-edge);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.item .label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Pinned but not running: present, quieter. */
+.item.idle img, .item.idle .letter, .item.idle .stack { opacity: 0.6; }
+
+/* Running: a short mark under the icon, longer for the focused window. */
+.item.running::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 6px;
+  height: 2px;
+  margin-left: -3px;
+  border-radius: 1px;
+  background: var(--ink-muted);
+}
+
+.item.running.on::after { width: 12px; margin-left: -6px; background: var(--ink); }
+
+.count {
+  font-family: var(--type-identifier-family);
+  font-size: var(--type-identifier-size);
+  color: var(--ink-muted);
+}
+
+.apps.icons-only .count {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 9px;
+}
+
+.item .dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+/* A folder: its first four apps in a 2x2 grid. */
+.stack {
+  display: grid;
+  grid-template-columns: repeat(2, 11px);
+  grid-auto-rows: 11px;
+  gap: 2px;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+}
+
+.stack img, .stack .letter { width: 11px; height: 11px; border-radius: 2px; font-size: 7px; border: 0; }
+
+.apps {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.apps .item.entering { animation: item-in var(--duration-base) var(--ease-enter) both; }
+@keyframes item-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Dragging: the pill rides above the others; held over another, that one invites the drop. */
+.item.dragging { z-index: 2; background: var(--surface-300); color: var(--ink); box-shadow: var(--shadow-card); transition: none; }
+.item.merge-target { background: var(--accent-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); transform: scale(1.06); transition: transform var(--duration-fast) var(--ease-enter), background var(--duration-fast) var(--ease-standard); }
+
+/* ---- tray ---- */
+
+.tray { display: flex; align-items: center; gap: var(--space-1); padding-left: var(--space-2); }
+
+.glyph-button, .status, .clock {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.glyph-button { width: 28px; justify-content: center; }
+.status { gap: var(--space-3); padding: 0 var(--space-3); }
+.glyph-button:hover, .status:hover, .clock:hover { background: var(--surface-300); color: var(--ink); }
+
+.clock { flex-direction: column; align-items: flex-end; justify-content: center; padding: 0 var(--space-3); color: var(--ink); }
+.clock #date { color: var(--ink-muted); font-weight: 400; }
+
+/* ---- popover (a folder, or an app's windows) ---- */
+
+.popover, .previews {
+  position: absolute;
+  bottom: calc(var(--taskbar-height) + var(--space-4));
+  background: var(--surface-200);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay), inset 0 1px 0 var(--glass-sheen);
+  animation: pop-in var(--duration-base) var(--ease-enter) both;
+}
+
+@keyframes pop-in { from { opacity: 0; transform: translateY(var(--rise)) scale(var(--scale-from)); } to { opacity: 1; transform: none; } }
+
+.popover { width: 280px; max-height: 360px; display: flex; flex-direction: column; overflow: hidden; }
+
+.popover .head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--strip-height);
+  flex: none;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  background: var(--header);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--type-strip-size);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.popover .head .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Renaming: an accent outline and tint say "type here"; the caret is the accent too. */
+.popover .head input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+  caret-color: var(--accent);
+  outline: none;
+  user-select: text;
+}
+
+.popover .head input::selection { background: var(--accent); color: var(--on-accent); }
+
+.rename-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--type-hint-size);
+  color: var(--ink-muted);
+}
+
+.rename-hint .key + .key, .rename-hint .key:not(:first-child) { margin-left: var(--space-2); }
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--key-height);
+  height: var(--key-height);
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--key);
+  border: 1px solid var(--glass-edge);
+  font-family: var(--type-key-family);
+  font-size: var(--type-key-size);
+  font-weight: var(--type-key-weight);
+  color: var(--ink-muted);
+}
+
+/* The folder being renamed shows its new name on the bar as it is typed. */
+.item.renaming { box-shadow: inset 0 0 0 1px var(--accent); }
+.item.renaming .label { color: var(--ink); }
+
+.popover .head .meta { font-family: var(--type-identifier-family); font-size: var(--type-identifier-size); font-weight: 500; color: var(--ink-muted); }
+
+.popover .head button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-sm); color: var(--ink-muted); }
+.popover .head button:hover { background: var(--surface-300); color: var(--ink); }
+.popover .head button.pinned { color: var(--ink); }
+
+.popover .rows { overflow-y: auto; padding: var(--space-1); }
+
+.popover .row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: var(--row-comfy);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.popover .row:hover { background: var(--surface-300); }
+.popover .row.on { background: var(--accent-soft); }
+.popover .row img, .popover .row .letter { width: 20px; height: 20px; }
+.popover .row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popover .row .meta { font-size: 11px; color: var(--ink-muted); }
+.popover .row.idle .name { color: var(--ink-muted); }
+.popover .row.window { padding-left: calc(var(--space-3) + 20px + var(--space-3)); height: var(--row-compact); font-size: 12px; color: var(--ink-muted); }
+.popover .row.window:hover { color: var(--ink); }
+
+/* ---- hover previews: live window pictures drawn by the helper into the wells ---- */
+
+.previews { display: flex; gap: var(--space-2); padding: var(--space-2); }
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 208px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.preview:hover { background: var(--surface-300); }
+.preview .title { display: flex; align-items: center; gap: var(--space-2); height: 16px; font-size: var(--type-strip-size); font-weight: 500; color: var(--ink); }
+.preview .title img { width: 16px; height: 16px; }
+.preview .title span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview .well { height: 112px; border-radius: var(--radius-sm); background: var(--surface-100); }
+.preview .well.minimized { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--type-hint-size); color: var(--ink-muted); }
+.preview .well.minimized img, .preview .well.minimized .letter { width: 32px; height: 32px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* ---- quick settings and calendar panels ---- */
+
+/* Above the bar's right end, under the status glyphs and clock; taskbar.js sets `right`
+   to line its edge up with the bar's. */
+.panel {
+  position: absolute;
+  bottom: calc(var(--taskbar-height) + var(--space-4));
+  right: var(--space-2);
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-200);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay), inset 0 1px 0 var(--glass-sheen);
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  animation: pop-in var(--duration-base) var(--ease-enter) both;
+}
+
+.dock.hidden .panel { display: none; }
+
+.status.active, .clock.active { background: var(--surface-300); color: var(--ink); }
+
+.panel button { display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); transition: background var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
+.panel button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.panel .icon-button { width: 32px; height: 32px; flex: none; color: var(--ink-muted); }
+.panel .icon-button:hover { background: var(--surface-300); color: var(--ink); }
+.panel .icon-button:disabled { opacity: 0.35; pointer-events: none; }
+
+/* Tiles: the main part toggles, the arrow opens the matching Settings page. */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+
+.tile {
+  display: flex;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--surface-100);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.tile .toggle { flex: 1; min-width: 0; justify-content: flex-start; gap: var(--space-3); padding: 0 var(--space-3); border-radius: 0; text-align: left; }
+.tile .toggle:hover, .tile .more:hover { background: var(--surface-300); }
+.tile .text { display: flex; flex-direction: column; min-width: 0; }
+.tile .name { font-weight: 600; }
+.tile .detail { color: var(--ink-muted); font-size: var(--type-hint-size); line-height: var(--type-hint-line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .more { width: 28px; border-radius: 0; border-left: 1px solid var(--line); color: var(--ink-muted); }
+
+.tile.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tile.on .detail, .tile.on .more { color: var(--on-accent); opacity: 0.8; }
+.tile.on .more { border-left-color: rgba(0, 0, 0, 0.15); }
+.tile.on .toggle:hover, .tile.on .more:hover { background: rgba(0, 0, 0, 0.08); }
+.tile.unavailable { opacity: 0.5; }
+
+/* Volume: the track fills with the accent up to the level. */
+.volume { display: flex; align-items: center; gap: var(--space-2); }
+.volume .level { width: 32px; text-align: right; font-family: var(--type-identifier-family); font-size: var(--type-identifier-size); color: var(--ink-muted); }
+
+.volume input {
+  --fill: 50%;
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  border-radius: var(--radius-full);
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-300) var(--fill));
+  outline: none;
+}
+
+.volume.muted input { background: linear-gradient(to right, var(--ink-muted) var(--fill), var(--surface-300) var(--fill)); }
+
+.volume input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--ink);
+  border: 3px solid var(--surface-200);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  transition: transform var(--duration-instant) var(--ease-standard);
+}
+
+.volume input:hover::-webkit-slider-thumb { transform: scale(1.15); }
+.volume input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--accent); }
+
+/* Now playing. */
+.media { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-100); border: 1px solid var(--line); }
+.media .art { width: 48px; height: 48px; flex: none; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-300); display: grid; place-items: center; color: var(--ink-muted); }
+.media .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.media .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media .by { color: var(--ink-muted); font-size: var(--type-hint-size); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media .controls { display: flex; gap: 2px; }
+.media .controls .play { color: var(--ink); }
+
+.panel .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 48px; margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-4)); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-top: 1px solid var(--line); background: var(--header); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.panel .foot .battery { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-muted); font-size: var(--type-hint-size); }
+.panel .link { height: 28px; padding: 0 var(--space-2); color: var(--ink-muted); font-size: var(--type-hint-size); }
+.panel .link:hover { background: var(--surface-300); color: var(--ink); }
+
+/* Calendar. */
+.today { display: flex; flex-direction: column; }
+.today .day { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.today .full { color: var(--ink-muted); }
+
+.month-head { display: flex; align-items: center; gap: var(--space-1); }
+.month-head .month-name { flex: 1; font-weight: 600; }
+
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.days .weekday { height: 24px; line-height: 24px; color: var(--ink-muted); font-size: var(--type-hint-size); }
+.days .date { width: 36px; height: 36px; justify-self: center; line-height: 36px; border-radius: var(--radius-full); font-family: var(--type-identifier-family); font-size: var(--type-identifier-size); }
+.days .date.other { color: var(--ink-muted); opacity: 0.5; }
+.days .date.today { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+.notes-head { display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-3); border-top: 1px solid var(--line); font-weight: 600; }
+.notes { display: flex; flex-direction: column; gap: var(--space-2); max-height: 168px; overflow-y: auto; margin-right: calc(-1 * var(--space-2)); padding-right: var(--space-2); }
+.notes::-webkit-scrollbar { width: 6px; }
+.notes::-webkit-scrollbar-thumb { background: var(--surface-300); border-radius: var(--radius-full); }
+.note { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--surface-100); border: 1px solid var(--line); }
+.note .row { display: flex; justify-content: space-between; gap: var(--space-2); }
+.note .note-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note.error .note-title { color: var(--danger); }
+.note .when { flex: none; color: var(--ink-muted); font-size: var(--type-hint-size); }
+.note .note-text { color: var(--ink-muted); font-size: var(--type-hint-size); line-height: var(--type-hint-line); }
+.notes .empty { padding: var(--space-3) 0; text-align: center; color: var(--ink-muted); }
+
+/* Hidden icons: the apps' tray icons, centred over the chevron. */
+.panel.tray { width: auto; padding: var(--space-2); gap: var(--space-1); }
+.glyph-button.active { background: var(--surface-300); color: var(--ink); }
+.tray-grid { display: grid; grid-template-columns: repeat(var(--tray-columns), 36px); gap: 2px; }
+.tray-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); }
+.tray-icon:hover, .tray-icon:focus-visible { background: var(--surface-300); }
+.tray-icon img { width: 16px; height: 16px; }
+.tray-name { min-height: 20px; max-width: calc(var(--tray-columns) * 38px); padding: 2px var(--space-2) 0; color: var(--ink-muted); font-size: var(--type-hint-size); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tray-empty { padding: var(--space-2) var(--space-3); color: var(--ink-muted); }
+
+/* Tags: a colour mark on a tagged window's icon, its tag's name as the label. */
+.icon-wrap { position: relative; display: flex; flex: none; }
+.tag-mark {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--tag);
+  box-shadow: 0 0 0 2px var(--surface-200);
+}
+.item.tagged .label { color: var(--ink); }
+.tag-dot { width: 8px; height: 8px; flex: none; margin-left: auto; border-radius: var(--radius-full); background: var(--tag); }
+
+/* The new-tag panel. */
+.panel.tag { width: 300px; gap: var(--space-3); }
+.tag-head { font-weight: 600; }
+.tag-for { margin-top: calc(-1 * var(--space-2)); color: var(--ink-muted); font-size: var(--type-hint-size); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-name {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-100);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  caret-color: var(--accent);
+  outline: none;
+  user-select: text;
+}
+.tag-name:focus { border-color: var(--accent); }
+.tag-colors { display: flex; gap: var(--space-2); }
+.panel .tag-color { width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--tag); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2); }
+.panel .tag-color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface-200), 0 0 0 4px var(--tag); }
+.tag-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+.tag-create { height: 28px; padding: 0 var(--space-4); border-radius: var(--radius-sm); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.tag-create:hover { filter: brightness(1.08); }
+
+/* Notifications in the calendar panel: the app, when, then the text; x on hover. */
+.notes { max-height: 260px; }
+.note.opens { cursor: pointer; }
+.note.opens:hover { background: var(--surface-300); }
+.note-app { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 2px; color: var(--ink-muted); font-size: var(--type-hint-size); }
+.note-app img, .note-initial { width: 16px; height: 16px; flex: none; border-radius: 4px; }
+.note-initial { display: grid; place-items: center; background: var(--surface-300); color: var(--ink); font-size: 10px; font-weight: 600; }
+.note-app-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-app .when { margin-left: auto; }
+.panel .note-dismiss { width: 20px; height: 20px; flex: none; opacity: 0; color: var(--ink-muted); }
+.panel .note-dismiss .i { width: 12px; height: 12px; }
+.note:hover .note-dismiss, .note-dismiss:focus-visible { opacity: 1; }
+.panel .note-dismiss:hover { background: var(--surface-200); color: var(--ink); }
+.note-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+
+/* Something new since the calendar was last opened. */
+.clock { position: relative; }
+.clock.unseen::after { content: ""; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--accent); }

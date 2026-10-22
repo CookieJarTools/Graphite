@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:; font-src file:">
+  <title>Taskbar</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="taskbar.css">
+</head>
+<body>
+  <div class="dock" id="dock">
+    <div class="popover" id="popover" hidden></div>
+    <div class="previews" id="previews" hidden></div>
+    <div class="panel" id="panel" role="dialog" hidden></div>
+    <div class="bar" id="bar">
+      <button class="item home" id="home" title="Start and search (Win)">
+        <svg class="i" viewBox="0 0 16 16"><path d="M7 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM10.5 10.5l3 3"/></svg>
+      </button>
+      <div class="apps" id="apps"></div>
+      <div class="tray">
+        <button class="glyph-button" id="peek" title="Show hidden icons">
+          <svg class="i" viewBox="0 0 16 16"><path d="m4.5 10 3.5-3.5 3.5 3.5"/></svg>
+        </button>
+        <button class="status" id="quick" title="Quick settings">
+          <svg class="i" id="network" viewBox="0 0 16 16"><path d="M2 6.5a9 9 0 0 1 12 0M4 9a6 6 0 0 1 8 0M6 11.3a3 3 0 0 1 4 0"/></svg>
+          <svg class="i" viewBox="0 0 16 16"><path d="M3 6h2.5L9 3v10L5.5 10H3zM11.5 6a3 3 0 0 1 0 4"/></svg>
+          <svg class="i" id="battery" viewBox="0 0 16 16" hidden><rect x="1.5" y="5" width="11.5" height="6" rx="1.5"/><path d="M14.5 7v2"/><rect id="batteryLevel" x="3" y="6.5" width="8.5" height="3" rx=".5" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="clock" id="clock" title="Calendar and notifications">
+          <span id="time"></span><span id="date"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <script src="taskbar.js"></script>
+</body>
+</html>

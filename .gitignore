@@ -1,0 +1,17 @@
+# Installs and build output
+node_modules/
+release/
+helper/bin/
+helper/obj/
+helper/publish/
+
+# Made by the build from their sources (npm run build: scripts/gen-icon.js, scripts/gen-tokens.js)
+build/icon.ico
+renderer/tokens.css
+
+# Editors and the OS
+.vs/
+.vscode/
+*.user
+Thumbs.db
+desktop.ini

@@ -1,0 +1,95 @@
+/* Tab strip, built to design/graphite-desk/components/TabStrip and WindowMerge.
+   The helper sizes this window to the strip itself: above the group's window, or over
+   the left of its title bar when there is no room above. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+/* Anything marked hidden stays hidden, whatever display a component's own rule sets
+   (an author display: flex otherwise overrides the browser's [hidden] rule). */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; overflow: hidden; background: transparent; }
+
+body { font-family: var(--font-sans); color: var(--ink); cursor: default; }
+
+.strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 100%;
+  padding: 0 var(--space-4);
+  background: var(--header);
+  border: 1px solid var(--glass-edge);
+  border-bottom-color: var(--line);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+/* A window is hovering over this strip, about to fold in. */
+.strip.target { background: var(--surface-300); }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 1 auto;
+  min-width: 48px;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--type-strip-size);
+  line-height: var(--type-strip-line);
+  font-weight: var(--type-strip-weight);
+  color: var(--ink-muted);
+  white-space: nowrap;
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.tab img { width: 16px; height: 16px; flex: none; }
+.tab .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tab:hover { background: var(--surface-300); color: var(--ink); }
+.tab.on { background: var(--surface-200); color: var(--ink); border-color: var(--glass-edge); }
+
+.tab .x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  opacity: 0;
+}
+
+.tab:hover .x, .tab.on .x { opacity: 1; }
+.tab .x:hover { background: var(--surface-300); }
+
+.tab .x svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* The slot a hovering window will drop into. */
+.tab.slot {
+  border: 1px dashed var(--line-strong);
+  background: var(--accent-soft);
+  color: var(--ink);
+  animation: tab-in var(--duration-fast) var(--ease-enter) both;
+}
+
+.tab.entering { animation: tab-in var(--duration-base) var(--ease-enter) both; }
+
+@keyframes tab-in { from { opacity: 0; transform: translateY(-4px) scale(0.9); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}

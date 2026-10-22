@@ -1,0 +1,104 @@
+/* Toasts, built to design/graphite-desk/components/Toast. The window covers the top-right
+   corner; only the cards take the mouse (see toast.js). */
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+/* Anything marked hidden stays hidden, whatever display a component's own rule sets
+   (an author display: flex otherwise overrides the browser's [hidden] rule). */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; overflow: hidden; background: transparent; }
+
+body { font-family: var(--font-sans); color: var(--ink); cursor: default; }
+
+button { font: inherit; color: inherit; background: none; border: 0; }
+
+.glyph {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stack {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.card {
+  width: 100%;
+  max-width: var(--toast-width);
+  flex: none;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--surface-200), var(--surface-100));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--glass-sheen);
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-4);
+  background: var(--header);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--type-strip-size);
+  line-height: var(--type-strip-line);
+  font-weight: var(--type-strip-weight);
+  color: var(--ink-muted);
+}
+
+.strip .app { flex: 1; }
+.strip .time { font-size: var(--type-hint-size); font-weight: 400; }
+
+.dismiss { display: grid; place-items: center; color: var(--ink-muted); opacity: 0; transition: opacity var(--duration-instant) var(--ease-standard); }
+.card:hover .dismiss { opacity: 1; }
+
+.body { padding: var(--space-3) var(--space-4) var(--space-3); }
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: 600;
+}
+
+.title .bad { color: var(--danger); display: flex; }
+
+.text { font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--ink-muted); }
+
+.actions { display: flex; gap: var(--space-1); padding: 0 var(--space-2) var(--space-2); }
+
+.ghost {
+  font-size: var(--type-action-size);
+  line-height: var(--type-action-line);
+  font-weight: var(--type-action-weight);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.ghost:hover { background: var(--surface-300); }
+
+.card.arriving { animation: toast-in var(--duration-slow) var(--ease-enter) both; }
+.card.leaving { animation: toast-out var(--duration-fast) var(--ease-exit) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(var(--slide)); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(var(--slide)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}

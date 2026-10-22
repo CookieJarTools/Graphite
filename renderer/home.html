@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:; font-src file:">
+  <title>Home</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="home.css">
+</head>
+<body class="home">
+  <div id="root">
+    <div class="glow"></div>
+    <div class="greeting"><h1 id="greetingText"></h1><p id="dateText"></p></div>
+    <div class="layer" id="layer">
+      <div class="launcher" id="launcher" role="search" aria-label="Home search">
+        <div class="input-row">
+          <svg class="i" viewBox="0 0 16 16"><path d="M7 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM10.5 10.5l3 3"/></svg>
+          <input id="query" placeholder="Search apps, files, settings and the web" autocomplete="off" spellcheck="false">
+          <span class="key">Esc</span>
+        </div>
+        <div class="scopes" id="scopes"></div>
+        <div class="body" id="body"></div>
+        <div class="foot">
+          <div class="user"><span class="avatar" id="avatar"></span><span id="username"></span></div>
+          <div class="hints" id="hints"></div>
+          <div class="power" id="power"></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-keys">
+      <span><span class="key">Win</span> Start and search</span>
+      <span><span class="keys"><span class="key">Win</span><span class="key">E</span></span> Files</span>
+      <span><span class="keys"><span class="key">Win</span><span class="key">N</span></span> Notifications</span>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

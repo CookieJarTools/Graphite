@@ -1,0 +1,35 @@
+<!-- @dsCard group="Windows" height=220 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>TabStrip</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% 40%,var(--backdrop-glow),var(--backdrop) 70%);font-family:var(--font-sans);color:var(--ink);box-sizing:border-box}
+.card{background:linear-gradient(180deg,var(--surface-200),var(--surface-100));border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card),inset 0 1px 0 var(--glass-sheen);overflow:hidden;color:var(--ink)}
+.strip{display:flex;align-items:center;gap:var(--space-2);height:var(--strip-height);padding:0 var(--space-10);background:var(--header);border-bottom:1px solid var(--line);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);box-sizing:border-box}
+.strip .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ghost{font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--ink);background:none;border:0;border-radius:var(--radius-sm);padding:var(--space-2) var(--space-4);cursor:pointer}
+.ghost:hover,.ghost.hover{background:var(--surface-300)}
+.hint{font-size:11px;line-height:14px;color:var(--ink-muted);display:flex;align-items:center;gap:var(--space-1)}
+kbd{font-family:var(--font-sans);font-size:11px;color:var(--ink-muted)}
+body{padding:var(--space-6) var(--space-4)}
+.card{max-width:640px;margin:0 auto}
+.strip{padding:0 var(--space-4);gap:var(--space-1)}
+.tab{display:flex;align-items:center;gap:var(--space-2);height:28px;padding:0 var(--space-3);max-width:200px;border-radius:var(--radius-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;box-sizing:border-box}
+.tab.active{background:var(--surface-200);color:var(--ink);border-color:var(--glass-edge)}
+.tab.hover{background:var(--surface-300);color:var(--ink)}
+.spacer{flex:1}
+.body{padding:var(--space-4) var(--space-10) var(--space-6);font-family:var(--font-mono);font-size:14px;line-height:20px}
+.dim{color:var(--ink-muted)}
+.ok{color:var(--success)}
+</style></head><body>
+<div class="card">
+<div class="strip">
+<div class="tab active"><svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="m5 7 2 1.5L5 10"/></svg>Terminal</div>
+<div class="tab hover"><svg class="glyph" viewBox="0 0 16 16"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Projects</div>
+<div class="tab"><svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/></svg>todo.md</div>
+<span class="spacer"></span>
+</div>
+<div class="body"><span class="dim">D:\Projects&gt;</span> dotnet build<br><span class="ok">Build succeeded.</span> <span class="dim">0 warnings</span></div>
+</div>
+</body></html>

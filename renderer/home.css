@@ -1,0 +1,131 @@
+/* Home and the sign-in Intro, built to design/graphite-desk/components/HomeSearch and Intro.
+   Home is the launcher in a second mode: idle it is one search field and a few quiet
+   recent rows on the backdrop; typing turns the field into the full launcher in place. */
+
+body.home { background: var(--backdrop); }
+
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 1400px;
+  height: 960px;
+  margin: -480px 0 0 -700px;
+  background: radial-gradient(ellipse at center, var(--backdrop-glow), transparent 65%);
+  pointer-events: none;
+}
+
+body.home .layer { padding-top: 22vh; }
+
+/* ---- idle: the field and recent rows ---- */
+
+body.home:not(.searching) .launcher {
+  width: 560px;
+  height: auto;
+  overflow: visible;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+body.home:not(.searching) .input-row {
+  padding: 0 var(--space-6);
+  background: linear-gradient(180deg, var(--surface-200), var(--surface-100));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay), inset 0 1px 0 var(--glass-sheen);
+}
+
+body.home:not(.searching) .input-row svg.i { width: 20px; height: 20px; }
+
+body.home:not(.searching) .input-row input {
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+}
+
+body.home:not(.searching) .input-row .key,
+body.home:not(.searching) .scopes,
+body.home:not(.searching) .foot { display: none; }
+
+body.home:not(.searching) .body { overflow: visible; padding: var(--space-6) var(--space-2) 0; }
+
+body.home:not(.searching) .row {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  height: auto;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+body.home:not(.searching) .row > .kind,
+body.home:not(.searching) .row > .id,
+body.home:not(.searching) .row > .tag,
+body.home:not(.searching) .row > span:empty,
+body.home:not(.searching) .row > .keys { display: none; }
+
+body.home:not(.searching) .row .path { display: none; }
+body.home:not(.searching) .row.sel { background: var(--accent-soft); }
+
+.home-keys {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--taskbar-height) + var(--space-10));
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  color: var(--ink-muted);
+}
+
+.home-keys > span { display: inline-flex; align-items: center; gap: 6px; }
+body.home.searching .home-keys { visibility: hidden; }
+
+/* ---- Home entrance: field rises, recent rows stagger, shortcut line last ---- */
+
+body.home #root.play .launcher { animation: rise-in var(--duration-slow) var(--ease-enter) both; }
+body.home #root.play .results { --row-base: 150ms; --row-step: 30ms; }
+body.home #root.play .section { animation: row-in var(--duration-base) var(--ease-enter) 120ms both; }
+body.home #root.play .home-keys { animation: fade-in var(--duration-slow) var(--ease-enter) 260ms both; }
+
+/* ---- Intro: glow blooms, greeting fades up and away, then Home rises in ---- */
+
+.greeting {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 38%;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.greeting h1 {
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-line);
+  font-weight: var(--type-display-weight);
+}
+
+.greeting p {
+  margin-top: var(--space-1);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  color: var(--ink-muted);
+}
+
+@keyframes glow-bloom { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+@keyframes greeting {
+  0% { opacity: 0; transform: translateY(var(--rise)); }
+  30% { opacity: 1; transform: none; }
+  75% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(calc(var(--rise) * -1)); }
+}
+
+#root.intro .glow { animation: glow-bloom 900ms var(--ease-enter) both; }
+#root.intro .greeting { animation: greeting 1000ms var(--ease-standard) 100ms both; }
+#root.intro .launcher { animation: rise-in var(--duration-slow) var(--ease-enter) 1000ms both; }
+#root.intro .section { animation: row-in var(--duration-base) var(--ease-enter) 1120ms both; }
+#root.intro .results { --row-base: 1150ms; --row-step: 30ms; }
+#root.intro .home-keys { animation: fade-in var(--duration-slow) var(--ease-enter) 1260ms both; }

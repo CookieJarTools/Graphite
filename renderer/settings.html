@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:">
+  <title>Settings</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header class="head">
+    <div class="title">
+      <svg class="glyph" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg>
+      <span>Settings</span>
+    </div>
+    <div class="controls">
+      <button class="control" id="minimize" aria-label="Minimise"><svg class="glyph" viewBox="0 0 16 16"><path d="M4 8h8"/></svg></button>
+      <button class="control close" id="close" aria-label="Close"><svg class="glyph" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg></button>
+    </div>
+  </header>
+  <main class="body" id="sections"></main>
+  <footer class="foot">
+    <span class="version" id="version"></span>
+    <button class="text-button" id="quit">Quit Custom Start</button>
+  </footer>
+  <script src="settings.js"></script>
+</body>
+</html>

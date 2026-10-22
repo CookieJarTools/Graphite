@@ -1,0 +1,148 @@
+/* Switcher, built to design/graphite-desk/components/Switcher. Values come from tokens.css. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+/* Anything marked hidden stays hidden, whatever display a component's own rule sets
+   (an author display: flex otherwise overrides the browser's [hidden] rule). */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; overflow: hidden; background: transparent; }
+
+body { font-family: var(--font-sans); color: var(--ink); cursor: default; }
+
+#root { position: absolute; inset: 0; }
+
+.scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; }
+#root.open .scrim { animation: fade-in var(--duration-fast) var(--ease-enter) both; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  pointer-events: none;
+}
+
+.panel {
+  pointer-events: auto;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: var(--space-4);
+  background: var(--surface-200);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay), inset 0 1px 0 var(--glass-sheen);
+  visibility: hidden;
+}
+
+#root.open .panel { visibility: visible; }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 5), 220px);
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-instant) var(--ease-standard);
+}
+
+.card:hover { background: var(--surface-300); }
+.card.sel { background: var(--accent-soft); }
+
+.preview {
+  position: relative;
+  height: 128px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-100);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2);
+}
+
+.preview img { width: 32px; height: 32px; }
+
+.preview .state {
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  color: var(--ink-muted);
+}
+
+.caption {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  height: 20px;
+  padding: 0 2px;
+}
+
+.caption img { width: 16px; height: 16px; }
+
+.caption .title {
+  font-size: var(--type-strip-size);
+  line-height: var(--type-strip-line);
+  font-weight: var(--type-strip-weight);
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card.sel .title { color: var(--ink); }
+
+.caption .id {
+  font-family: var(--type-identifier-family);
+  font-size: var(--type-identifier-size);
+  font-weight: var(--type-identifier-weight);
+  color: var(--ink-muted);
+}
+
+.card.sel .id { color: var(--ink); }
+
+.hints {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  color: var(--ink-muted);
+}
+
+.hints > span { display: inline-flex; align-items: center; gap: 6px; }
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--key-height);
+  height: var(--key-height);
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--key);
+  border: 1px solid var(--glass-edge);
+  font-family: var(--type-key-family);
+  font-size: var(--type-key-size);
+  line-height: var(--type-key-line);
+  font-weight: var(--type-key-weight);
+  color: var(--ink-muted);
+}
+
+.keys { display: inline-flex; gap: 3px; }

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:; font-src file:">
+  <title>Files</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="files.css">
+</head>
+<body>
+  <div class="win" id="win" data-density="comfy">
+    <aside class="side">
+      <div class="app">Files</div>
+      <nav id="nav"></nav>
+    </aside>
+    <section class="main">
+      <div class="top">
+        <div class="tabs" id="tabs"></div>
+        <button class="icon-button" id="newTab" title="New tab (Ctrl+T)">
+          <svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+        </button>
+        <span class="drag"></span>
+        <button class="icon-button" data-window="minimize" title="Minimise"><svg class="glyph" viewBox="0 0 16 16"><path d="M4 8h8"/></svg></button>
+        <button class="icon-button" data-window="maximize" title="Maximise"><svg class="glyph" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg></button>
+        <button class="icon-button" data-window="close" title="Close"><svg class="glyph" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg></button>
+      </div>
+      <div class="bar">
+        <button class="icon-button" id="back" title="Back (Alt+Left)"><svg class="glyph" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+        <button class="icon-button" id="forward" title="Forward (Alt+Right)"><svg class="glyph" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+        <button class="icon-button" id="up" title="Up (Alt+Up)"><svg class="glyph" viewBox="0 0 16 16"><path d="M8 13V3.5M3.5 8 8 3.5 12.5 8"/></svg></button>
+        <label class="path">
+          <svg class="glyph" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input id="pathInput" spellcheck="false" autocomplete="off" placeholder="Search this folder, or type a path">
+        </label>
+        <div class="density" role="group" aria-label="Density">
+          <button data-density="compact">Compact</button>
+          <button data-density="comfy">Comfy</button>
+          <button data-density="spacious">Spacious</button>
+        </div>
+      </div>
+      <div class="cols" id="cols">
+        <button data-sort="name">Name</button>
+        <button data-sort="type">Type</button>
+        <button data-sort="size" class="size">Size</button>
+        <button data-sort="modified">Modified</button>
+      </div>
+      <div class="list" id="list" tabindex="0"></div>
+      <div class="foot">
+        <span class="hint" id="count"></span>
+        <span class="hint" id="message"></span>
+        <span class="hint keys">
+          <span class="key">Ctrl</span><span class="key">T</span> New tab
+          <span class="key gap">F2</span> Rename
+          <span class="key gap">Del</span> Recycle
+        </span>
+      </div>
+    </section>
+  </div>
+  <script src="contextmenu.js"></script>
+  <script src="files.js"></script>
+</body>
+</html>

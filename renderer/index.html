@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- 'self' is unusable on file:// pages (opaque origin), so scheme sources it is -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; img-src file: data:; font-src file:">
+  <title>Custom Start</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="root">
+    <div class="scrim" id="scrim"></div>
+    <div class="layer" id="layer">
+      <div class="launcher" id="launcher" role="dialog" aria-label="Launcher">
+        <div class="input-row">
+          <svg class="i" viewBox="0 0 16 16"><path d="M7 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM10.5 10.5l3 3"/></svg>
+          <input id="query" placeholder="Search apps, files, folders and commands" autocomplete="off" spellcheck="false">
+          <span class="key">Esc</span>
+        </div>
+        <div class="scopes" id="scopes"></div>
+        <div class="body" id="body"></div>
+        <div class="foot">
+          <div class="user"><span class="avatar" id="avatar"></span><span id="username"></span></div>
+          <div class="hints" id="hints"></div>
+          <div class="power" id="power"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

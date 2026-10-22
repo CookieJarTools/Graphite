@@ -1,0 +1,92 @@
+<!-- @dsCard group="Windows" height=480 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Window</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% 40%,var(--backdrop-glow),var(--backdrop) 70%);font-family:var(--font-sans);color:var(--ink);box-sizing:border-box;overflow:hidden}
+.card{background:linear-gradient(180deg,var(--surface-200),var(--surface-100));border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card),inset 0 1px 0 var(--glass-sheen);overflow:hidden;color:var(--ink)}
+.strip{display:flex;align-items:center;gap:var(--space-2);height:var(--strip-height);padding:0 var(--space-10);background:var(--header);border-bottom:1px solid var(--line);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);box-sizing:border-box}
+.strip .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ghost{font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--ink);background:none;border:0;border-radius:var(--radius-sm);padding:var(--space-2) var(--space-4);cursor:pointer;transition:background var(--duration-instant) var(--ease-standard)}
+.ghost:hover,.ghost.hover{background:var(--surface-300)}
+.hint{font-size:11px;line-height:14px;color:var(--ink-muted);display:flex;align-items:center;gap:var(--space-1)}
+kbd{font-family:var(--font-sans);font-size:11px;color:var(--ink-muted)}
+.controls{position:fixed;left:var(--space-2);bottom:var(--space-2);display:flex;gap:var(--space-1);z-index:50}
+.controls .ghost{font-size:12px;padding:6px var(--space-3);background:var(--surface-200);border:1px solid var(--glass-edge)}
+.controls .ghost:hover{background:var(--surface-300)}
+@keyframes rise-in{from{opacity:0;transform:translateY(var(--rise)) scale(var(--scale-from))}to{opacity:1;transform:none}}
+@keyframes rise-out{from{opacity:1;transform:none}to{opacity:0;transform:scale(0.98)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@keyframes row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;transition-duration:1ms!important}}
+body{display:flex;align-items:flex-start;justify-content:center;gap:var(--space-6);padding:var(--space-6) var(--space-4) 56px}
+.card{width:100%;max-width:440px}
+.body{padding:var(--space-6) var(--space-10) 0;position:relative}
+.meta{position:absolute;right:var(--space-10);top:var(--space-6);font-size:11px;line-height:14px;color:var(--ink-muted)}
+.from{margin:0;font-size:20px;line-height:28px;font-weight:400}
+.head{margin:var(--space-1) 0 var(--space-6);font-size:28px;line-height:34px;font-weight:700}
+.copy{margin:0 0 var(--space-4);font-size:14px;line-height:22px}
+.actions{display:flex;gap:var(--space-2);padding:var(--space-4) var(--space-6) 0 calc(var(--space-10) - var(--space-4))}
+.foot{padding:var(--space-4) var(--space-10)}
+.round{flex:none;width:var(--icon-button);height:var(--icon-button);border-radius:var(--radius-full);background:var(--surface-300);border:1px solid var(--glass-edge);color:var(--ink);display:grid;place-items:center;box-shadow:var(--shadow-card);cursor:pointer;padding:0}
+.round .glyph{width:20px;height:20px}
+.card.opening{animation:rise-in var(--duration-base) var(--ease-enter) both}
+.card.closing{animation:rise-out var(--duration-fast) var(--ease-exit) both}
+.card.closed{visibility:hidden}
+@media (max-width:560px){.round{display:none}}
+</style></head><body>
+<div class="card opening" id="windowCard">
+<div class="strip"><svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="M2.5 4.5 8 9l5.5-4.5"/></svg><span class="title">Build finished - Mail from Sam Hale</span><svg class="glyph" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="8" rx="2"/><path d="M4 8a4 4 0 0 0 8 0M8 12v2"/></svg></div>
+<div class="body">
+<span class="meta">Just now</span>
+<p class="from">Sam Hale</p>
+<h1 class="head">Nightly build is green</h1>
+<p class="copy">Morning Joe,</p>
+<p class="copy">The overnight build passed on all three platforms. Profiling captures are in the shared drive if you want to look before standup.</p>
+<p class="copy">Sam</p>
+</div>
+<div class="actions"><button class="ghost">Reply</button><button class="ghost">Forward</button><button class="ghost" id="archiveButton">Archive</button></div>
+<div class="foot"><span class="hint"><kbd>Ctrl+K</kbd> More actions</span></div>
+</div>
+<button class="round" id="newButton" aria-label="Open window"><svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></button>
+<div class="controls"><button class="ghost" id="openButton">Open</button><button class="ghost" id="closeButton">Close</button></div>
+<script>
+function restartAnimation(element, className)
+{
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+const windowCard = document.getElementById('windowCard');
+
+function openWindow()
+{
+  windowCard.classList.remove('closing', 'closed');
+  restartAnimation(windowCard, 'opening');
+}
+
+function closeWindow()
+{
+  if (windowCard.classList.contains('closed'))
+  {
+    return;
+  }
+  windowCard.classList.remove('opening');
+  restartAnimation(windowCard, 'closing');
+}
+
+windowCard.addEventListener('animationend', (event) =>
+{
+  if (event.animationName === 'rise-out')
+  {
+    windowCard.classList.add('closed');
+  }
+});
+document.getElementById('openButton').addEventListener('click', openWindow);
+document.getElementById('newButton').addEventListener('click', openWindow);
+document.getElementById('closeButton').addEventListener('click', closeWindow);
+document.getElementById('archiveButton').addEventListener('click', closeWindow);
+</script>
+</body></html>

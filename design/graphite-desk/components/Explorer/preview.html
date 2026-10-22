@@ -1,0 +1,245 @@
+<!-- @dsCard group="Windows" height=540 width=900 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Explorer</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% 40%,var(--backdrop-glow),var(--backdrop) 70%);font-family:var(--font-sans);color:var(--ink);box-sizing:border-box;overflow:hidden}
+.card{background:linear-gradient(180deg,var(--surface-200),var(--surface-100));border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card),inset 0 1px 0 var(--glass-sheen);overflow:hidden;color:var(--ink)}
+.strip{display:flex;align-items:center;gap:var(--space-2);height:var(--strip-height);padding:0 var(--space-10);background:var(--header);border-bottom:1px solid var(--line);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);box-sizing:border-box}
+.strip .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ghost{font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--ink);background:none;border:0;border-radius:var(--radius-sm);padding:var(--space-2) var(--space-4);cursor:pointer;transition:background var(--duration-instant) var(--ease-standard)}
+.ghost:hover,.ghost.hover{background:var(--surface-300)}
+.hint{font-size:11px;line-height:14px;color:var(--ink-muted);display:flex;align-items:center;gap:var(--space-1)}
+kbd{font-family:var(--font-sans);font-size:11px;color:var(--ink-muted)}
+.controls{position:fixed;left:var(--space-2);bottom:var(--space-2);display:flex;gap:var(--space-1);z-index:50}
+.controls .ghost{font-size:12px;padding:6px var(--space-3);background:var(--surface-200);border:1px solid var(--glass-edge)}
+.controls .ghost:hover{background:var(--surface-300)}
+@keyframes rise-in{from{opacity:0;transform:translateY(var(--rise)) scale(var(--scale-from))}to{opacity:1;transform:none}}
+@keyframes rise-out{from{opacity:1;transform:none}to{opacity:0;transform:scale(0.98)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@keyframes row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;transition-duration:1ms!important}}
+body{padding:var(--space-3)}
+.win{position:relative;display:flex;height:100%;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--glass-edge);box-shadow:var(--shadow-card);background:var(--surface-100)}
+.side{position:relative;width:var(--sidebar-width);flex:none;display:flex;flex-direction:column;padding:var(--space-3) var(--space-2);box-sizing:border-box;background:linear-gradient(var(--sidebar),var(--sidebar)),radial-gradient(ellipse at 20% 110%,var(--accent-soft),transparent 60%),radial-gradient(ellipse at 90% 0%,var(--backdrop-glow),var(--backdrop) 80%);border-right:1px solid var(--glass-edge)}
+.app{font-size:12px;line-height:16px;font-weight:600;padding:var(--space-2) var(--space-3) var(--space-3)}
+.sec{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;font:inherit;color:var(--ink);font-size:12px;line-height:16px;font-weight:600;padding:var(--space-2) var(--space-3);margin-top:var(--space-2);border-radius:var(--radius-sm);cursor:pointer}
+.sec:hover{background:var(--surface-300)}
+.sec .chev{color:var(--ink-muted);transition:transform var(--duration-base) var(--ease-standard)}
+.sec[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.group[hidden]{display:none}
+.group:not([hidden]) .nav{animation:row-in var(--duration-base) var(--ease-enter) both}
+.nav{position:relative;display:flex;align-items:center;gap:var(--space-2);height:var(--row);padding:0 var(--space-3) 0 var(--space-4);border-radius:var(--radius-sm);font-size:13px;color:var(--ink-muted);cursor:pointer;transition:background var(--duration-instant) var(--ease-standard)}
+.nav:hover{background:var(--surface-300);color:var(--ink)}
+.nav.on{color:var(--ink);font-weight:500}
+.nav.on::before{content:"";position:absolute;left:4px;top:25%;bottom:25%;width:2px;border-radius:2px;background:var(--accent)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:var(--space-1);height:var(--strip-height);padding:0 var(--space-2) 0 var(--space-3);border-bottom:1px solid var(--line);background:var(--header)}
+.tabs{display:flex;align-items:center;gap:2px;min-width:0}
+.tab{display:flex;align-items:center;gap:var(--space-2);height:28px;padding:0 var(--space-2) 0 var(--space-3);max-width:180px;border-radius:var(--radius-sm);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);cursor:pointer;border:1px solid transparent;box-sizing:border-box;white-space:nowrap;transition:background var(--duration-instant) var(--ease-standard)}
+.tab span{overflow:hidden;text-overflow:ellipsis}
+.tab:hover{background:var(--surface-300);color:var(--ink)}
+.tab.on{background:var(--surface-200);color:var(--ink);border-color:var(--glass-edge)}
+.tab .x{display:grid;place-items:center;width:18px;height:18px;border-radius:4px;opacity:0;background:none;border:0;padding:0;color:inherit;cursor:pointer}
+.tab:hover .x,.tab.on .x{opacity:1}
+.tab .x:hover{background:var(--surface-300)}
+.tab .x .glyph{width:12px;height:12px}
+.tab.entering{animation:tab-in var(--duration-base) var(--ease-enter) both}
+.tab.leaving{animation:tab-out var(--duration-fast) var(--ease-exit) both}
+@keyframes tab-in{from{opacity:0;transform:translateY(-4px) scale(0.9)}to{opacity:1;transform:none}}
+@keyframes tab-out{to{opacity:0;transform:scale(0.9)}}
+.icon-button{display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-sm);background:none;border:0;color:var(--ink-muted);cursor:pointer;flex:none}
+.icon-button:hover{background:var(--surface-300);color:var(--ink)}
+.spacer{flex:1}
+.bar{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4)}
+.path{flex:1;min-width:0;display:flex;align-items:center;gap:var(--space-2);height:32px;padding:0 var(--space-3);border-radius:var(--radius-sm);background:var(--surface-200);border:1px solid var(--glass-edge);font-size:12px;color:var(--ink-muted)}
+.path b{color:var(--ink);font-weight:500}
+.density{display:flex;padding:2px;gap:2px;border-radius:var(--radius-sm);background:var(--surface-200);border:1px solid var(--glass-edge)}
+.density button{font:inherit;font-size:12px;font-weight:500;color:var(--ink-muted);background:none;border:0;border-radius:4px;padding:5px var(--space-3);cursor:pointer}
+.density button[aria-pressed="true"]{background:var(--surface-300);color:var(--ink)}
+.cols,.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 80px 150px;align-items:center;column-gap:var(--space-4);padding:0 var(--space-4)}
+.cols{height:28px;margin:0 var(--space-2);font-size:11px;line-height:14px;color:var(--ink-muted);border-bottom:1px solid var(--line)}
+.cols .size,.row .size{text-align:right}
+.list{flex:1;overflow:hidden;padding:var(--space-1) var(--space-2)}
+.row{height:var(--row);border-radius:var(--radius-sm);font-size:13px;cursor:default;transition:background var(--duration-instant) var(--ease-standard)}
+.row:hover{background:var(--surface-300)}
+.row.sel{background:var(--accent-soft)}
+.row .name{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.row .name .glyph{width:var(--icon);height:var(--icon);color:var(--ink-muted)}
+.row .label{min-width:0;display:flex;flex-direction:column}
+.row .label span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .detail{display:none;font-size:11px;line-height:14px;color:var(--ink-muted)}
+.row .meta{font-size:12px;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.sel .meta,.row.sel .detail{color:var(--ink)}
+.list.fresh .row{animation:row-in var(--duration-base) var(--ease-enter) both}
+.win[data-density="compact"]{--row:var(--row-compact);--icon:var(--icon-list)}
+.win[data-density="comfy"]{--row:var(--row-comfy);--icon:var(--icon-list)}
+.win[data-density="spacious"]{--row:var(--row-spacious);--icon:var(--icon-list-large)}
+.win[data-density="spacious"] .row .detail{display:block}
+.win[data-density="compact"] .bar{padding:var(--space-2) var(--space-3)}
+.foot{display:flex;justify-content:space-between;padding:var(--space-2) var(--space-4) var(--space-3);border-top:1px solid var(--line)}
+</style></head><body>
+<div class="win" id="explorer" data-density="comfy">
+<aside class="side">
+<div class="app">Files</div>
+<button class="sec" aria-expanded="true">Quick access<svg class="glyph chev" viewBox="0 0 16 16"><path d="m5 6.5 3 3 3-3"/></svg></button>
+<div class="group">
+<div class="nav on"><svg class="glyph" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>Recents</div>
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><path d="M8 2.5v8M5 7.5l3 3 3-3M3 13.5h10"/></svg>Downloads</div>
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M9.5 2.5V5H12"/></svg>Documents</div>
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Projects</div>
+</div>
+<button class="sec" aria-expanded="true">Devices<svg class="glyph chev" viewBox="0 0 16 16"><path d="m5 6.5 3 3 3-3"/></svg></button>
+<div class="group">
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="5" width="12" height="6" rx="1.5"/><path d="M11 8h0"/></svg>Local Disk (C:)</div>
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="5" width="12" height="6" rx="1.5"/><path d="M11 8h0"/></svg>Data (D:)</div>
+</div>
+<button class="sec" aria-expanded="false">Cloud<svg class="glyph chev" viewBox="0 0 16 16"><path d="m5 6.5 3 3 3-3"/></svg></button>
+<div class="group" hidden>
+<div class="nav"><svg class="glyph" viewBox="0 0 16 16"><path d="M5 12.5h6.5a2.5 2.5 0 0 0 .3-5 3.5 3.5 0 0 0-6.8-.5A2.8 2.8 0 0 0 5 12.5z"/></svg>OneDrive</div>
+</div>
+</aside>
+<section class="main">
+<div class="top">
+<div class="tabs" id="tabs"></div>
+<button class="icon-button" id="newTabButton" aria-label="New tab"><svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></button>
+<span class="spacer"></span>
+<button class="icon-button" aria-label="Minimise"><svg class="glyph" viewBox="0 0 16 16"><path d="M4 8h8"/></svg></button>
+<button class="icon-button" aria-label="Maximise"><svg class="glyph" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg></button>
+<button class="icon-button" aria-label="Close"><svg class="glyph" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg></button>
+</div>
+<div class="bar">
+<button class="icon-button" aria-label="Back"><svg class="glyph" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+<button class="icon-button" aria-label="Forward"><svg class="glyph" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+<div class="path"><svg class="glyph" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span id="pathText"></span></div>
+<div class="density" role="group" aria-label="Density">
+<button data-density="compact" aria-pressed="false">Compact</button>
+<button data-density="comfy" aria-pressed="true">Comfy</button>
+<button data-density="spacious" aria-pressed="false">Spacious</button>
+</div>
+<button class="icon-button" aria-label="Sort"><svg class="glyph" viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h7M3 11.5h4"/></svg></button>
+</div>
+<div class="cols"><span>Name</span><span>Type</span><span class="size">Size</span><span>Modified</span></div>
+<div class="list" id="fileList"></div>
+<div class="foot"><span class="hint" id="countText"></span><span class="hint"><kbd>Ctrl+T</kbd> New tab <kbd style="margin-left:12px">Ctrl+K</kbd> More actions</span></div>
+</section>
+</div>
+<script>
+function restartAnimation(element, className)
+{
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+const icons = {folder:'<svg class="glyph" viewBox="0 0 16 16"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>',file:'<svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M9.5 2.5V5H12"/></svg>',image:'<svg class="glyph" viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1"/><path d="m3 12 3.5-3.5 2.5 2.5 1.5-1.5L13 12"/></svg>',code:'<svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="m7 8-1.2 1.2L7 10.4M9 8l1.2 1.2L9 10.4"/></svg>',terminal:'<svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="m5 7 2 1.5L5 10M8.5 10.5H11"/></svg>',plus:'<svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>',close:'<svg class="glyph" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>'};
+const folderContents = {
+  Recents: { path: 'Recents', items: [
+    { name: 'LawnMowing', icon: 'folder', type: 'Folder', size: '2.4 GB', modified: 'Today, 14:05', detail: '18 items, D:\\Projects' },
+    { name: 'contract-economy.md', icon: 'file', type: 'Markdown', size: '8 KB', modified: 'Today, 13:52', detail: 'D:\\Projects\\LawnMowing\\Docs', selected: true },
+    { name: 'mower-reference.jpg', icon: 'image', type: 'JPEG image', size: '2.1 MB', modified: 'Yesterday, 17:23', detail: '3840 x 2160, Downloads' },
+    { name: 'ContractGenerationService.cs', icon: 'code', type: 'C# source', size: '14 KB', modified: 'Yesterday, 11:40', detail: 'D:\\Projects\\LawnMowing\\Runtime' },
+    { name: 'GraphiteShell.ahk', icon: 'terminal', type: 'AutoHotkey script', size: '6 KB', modified: '12 Oct, 09:15', detail: 'Documents\\Scripts' }
+  ]},
+  Projects: { path: 'D: > Projects', items: [
+    { name: 'LawnMowing', icon: 'folder', type: 'Folder', size: '2.4 GB', modified: 'Today, 14:05', detail: '18 items' },
+    { name: 'Crumb', icon: 'folder', type: 'Folder', size: '310 MB', modified: '19 Aug', detail: '42 items' },
+    { name: 'TerrainMolder', icon: 'folder', type: 'Folder', size: '1.1 GB', modified: '6 Sep', detail: '27 items' },
+    { name: 'HEIRLOOM', icon: 'folder', type: 'Folder', size: '860 MB', modified: '10 Oct', detail: '33 items' }
+  ]},
+  Downloads: { path: 'Downloads', items: [
+    { name: 'mower-reference.jpg', icon: 'image', type: 'JPEG image', size: '2.1 MB', modified: 'Yesterday, 17:23', detail: '3840 x 2160' },
+    { name: 'PowerToysSetup.exe', icon: 'file', type: 'Application', size: '298 MB', modified: '15 Oct', detail: 'Installer' },
+    { name: 'invoice-template.pdf', icon: 'file', type: 'PDF document', size: '240 KB', modified: '14 Oct', detail: '2 pages' }
+  ]}
+};
+
+const explorer = document.getElementById('explorer');
+const tabsElement = document.getElementById('tabs');
+const fileList = document.getElementById('fileList');
+const openTabs = ['Recents', 'Projects'];
+let activeTab = 'Recents';
+
+function renderFileList()
+{
+  const folder = folderContents[activeTab];
+  document.getElementById('pathText').innerHTML = folder.path.replace(/([^>]+)$/, '<b>$1</b>');
+  document.getElementById('countText').textContent = folder.items.length + ' items';
+  fileList.innerHTML = folder.items.map((item) =>
+    `<div class="row${item.selected ? ' sel' : ''}"><span class="name">${icons[item.icon]}<span class="label"><span>${item.name}</span><span class="detail">${item.detail}</span></span></span><span class="meta">${item.type}</span><span class="meta size">${item.size}</span><span class="meta">${item.modified}</span></div>`).join('');
+  [...fileList.children].forEach((row, rowIndex) => { row.style.animationDelay = (rowIndex * 30) + 'ms'; });
+  restartAnimation(fileList, 'fresh');
+}
+
+function createTabElement(tabName)
+{
+  const tab = document.createElement('div');
+  tab.className = 'tab';
+  tab.dataset.name = tabName;
+  tab.innerHTML = `${icons.folder}<span>${tabName}</span><button class="x" aria-label="Close tab">${icons.close}</button>`;
+  tab.addEventListener('click', () => selectTab(tabName));
+  tab.querySelector('.x').addEventListener('click', (event) => { event.stopPropagation(); closeTab(tab); });
+  return tab;
+}
+
+function selectTab(tabName)
+{
+  activeTab = tabName;
+  [...tabsElement.children].forEach((tab) => tab.classList.toggle('on', tab.dataset.name === tabName));
+  renderFileList();
+}
+
+function openTab(tabName)
+{
+  if (!openTabs.includes(tabName))
+  {
+    openTabs.push(tabName);
+    const tab = createTabElement(tabName);
+    tab.classList.add('entering');
+    tabsElement.append(tab);
+  }
+  selectTab(tabName);
+}
+
+function closeTab(tab)
+{
+  if (openTabs.length === 1)
+  {
+    return;
+  }
+  openTabs.splice(openTabs.indexOf(tab.dataset.name), 1);
+  tab.classList.add('leaving');
+  tab.addEventListener('animationend', () => tab.remove(), { once: true });
+  if (tab.dataset.name === activeTab)
+  {
+    selectTab(openTabs[openTabs.length - 1]);
+  }
+}
+
+openTabs.forEach((tabName) => tabsElement.append(createTabElement(tabName)));
+document.getElementById('newTabButton').addEventListener('click', () => openTab('Downloads'));
+document.querySelectorAll('.nav').forEach((navItem) => navItem.addEventListener('click', () =>
+{
+  document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('on', item === navItem));
+  const target = navItem.textContent.trim();
+  if (folderContents[target])
+  {
+    openTab(target);
+  }
+}));
+document.querySelectorAll('.sec').forEach((sectionButton) => sectionButton.addEventListener('click', () =>
+{
+  const isExpanded = sectionButton.getAttribute('aria-expanded') === 'true';
+  sectionButton.setAttribute('aria-expanded', String(!isExpanded));
+  sectionButton.nextElementSibling.hidden = isExpanded;
+}));
+document.querySelectorAll('.density button').forEach((densityButton) => densityButton.addEventListener('click', () =>
+{
+  explorer.dataset.density = densityButton.dataset.density;
+  document.querySelectorAll('.density button').forEach((button) => button.setAttribute('aria-pressed', String(button === densityButton)));
+  renderFileList();
+}));
+selectTab(activeTab);
+</script>
+</body></html>

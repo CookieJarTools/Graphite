@@ -1,0 +1,106 @@
+<!-- @dsCard group="Shell" height=380 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CommandPalette</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% 40%,var(--backdrop-glow),var(--backdrop) 70%);font-family:var(--font-sans);color:var(--ink);box-sizing:border-box;overflow:hidden}
+.card{background:linear-gradient(180deg,var(--surface-200),var(--surface-100));border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card),inset 0 1px 0 var(--glass-sheen);overflow:hidden;color:var(--ink)}
+.strip{display:flex;align-items:center;gap:var(--space-2);height:var(--strip-height);padding:0 var(--space-10);background:var(--header);border-bottom:1px solid var(--line);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);box-sizing:border-box}
+.strip .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ghost{font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--ink);background:none;border:0;border-radius:var(--radius-sm);padding:var(--space-2) var(--space-4);cursor:pointer;transition:background var(--duration-instant) var(--ease-standard)}
+.ghost:hover,.ghost.hover{background:var(--surface-300)}
+.hint{font-size:11px;line-height:14px;color:var(--ink-muted);display:flex;align-items:center;gap:var(--space-1)}
+kbd{font-family:var(--font-sans);font-size:11px;color:var(--ink-muted)}
+.controls{position:fixed;left:var(--space-2);bottom:var(--space-2);display:flex;gap:var(--space-1);z-index:50}
+.controls .ghost{font-size:12px;padding:6px var(--space-3);background:var(--surface-200);border:1px solid var(--glass-edge)}
+.controls .ghost:hover{background:var(--surface-300)}
+@keyframes rise-in{from{opacity:0;transform:translateY(var(--rise)) scale(var(--scale-from))}to{opacity:1;transform:none}}
+@keyframes rise-out{from{opacity:1;transform:none}to{opacity:0;transform:scale(0.98)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@keyframes row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;transition-duration:1ms!important}}
+body{padding:var(--space-4)}
+.busy{position:absolute;inset:var(--space-2);display:grid;grid-template-columns:2fr 1fr;gap:var(--space-2)}
+.busy .card{padding:var(--space-4);font-size:14px;line-height:22px}
+.busy .code{font-family:var(--font-mono);font-size:13px;line-height:20px;color:var(--ink);white-space:pre;overflow:hidden}
+.busy .code .k{color:var(--accent)}
+.busy .code .s{color:var(--success)}
+.busy .side{background:repeating-linear-gradient(135deg,var(--surface-300) 0 12px,var(--surface-100) 12px 24px)}
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;pointer-events:none}
+.layer{position:absolute;inset:0;display:flex;justify-content:center;padding:40px var(--space-4) 0;pointer-events:none}
+.palette{width:100%;max-width:560px;align-self:flex-start;background:var(--surface-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-overlay),inset 0 1px 0 var(--glass-sheen);opacity:0;pointer-events:auto}
+.input{display:flex;align-items:center;gap:var(--space-3);height:52px;padding:0 var(--space-6);border-bottom:1px solid var(--line);font-size:20px;line-height:28px}
+.input .glyph{width:20px;height:20px;color:var(--ink-muted)}
+.caret{display:inline-block;width:2px;height:24px;background:var(--accent);vertical-align:-5px;margin-left:1px}
+.list{padding:var(--space-2)}
+.row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);border-radius:var(--radius-sm);font-size:14px;line-height:22px}
+.row.sel{background:var(--accent-soft)}
+.row .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:11px;line-height:14px;color:var(--ink-muted)}
+.row.sel .meta{color:var(--ink)}
+.foot{display:flex;gap:var(--space-6);padding:var(--space-3) var(--space-6);border-top:1px solid var(--line);flex-wrap:wrap}
+.open .scrim{animation:fade-in var(--duration-base) var(--ease-enter) both}
+.open .palette{animation:rise-in var(--duration-base) var(--ease-enter) both}
+.open .row{animation:row-in var(--duration-base) var(--ease-enter) both}
+.open .row:nth-child(1){animation-delay:40ms}
+.open .row:nth-child(2){animation-delay:70ms}
+.open .row:nth-child(3){animation-delay:100ms}
+.open .row:nth-child(4){animation-delay:130ms}
+.shut .scrim{animation:fade-out var(--duration-fast) var(--ease-exit) both}
+.shut .palette{animation:rise-out var(--duration-fast) var(--ease-exit) both}
+</style></head><body>
+<div class="busy" aria-hidden="true">
+<div class="card"><div class="code"><span class="k">public sealed class</span> ContractGenerationService
+{
+    <span class="k">private readonly</span> ContractTable contractTable;
+    <span class="k">private const string</span> defaultRegion = <span class="s">"Meadowbrook"</span>;
+
+    <span class="k">public</span> IReadOnlyList&lt;Contract&gt; GenerateContracts(int count)
+    {
+        var generatedContracts = new List&lt;Contract&gt;(count);
+        for (var contractIndex = 0; contractIndex &lt; count; contractIndex++)</div></div>
+<div class="card side"></div>
+</div>
+<div id="paletteRoot" class="open">
+<div class="scrim"></div>
+<div class="layer">
+<div class="palette" role="dialog" aria-label="Command palette">
+<div class="input"><svg class="glyph" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span>term<span class="caret"></span></span></div>
+<div class="list">
+<div class="row sel"><span class="name">Windows Terminal</span><span class="meta">App</span></div>
+<div class="row"><span class="name">terminal-scheme.json</span><span class="meta">D:\dotfiles</span></div>
+<div class="row"><span class="name">Terminal: new tab</span><span class="meta">Command</span></div>
+<div class="row"><span class="name">&gt; wt -d D:\Projects</span><span class="meta">Shell</span></div>
+</div>
+<div class="foot"><span class="hint"><kbd>Enter</kbd> Open</span><span class="hint"><kbd>Ctrl+Enter</kbd> Open folder</span><span class="hint"><kbd>Esc</kbd> Close</span></div>
+</div>
+</div>
+</div>
+<div class="controls"><button class="ghost" id="openButton">Alt+Space</button><button class="ghost" id="closeButton">Esc</button></div>
+<script>
+function restartAnimation(element, className)
+{
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+const paletteRoot = document.getElementById('paletteRoot');
+
+function openPalette()
+{
+  paletteRoot.classList.remove('shut');
+  restartAnimation(paletteRoot, 'open');
+}
+
+function closePalette()
+{
+  paletteRoot.classList.remove('open');
+  restartAnimation(paletteRoot, 'shut');
+}
+
+document.getElementById('openButton').addEventListener('click', openPalette);
+document.getElementById('closeButton').addEventListener('click', closePalette);
+</script>
+</body></html>

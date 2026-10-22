@@ -1,0 +1,58 @@
+{
+  "name": "custom-start",
+  "productName": "Custom Start",
+  "version": "0.1.0",
+  "description": "Custom Windows start menu replacement",
+  "main": "main.js",
+  "scripts": {
+    "build": "npm run build:helper && npm run build:icon && npm run build:tokens",
+    "build:helper": "dotnet build helper/WinKeyHelper.csproj -c Release --nologo",
+    "build:helper:publish": "dotnet publish helper/WinKeyHelper.csproj -c Release -o helper/publish --nologo",
+    "build:icon": "node scripts/gen-icon.js",
+    "prestart": "npm run build",
+    "start": "electron .",
+    "predev": "npm run build",
+    "dev": "electron . --dev",
+    "dist": "npm run build:helper:publish && npm run build:icon && npm run build:tokens && electron-builder --win",
+    "build:tokens": "node scripts/gen-tokens.js",
+    "test:e2e": "node tests/e2e/run.mjs"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "dev.cookie.customstart",
+    "productName": "Custom Start",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "files-main.js",
+      "taskbar-model.js",
+      "window-tags.js",
+      "preload.js",
+      "renderer/**",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "helper/publish",
+        "to": "helper"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true
+    }
+  }
+}

@@ -1,0 +1,45 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Graphite Desk</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:var(--backdrop);color:var(--ink);font-family:var(--font-sans);overflow:hidden}
+.cover{position:relative;width:960px;height:288px;overflow:hidden}
+.art{position:absolute;top:0;left:480px;width:480px;height:288px;overflow:hidden}
+.art svg{display:block;width:480px;height:288px}
+.back{fill:var(--line-strong)}
+.front{fill:var(--ink)}
+.strip{fill:var(--ink-muted)}
+.accent{fill:var(--accent)}
+.cut{fill:var(--backdrop)}
+.card{rx:var(--radius-md)}
+.pill{rx:var(--radius-sm)}
+.words{position:absolute;left:var(--space-6);bottom:var(--space-6);max-width:440px}
+.name{margin:0;font-size:88px;line-height:.95;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.tag{margin:var(--space-2) 0 0 4px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+</style></head><body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      ink 232x248 front card (bleeds off the bottom) · line-strong card behind it, offset space-6 up and right, bleeding off the right · ink-muted 40-tall title strip across the front card · accent disc icon-button size (the one signal, small)
+  arrangement two stacked cards like windows on the backdrop, the round "new" button floating space-6 beside the front card
+  pattern     pills and a disc from "quiet ghost actions, round icon buttons, radius-md cards": three ghost-button pills cut into the front card in the backdrop colour
+  scales      strip-height 40; gaps space-2 and space-6; cards radius-md, pills radius-sm, disc radius-full (half of icon-button)
+-->
+<rect class="back card" x="232" y="16" width="264" height="232" rx="12"/>
+<rect class="front card" x="40" y="48" width="232" height="256" rx="12"/>
+<rect class="strip" x="40" y="48" width="232" height="40" rx="12"/>
+<rect class="strip" x="40" y="68" width="232" height="20"/>
+<rect class="cut pill" x="64" y="232" width="56" height="24" rx="6"/>
+<rect class="cut pill" x="128" y="232" width="56" height="24" rx="6"/>
+<rect class="cut pill" x="192" y="232" width="56" height="24" rx="6"/>
+<circle class="accent" cx="316" cy="68" r="20"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Graphite<br>Desk</h1>
+<p class="tag">No desktop, search first, calm cards.</p>
+</div>
+</div>
+</body></html>

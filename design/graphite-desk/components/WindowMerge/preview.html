@@ -1,0 +1,328 @@
+<!-- @dsCard group="Motion" height=440 width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>WindowMerge</title>
+<style>
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 50% 40%,var(--backdrop-glow),var(--backdrop) 70%);font-family:var(--font-sans);color:var(--ink);box-sizing:border-box;overflow:hidden}
+.card{background:linear-gradient(180deg,var(--surface-200),var(--surface-100));border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card),inset 0 1px 0 var(--glass-sheen);overflow:hidden;color:var(--ink)}
+.strip{display:flex;align-items:center;gap:var(--space-2);height:var(--strip-height);padding:0 var(--space-10);background:var(--header);border-bottom:1px solid var(--line);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);box-sizing:border-box}
+.strip .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ghost{font:inherit;font-size:13px;line-height:18px;font-weight:500;color:var(--ink);background:none;border:0;border-radius:var(--radius-sm);padding:var(--space-2) var(--space-4);cursor:pointer;transition:background var(--duration-instant) var(--ease-standard)}
+.ghost:hover,.ghost.hover{background:var(--surface-300)}
+.hint{font-size:11px;line-height:14px;color:var(--ink-muted);display:flex;align-items:center;gap:var(--space-1)}
+kbd{font-family:var(--font-sans);font-size:11px;color:var(--ink-muted)}
+.controls{position:fixed;left:var(--space-2);bottom:var(--space-2);display:flex;gap:var(--space-1);z-index:50}
+.controls .ghost{font-size:12px;padding:6px var(--space-3);background:var(--surface-200);border:1px solid var(--glass-edge)}
+.controls .ghost:hover{background:var(--surface-300)}
+@keyframes rise-in{from{opacity:0;transform:translateY(var(--rise)) scale(var(--scale-from))}to{opacity:1;transform:none}}
+@keyframes rise-out{from{opacity:1;transform:none}to{opacity:0;transform:scale(0.98)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@keyframes row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;transition-duration:1ms!important}}
+.desk{position:relative;height:100%}
+.win{position:absolute;width:360px;height:280px;display:flex;flex-direction:column;background:var(--surface-100);border:1px solid var(--glass-edge);border-radius:var(--radius-md);box-shadow:var(--shadow-card);overflow:hidden;transition:transform var(--duration-fast) var(--ease-standard),opacity var(--duration-fast) var(--ease-standard),box-shadow var(--duration-fast) var(--ease-standard)}
+.win.dragging{box-shadow:var(--shadow-overlay);transition:none}
+.win.hovering{transform:translateY(calc(var(--strip-height) - 4px)) scale(var(--merge-scale));opacity:0.9;transform-origin:50% 0;transition:transform var(--duration-fast) var(--ease-standard),opacity var(--duration-fast) var(--ease-standard)}
+.win.opening{animation:rise-in var(--duration-base) var(--ease-enter) both}
+.win.closing{animation:rise-out var(--duration-fast) var(--ease-exit) both}
+.win[hidden]{display:none}
+.top{display:flex;align-items:center;gap:2px;height:var(--strip-height);padding:0 var(--space-1) 0 var(--space-2);background:var(--header);border-bottom:1px solid var(--line);cursor:grab;user-select:none;touch-action:none;transition:background var(--duration-fast) var(--ease-standard)}
+.win.target .top{background:var(--surface-300)}
+.tab{display:flex;align-items:center;gap:var(--space-2);height:26px;padding:0 var(--space-3);border-radius:var(--radius-sm);font-size:12px;line-height:16px;font-weight:500;color:var(--ink-muted);border:1px solid transparent;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.tab.on{background:var(--surface-200);color:var(--ink);border-color:var(--glass-edge)}
+.tab.slot{border:1px dashed var(--line-strong);background:var(--accent-soft);color:var(--ink);animation:tab-in var(--duration-fast) var(--ease-enter) both}
+.tab.entering{animation:tab-in var(--duration-base) var(--ease-enter) both}
+.tab.leaving{animation:tab-out var(--duration-fast) var(--ease-exit) both}
+@keyframes tab-in{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:none}}
+@keyframes tab-out{to{opacity:0;transform:scale(0.85)}}
+.spacer{flex:1}
+.icon-button{display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius-sm);background:none;border:0;color:var(--ink-muted);cursor:pointer}
+.icon-button:hover{background:var(--surface-300);color:var(--ink)}
+.path{margin:var(--space-2) var(--space-3);height:28px;display:flex;align-items:center;padding:0 var(--space-3);border-radius:var(--radius-sm);background:var(--surface-200);border:1px solid var(--glass-edge);font-size:12px;color:var(--ink-muted)}
+.list{padding:0 var(--space-2)}
+.list.fresh .row{animation:row-in var(--duration-base) var(--ease-enter) both}
+.row{display:flex;align-items:center;gap:var(--space-3);height:var(--row-compact);padding:0 var(--space-3);border-radius:var(--radius-sm);font-size:13px}
+.row .glyph{color:var(--ink-muted)}
+.row .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:11px;color:var(--ink-muted)}
+.drop-hint{position:absolute;left:50%;top:var(--space-3);transform:translateX(-50%);font-size:11px;line-height:14px;color:var(--ink-muted);pointer-events:none}
+</style></head><body>
+<div class="desk" id="desk">
+<div class="drop-hint">Drag the right window's title strip onto the left one's tabs</div>
+<div class="win" id="targetWindow" style="left:40px;top:56px"></div>
+<div class="win" id="draggedWindow" style="left:460px;top:96px"></div>
+</div>
+<div class="controls"><button class="ghost" id="playButton">Play merge</button><button class="ghost" id="splitButton">Split out</button><button class="ghost" id="resetButton">Reset</button></div>
+<script>
+function restartAnimation(element, className)
+{
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+const icons = {folder:'<svg class="glyph" viewBox="0 0 16 16"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>',file:'<svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="M9.5 2.5V5H12"/></svg>',image:'<svg class="glyph" viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1"/><path d="m3 12 3.5-3.5 2.5 2.5 1.5-1.5L13 12"/></svg>',code:'<svg class="glyph" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4z"/><path d="m7 8-1.2 1.2L7 10.4M9 8l1.2 1.2L9 10.4"/></svg>',terminal:'<svg class="glyph" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="m5 7 2 1.5L5 10M8.5 10.5H11"/></svg>',plus:'<svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>',close:'<svg class="glyph" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>'};
+const folders = {
+  Projects: [['folder', 'LawnMowing', '18 items'], ['folder', 'Crumb', '42 items'], ['folder', 'TerrainMolder', '27 items'], ['folder', 'HEIRLOOM', '33 items']],
+  Downloads: [['image', 'mower-reference.jpg', '2.1 MB'], ['file', 'PowerToysSetup.exe', '298 MB'], ['file', 'invoice-template.pdf', '240 KB']]
+};
+const desk = document.getElementById('desk');
+const targetWindow = document.getElementById('targetWindow');
+const draggedWindow = document.getElementById('draggedWindow');
+const rootStyle = getComputedStyle(document.documentElement);
+const readMilliseconds = (name, fallback) => parseFloat(rootStyle.getPropertyValue(name)) || fallback;
+const readEasing = (name, fallback) => rootStyle.getPropertyValue(name).trim() || fallback;
+const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mergeDuration = prefersReducedMotion ? 1 : readMilliseconds('--duration-merge', 280);
+const enterEasing = readEasing('--ease-enter', 'cubic-bezier(0.16, 1, 0.3, 1)');
+const standardEasing = readEasing('--ease-standard', 'cubic-bezier(0.2, 0, 0, 1)');
+const draggedStart = { left: 460, top: 96 };
+let isMerged = false;
+let isAnimating = false;
+
+function renderRows(listElement, folderName)
+{
+  listElement.innerHTML = folders[folderName].map(([icon, name, meta]) => `<div class="row">${icons[icon]}<span class="name">${name}</span><span class="meta">${meta}</span></div>`).join('');
+  [...listElement.children].forEach((row, rowIndex) => { row.style.animationDelay = (rowIndex * 30) + 'ms'; });
+  restartAnimation(listElement, 'fresh');
+}
+
+function buildWindow(windowElement, folderName)
+{
+  windowElement.innerHTML = `<div class="top"><div class="tabs" style="display:flex;gap:2px"><div class="tab on" data-name="${folderName}">${icons.folder}${folderName}</div></div><span class="spacer"></span><button class="icon-button close-button" aria-label="Close">${icons.close}</button></div><div class="path">${folderName}</div><div class="list"></div>`;
+  renderRows(windowElement.querySelector('.list'), folderName);
+  windowElement.querySelector('.close-button').addEventListener('click', () => closeWindow(windowElement));
+}
+
+function closeWindow(windowElement)
+{
+  windowElement.classList.remove('opening');
+  restartAnimation(windowElement, 'closing');
+  const hideWhenClosed = (event) =>
+  {
+    if (event.target === windowElement && event.animationName === 'rise-out')
+    {
+      windowElement.hidden = true;
+      windowElement.removeEventListener('animationend', hideWhenClosed);
+    }
+  };
+  windowElement.addEventListener('animationend', hideWhenClosed);
+}
+
+function getTargetStripRectangle()
+{
+  const rectangle = targetWindow.querySelector('.top').getBoundingClientRect();
+  return { left: rectangle.left - 16, right: rectangle.right + 16, top: rectangle.top - 16, bottom: rectangle.bottom + 16 };
+}
+
+function isPointOverTarget(pointX, pointY)
+{
+  const area = getTargetStripRectangle();
+  return pointX > area.left && pointX < area.right && pointY > area.top && pointY < area.bottom;
+}
+
+function setHovering(isHovering)
+{
+  if (draggedWindow.classList.contains('hovering') === isHovering)
+  {
+    return;
+  }
+  draggedWindow.classList.toggle('hovering', isHovering);
+  targetWindow.classList.toggle('target', isHovering);
+  const existingSlot = targetWindow.querySelector('.tab.slot');
+  if (isHovering && !existingSlot)
+  {
+    const slot = document.createElement('div');
+    slot.className = 'tab slot';
+    slot.innerHTML = `${icons.folder}Downloads`;
+    targetWindow.querySelector('.tabs').append(slot);
+  }
+  if (!isHovering && existingSlot)
+  {
+    existingSlot.remove();
+  }
+}
+
+// Shrinks the dragged window into the slot tab. Both keyframes are written against the window's untransformed box with a top-left origin, so the scale and offset line up exactly with the slot.
+function mergeIntoTarget()
+{
+  const slot = targetWindow.querySelector('.tab.slot');
+  if (!slot)
+  {
+    return;
+  }
+  isAnimating = true;
+  const startRectangle = draggedWindow.getBoundingClientRect();
+  const slotRectangle = slot.getBoundingClientRect();
+  draggedWindow.classList.remove('hovering', 'dragging');
+  draggedWindow.style.transition = 'none';
+  draggedWindow.style.transformOrigin = '0 0';
+  const deskRectangle = desk.getBoundingClientRect();
+  const boxLeft = deskRectangle.left + draggedWindow.offsetLeft;
+  const boxTop = deskRectangle.top + draggedWindow.offsetTop;
+  const boxWidth = draggedWindow.offsetWidth;
+  const boxHeight = draggedWindow.offsetHeight;
+  const toTransform = (rectangle) => `translate(${rectangle.left - boxLeft}px, ${rectangle.top - boxTop}px) scale(${rectangle.width / boxWidth}, ${rectangle.height / boxHeight})`;
+  const animation = draggedWindow.animate([
+    { transform: toTransform(startRectangle), opacity: 0.9, borderRadius: '12px' },
+    { transform: toTransform(slotRectangle), opacity: 0, borderRadius: '40px' }
+  ], { duration: mergeDuration, easing: enterEasing, fill: 'forwards' });
+  animation.onfinish = () =>
+  {
+    draggedWindow.hidden = true;
+    animation.cancel();
+    draggedWindow.style.transition = '';
+    draggedWindow.style.transformOrigin = '';
+    targetWindow.classList.remove('target');
+    slot.className = 'tab';
+    slot.dataset.name = 'Downloads';
+    slot.addEventListener('pointerdown', startTabDrag);
+    activateTargetTab('Downloads');
+    isMerged = true;
+    isAnimating = false;
+  };
+}
+
+function activateTargetTab(folderName)
+{
+  targetWindow.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('on', tab.dataset.name === folderName));
+  targetWindow.querySelector('.path').textContent = folderName;
+  renderRows(targetWindow.querySelector('.list'), folderName);
+}
+
+function splitOut()
+{
+  const mergedTab = targetWindow.querySelector('.tab[data-name="Downloads"]');
+  if (!isMerged || isAnimating || !mergedTab)
+  {
+    return;
+  }
+  isAnimating = true;
+  const tabRectangle = mergedTab.getBoundingClientRect();
+  draggedWindow.style.left = draggedStart.left + 'px';
+  draggedWindow.style.top = draggedStart.top + 'px';
+  draggedWindow.hidden = false;
+  draggedWindow.classList.remove('closing', 'opening');
+  draggedWindow.style.transformOrigin = '0 0';
+  const deskRectangle = desk.getBoundingClientRect();
+  const fromTransform = `translate(${tabRectangle.left - deskRectangle.left - draggedStart.left}px, ${tabRectangle.top - deskRectangle.top - draggedStart.top}px) scale(${tabRectangle.width / draggedWindow.offsetWidth}, ${tabRectangle.height / draggedWindow.offsetHeight})`;
+  const animation = draggedWindow.animate([
+    { transform: fromTransform, opacity: 0, borderRadius: '40px' },
+    { transform: 'none', opacity: 1, borderRadius: '12px' }
+  ], { duration: mergeDuration, easing: enterEasing });
+  mergedTab.classList.add('leaving');
+  mergedTab.addEventListener('animationend', () => mergedTab.remove(), { once: true });
+  activateTargetTab('Projects');
+  animation.onfinish = () =>
+  {
+    draggedWindow.style.transformOrigin = '';
+    isMerged = false;
+    isAnimating = false;
+  };
+}
+
+function startTabDrag(event)
+{
+  const startY = event.clientY;
+  const handleMove = (moveEvent) =>
+  {
+    if (Math.abs(moveEvent.clientY - startY) > 16)
+    {
+      stopListening();
+      splitOut();
+    }
+  };
+  const stopListening = () =>
+  {
+    window.removeEventListener('pointermove', handleMove);
+    window.removeEventListener('pointerup', stopListening);
+  };
+  window.addEventListener('pointermove', handleMove);
+  window.addEventListener('pointerup', stopListening);
+}
+
+function startWindowDrag(event)
+{
+  if (isMerged || isAnimating || event.target.closest('button'))
+  {
+    return;
+  }
+  const deskRectangle = desk.getBoundingClientRect();
+  const offsetX = event.clientX - deskRectangle.left - draggedWindow.offsetLeft;
+  const offsetY = event.clientY - deskRectangle.top - draggedWindow.offsetTop;
+  draggedWindow.classList.add('dragging');
+  const handleMove = (moveEvent) =>
+  {
+    draggedWindow.style.left = (moveEvent.clientX - deskRectangle.left - offsetX) + 'px';
+    draggedWindow.style.top = (moveEvent.clientY - deskRectangle.top - offsetY) + 'px';
+    setHovering(isPointOverTarget(moveEvent.clientX, moveEvent.clientY));
+  };
+  const handleUp = () =>
+  {
+    window.removeEventListener('pointermove', handleMove);
+    window.removeEventListener('pointerup', handleUp);
+    if (draggedWindow.classList.contains('hovering'))
+    {
+      mergeIntoTarget();
+      return;
+    }
+    draggedWindow.classList.remove('dragging');
+  };
+  window.addEventListener('pointermove', handleMove);
+  window.addEventListener('pointerup', handleUp);
+}
+
+function playMerge()
+{
+  if (isMerged || isAnimating)
+  {
+    return;
+  }
+  isAnimating = true;
+  const strip = targetWindow.querySelector('.top');
+  const tabs = targetWindow.querySelector('.tabs');
+  const deskRectangle = desk.getBoundingClientRect();
+  const destinationLeft = tabs.getBoundingClientRect().right - deskRectangle.left - 24;
+  const destinationTop = strip.getBoundingClientRect().top - deskRectangle.top + 8;
+  const travel = draggedWindow.animate([
+    { left: draggedWindow.style.left, top: draggedWindow.style.top },
+    { left: destinationLeft + 'px', top: destinationTop + 'px' }
+  ], { duration: prefersReducedMotion ? 1 : 520, easing: standardEasing });
+  travel.onfinish = () =>
+  {
+    draggedWindow.style.left = destinationLeft + 'px';
+    draggedWindow.style.top = destinationTop + 'px';
+    setHovering(true);
+    setTimeout(() => { isAnimating = false; mergeIntoTarget(); }, prefersReducedMotion ? 0 : 260);
+  };
+}
+
+function resetDesk()
+{
+  isMerged = false;
+  isAnimating = false;
+  [targetWindow, draggedWindow].forEach((windowElement) => { windowElement.hidden = false; windowElement.className = 'win'; windowElement.style.transform = ''; });
+  draggedWindow.style.left = draggedStart.left + 'px';
+  draggedWindow.style.top = draggedStart.top + 'px';
+  buildWindow(targetWindow, 'Projects');
+  buildWindow(draggedWindow, 'Downloads');
+  draggedWindow.querySelector('.top').addEventListener('pointerdown', startWindowDrag);
+  [targetWindow, draggedWindow].forEach((windowElement) => restartAnimation(windowElement, 'opening'));
+}
+
+// The open animation holds its end state, which would block the hover scale, so drop the class once it has played.
+[targetWindow, draggedWindow].forEach((windowElement) => windowElement.addEventListener('animationend', (event) =>
+{
+  if (event.target === windowElement && event.animationName === 'rise-in')
+  {
+    windowElement.classList.remove('opening');
+  }
+}));
+
+document.getElementById('playButton').addEventListener('click', playMerge);
+document.getElementById('splitButton').addEventListener('click', splitOut);
+document.getElementById('resetButton').addEventListener('click', resetDesk);
+resetDesk();
+</script>
+</body></html>
