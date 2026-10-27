@@ -15,7 +15,8 @@
     "dev": "electron . --dev",
     "dist": "npm run build:helper:publish && npm run build:icon && npm run build:tokens && electron-builder --win",
     "build:tokens": "node scripts/gen-tokens.js",
-    "test:e2e": "node tests/e2e/run.mjs"
+    "test:e2e": "node tests/e2e/run.mjs",
+    "build:qml-theme": "node scripts/gen-qml-theme.js"
   },
   "devDependencies": {
     "electron": "^37.0.0",

@@ -1,0 +1,4 @@
+# The Linux shell runs inside a Linux VM straight from this checkout (a shared folder), so its
+# files keep Linux line endings even on Windows: bash will not run a script with CRLFs.
+linux/** text eol=lf
+*.sh text eol=lf

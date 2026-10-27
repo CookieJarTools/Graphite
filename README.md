@@ -4,6 +4,9 @@ A minimal Windows 11 shell built to the Graphite Desk design system: no desktop,
 first, calm cards. Electron draws every surface; a small C# helper does what Chromium
 can't (keyboard hooks, window management, the shell hook, DWM previews).
 
+**Linux:** the same shell for Hyprland, written with Quickshell, is in [`linux/`](linux/README.md),
+with how to try it in a VMware VM.
+
 ## What it does
 
 - **Launcher.** The bare Win key (and the taskbar Start button, and `Ctrl+Esc`) opens
