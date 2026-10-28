@@ -48,8 +48,10 @@ echo "Graphite Desk at $(git -C "$repo" log --oneline -1)"
 
 cat > "$profile/airootfs/usr/local/bin/graphite-install" <<'START'
 #!/usr/bin/env bash
-# Starts the Graphite Desk installer, in a font big enough to read.
+# Starts the Graphite Desk installer, in a font big enough to read, with the kernel's messages
+# kept off its screens.
 setfont ter-v24b 2>/dev/null
+dmesg -n 1 2>/dev/null
 exec bash /usr/share/graphite-desk/linux/installer/graphite-install.sh "$@"
 START
 

@@ -246,6 +246,11 @@ initrd /initramfs-linux.img
 options $kernel_options
 ENTRY
 
+# In VirtualBox: its guest control signs in through PAM as "vboxservice" (Arch ships no rules).
+if [ -n "$guest_services" ] && [ "\${guest_services#vboxservice}" != "$guest_services" ]; then
+    printf '#%%PAM-1.0\nauth include system-auth\naccount include system-auth\nsession include system-auth\n' > /etc/pam.d/vboxservice
+fi
+
 # Memory: compressed swap in RAM.
 printf '[zram0]\nzram-size = min(ram / 2, 8192)\n' > /etc/systemd/zram-generator.conf
 
@@ -293,6 +298,8 @@ gaming_note=""
 umount -R "$target" 2>/dev/null
 
 if [ -z "${GRAPHITE_ANSWERS:-}" ]; then
-    say "Graphite Desk is installed.$gaming_note\n\nTake out the USB stick, then press Enter: the computer restarts into your new desktop. Sign in with the password you chose." 13
-    reboot
+    say "Graphite Desk is installed.$gaming_note\n\nPress Enter to restart. Once the screen goes dark, take out the USB stick; the computer starts your new desktop. Sign in with the password you chose." 13
+    # Everything is written and unmounted: no need to wait for the USB stick's services to stop
+    # (which hangs when the stick is pulled out early).
+    reboot -f
 fi
