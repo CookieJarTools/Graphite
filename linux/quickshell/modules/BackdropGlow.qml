@@ -8,6 +8,9 @@ import qs.config
 Rectangle {
     id: root
 
+    // How far the glow reaches (1 as drawn; the sign-in screen widens it on the right password).
+    property real spread: 1
+
     color: Theme.backdrop
 
     Shape {
@@ -23,7 +26,7 @@ Rectangle {
             fillGradient: RadialGradient {
                 centerX: root.width / 2
                 centerY: root.height * 0.4
-                centerRadius: 700 * Math.SQRT2 * 0.65
+                centerRadius: 700 * Math.SQRT2 * 0.65 * root.spread
                 focalX: centerX
                 focalY: centerY
 

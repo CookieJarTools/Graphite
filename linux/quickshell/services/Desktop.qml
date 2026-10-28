@@ -29,6 +29,12 @@ Singleton {
 
     // Apps a newcomer is likely to want, one click each from Flathub.
     readonly property var featured: [
+        { id: "app.zen_browser.zen", name: "Zen Browser", detail: "A calm, private web browser" },
+        { id: "com.valvesoftware.Steam", name: "Steam", detail: "Games, with Proton for Windows games" },
+        { id: "net.lutris.Lutris", name: "Lutris", detail: "Battle.net, EA, Ubisoft and more games" },
+        { id: "io.bassi.Amberol", name: "Amberol", detail: "Plays your music" },
+        { id: "org.gnome.gThumb", name: "gThumb", detail: "Browse and edit photos" },
+        { id: "org.gnome.Shotwell", name: "Shotwell", detail: "Your photo library" },
         { id: "com.discordapp.Discord", name: "Discord", detail: "Chat, voice and video" },
         { id: "com.spotify.Client", name: "Spotify", detail: "Music" },
         { id: "org.videolan.VLC", name: "VLC", detail: "Plays any video" },
@@ -38,7 +44,7 @@ Singleton {
         { id: "org.gimp.GIMP", name: "GIMP", detail: "Photo editing" },
         { id: "org.telegram.desktop", name: "Telegram", detail: "Messaging" },
         { id: "com.google.Chrome", name: "Google Chrome", detail: "Web browser" },
-        { id: "org.prismlauncher.PrismLauncher", name: "Prism Launcher", detail: "Minecraft and modpacks" },
+        { id: "com.modrinth.ModrinthApp", name: "Modrinth App", detail: "Minecraft and modpacks" },
         { id: "com.heroicgameslauncher.hgl", name: "Heroic", detail: "Epic and GOG games" },
         { id: "org.blender.Blender", name: "Blender", detail: "3D" }
     ]
@@ -113,14 +119,22 @@ Singleton {
         ShellState.appsOpen = true;
     }
 
-    // The system, the apps and Graphite Desk itself (linux/update.sh), in a terminal.
+    // The system, the apps and Graphite Desk itself, on the Control Panel's Updates page.
     function updateEverything() {
-        Quickshell.execDetached(["kitty", "--title", "Updating everything", "bash", linux + "/update.sh"]);
+        ShellState.openSettings("updates");
+        Updates.install();
     }
 
-    // In a terminal, as it asks for the password and reports what it does.
+    // In the background: the password once (pkexec's window), then notifications as it goes.
     function setUpGaming() {
-        Quickshell.execDetached(["kitty", "--title", "Setting up gaming", "bash", linux + "/gaming.sh"]);
+        Quickshell.execDetached(["sh", "-c", [
+            "notify-send -a 'Graphite Desk' -i applications-games 'Setting up gaming' 'Steam, Minecraft and your graphics drivers are on their way. This takes a few minutes.'",
+            `if pkexec env GRAPHITE_USER="$USER" bash "${linux}/gaming.sh" --background > /tmp/graphite-gaming.log 2>&1; then`,
+            "  notify-send -a 'Graphite Desk' -i applications-games 'Gaming is ready' 'Steam and the Modrinth App are in your apps. If it says so in the log, restart for new drivers.'",
+            "else",
+            "  notify-send -a 'Graphite Desk' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from the Control Panel (Apps). Details: /tmp/graphite-gaming.log'",
+            "fi"
+        ].join("\n")]);
     }
 
     function canRemove(id) {

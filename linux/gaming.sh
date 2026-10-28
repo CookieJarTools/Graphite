@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sets this machine up for games: the graphics drivers for its GPU (with the 32-bit parts Steam
-# and Proton need), Steam, Prism Launcher for Minecraft with Java, GameMode (the CPU and GPU at
+# and Proton need), Steam, the Modrinth App for Minecraft, GameMode (the CPU and GPU at
 # full speed while a game runs), MangoHud (an FPS overlay), gamescope and power profiles.
 # Minecraft gets settings against the stutter modpacks show: enough memory, fixed from the
 # start, and garbage collection tuned for short pauses (Aikar's flags), under GameMode and on
@@ -10,14 +10,18 @@
 #   gaming.sh                    in a terminal, asks for the password as it goes
 #   gaming.sh --from-installer   from the installer (as root, for the user in $GRAPHITE_USER,
 #                                inside the new system, nothing started, nothing asked)
+#   gaming.sh --background       from the Control Panel (as root through pkexec, for the user
+#                                in $GRAPHITE_USER, nothing asked; its output goes to a log)
 set -euo pipefail
 
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
 installing=false
-if [ "${1:-}" = "--from-installer" ]; then
-    installing=true
+quiet=false
+if [ "${1:-}" = "--from-installer" ] || [ "${1:-}" = "--background" ]; then
+    [ "$1" = "--from-installer" ] && installing=true
+    quiet=true
     sudo() { "$@"; }        # already root
     USER="${GRAPHITE_USER:?the user to set up}"
     HOME="/home/$USER"
@@ -36,7 +40,7 @@ fi
 sudo pacman -Sy --noconfirm
 
 packages=(steam gamemode lib32-gamemode mangohud lib32-mangohud gamescope power-profiles-daemon
-          prismlauncher jre21-openjdk jre17-openjdk jre8-openjdk pciutils linux-headers)
+          flatpak pciutils linux-headers)
 
 # The GPU's drivers (installer/gpu-packages.sh: the same list the installer uses).
 mapfile -t gpu < <(bash "$here/installer/gpu-packages.sh")
@@ -65,29 +69,10 @@ if $nvidia; then
     echo "Restart the computer once this finishes, for the NVIDIA driver to load."
 fi
 
-# Minecraft (Prism Launcher): half the memory, between 4 and 12 GB, fixed from the start;
-# short-pause garbage collection; GameMode; the discrete GPU; Java fetched per Minecraft version.
-prism="$HOME/.local/share/PrismLauncher/prismlauncher.cfg"
-if [ ! -f "$prism" ]; then
-    say "Setting up Prism Launcher for smooth modpacks..."
-    total_mb=$(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 ))
-    memory=$(( total_mb / 2 ))
-    [ "$memory" -gt 12288 ] && memory=12288
-    [ "$memory" -lt 4096 ] && memory=4096
-    flags="-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseIntervalPercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1"
-    mkdir -p "$(dirname "$prism")"
-    cat > "$prism" <<PRISM
-[General]
-MinMemAlloc=$memory
-MaxMemAlloc=$memory
-JvmArgs=$flags
-EnableFeralGamemode=true
-UseDiscreteGpu=true
-AutomaticJavaSwitch=true
-AutomaticJavaDownload=true
-PRISM
-    echo "Minecraft gets ${memory} MB."
-fi
+# Minecraft: the Modrinth App (from Flathub; it fetches the right Java for each version).
+say "Installing the Modrinth App for Minecraft..."
+sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+sudo flatpak install --system -y --noninteractive flathub com.modrinth.ModrinthApp || echo "The Modrinth App didn't install (is the internet on?)."
 
 # From the installer, as root: what was written in the home is the user's.
 if $installing; then
@@ -99,7 +84,7 @@ say "Done."
 cat <<'DONE'
 Steam: sign in, then in Settings > Compatibility turn on Steam Play for all titles (Proton).
 For any game, Launch Options:  gamemoderun %command%    (add mangohud for an FPS counter)
-Minecraft: open Prism Launcher and add your modpack; it is already tuned.
+Minecraft: open the Modrinth App, pick a modpack, and in its Settings give it more memory (6 to 8 GB) for big packs.
 DONE
 if $nvidia; then echo "Restart now to load the NVIDIA driver."; fi
-read -rp "Press Enter to close."
+$quiet || read -rp "Press Enter to close."

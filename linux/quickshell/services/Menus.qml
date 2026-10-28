@@ -118,7 +118,8 @@ Singleton {
             });
         }
         rows.push(separator);
-        rows.push({ text: "Taskbar settings", action: () => ShellState.openSettings() });
+        rows.push({ text: "Task Manager", action: () => { ShellState.taskManagerOpen = true; } });
+        rows.push({ text: "Taskbar settings", action: () => ShellState.openSettings("personalise") });
         return rows;
     }
 }

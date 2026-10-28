@@ -47,6 +47,17 @@ ShellRoot {
         user = users.length ? users[0].name : "";
     }
 
+    // Whether the chosen person has a PIN (its folder exists; what's in it only they and root
+    // can read).
+    property bool hasPin: false
+    onUserChanged: pinCheck.running = true
+
+    Process {
+        id: pinCheck
+        command: ["test", "-d", "/var/lib/graphite/pins/" + root.user]
+        onExited: code => root.hasPin = code === 0
+    }
+
     property bool justRefused: false
 
     function signIn(text) {
@@ -75,7 +86,7 @@ ShellRoot {
             root.password = "";
             root.justRefused = true;
             Greetd.cancelSession();
-            root.refused("That password isn't right");
+            root.refused("");
         }
 
         function onReadyToLaunch() {
@@ -116,6 +127,7 @@ ShellRoot {
                 focus: true
                 users: root.users
                 user: root.user
+                hasPin: root.hasPin
                 busy: root.busy
                 onSubmit: password => root.signIn(password)
                 onPickUser: name => root.user = name

@@ -12,10 +12,13 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Floating taskbar: pinned and running apps, folders, tagged windows, previews, auto-hide | `modules/Bar.qml`, `TaskButton.qml`, `Popover.qml`, `Previews.qml`, `TagPanel.qml` |
 | The bar's arrangement and window tags (the Windows version's own code) | `services/Taskbar.qml`, `services/lib/` (from `taskbar-model.js`, `window-tags.js`) |
 | Menus (bar, apps, windows, folders, launcher) | `modules/Menu.qml`, `services/Menus.qml` |
-| Login screen (greetd runs it on a small Hyprland), with a welcome animation on the right password | `quickshell/greeter.qml`, `modules/LoginView.qml`, `hypr/greeter.lua`, `greetd/setup.sh` |
+| Login screen (greetd runs it on a small Hyprland): a clock curtain, then a 4-digit PIN (signs in on the fourth digit; `system/pin-check`, set in Accounts) or the password, with a sweep while it checks, a shake and the tries left when wrong, a 30-second lock-out and the hint after three, a Caps Lock warning, and a welcome | `quickshell/greeter.qml`, `modules/LoginView.qml`, `hypr/greeter.lua`, `greetd/setup.sh` |
 | Lock screen (Super+L, Lock, before sleep): the same look, the password checked by PAM | `modules/LockScreen.qml` |
-| Settings window | `modules/SettingsWindow.qml`, kept in `settings.json` (`services/ShellSettings.qml`) |
-| Quick settings: Wi-Fi, Bluetooth, volume, media | `modules/QuickSettings.qml` |
+| Control Panel: network, Bluetooth and devices, display (resolution, scale, HDR, night light), sound, power, personalisation, apps, accounts, time, updates, privacy and security, system | `modules/ControlPanel.qml`, `Cp*.qml`; `services/Displays.qml`, `Power.qml`, `Machine.qml`, `Updates.qml`; kept in `settings.json` (`services/ShellSettings.qml`) |
+| Task Manager (Ctrl+Shift+Esc): apps and background processes, end task, performance graphs | `modules/TaskManager.qml`, `services/Tasks.qml`, `system/task-sample.sh` |
+| Administrator changes and updates without a terminal: a root-owned helper, an update service, polkit rules | `system/` (`install.sh` puts them in place) |
+| Installer on the USB stick: friendly screens over `installer/graphite-install.sh` | `quickshell/installer.qml`, `installer/gui.lua`, `installer/build-iso.sh` |
+| Quick settings: Wi-Fi networks to join, Bluetooth devices to pair, where the sound goes, aeroplane mode, night light, volume, media | `modules/QuickSettings.qml`, `NetworkList.qml`, `BluetoothList.qml`, `SoundDeviceList.qml` |
 | Calendar with the notifications still kept | `modules/CalendarPanel.qml`, `NoteCard.qml` |
 | Tray icons (StatusNotifierItem) over the chevron | `modules/TrayPanel.qml` |
 | Launcher (Super) and Alt+Space search: apps, files, folders, commands, aliases, pins, labels | `modules/Launcher.qml`, `LauncherView.qml`, `services/Search.qml` |
@@ -26,7 +29,7 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Keys, look, start-up, floating or tiling windows | `hypr/hyprland.lua` |
 
 Windows float, as on Windows: they open centred, move by their title bar and resize from
-their edges. **Tile windows** (Settings, or the bar's right-click menu) switches to
+their edges. **Tile windows** (Control Panel, Personalisation; or the bar's right-click menu) switches to
 Hyprland's tiling and back; the choice is kept in `~/.config/graphite/windows`.
 
 ## Window zones
@@ -62,26 +65,40 @@ files; the shell runs the latter at start.
 
 ## Games
 
-Settings → **Set up gaming** (or the launcher's "Set up gaming") runs `gaming.sh` in a
-terminal: the drivers for the machine's GPU with their 32-bit parts, Steam (with Proton),
-Prism Launcher for Minecraft with Java 8, 17 and 21, GameMode, MangoHud, gamescope and power
-profiles. Minecraft gets settings against the stutter modpacks show: half the memory (4 to
-12 GB), fixed from the start, garbage collection tuned for short pauses (Aikar's flags),
-GameMode on and the discrete GPU. Hyprland lets games draw without waiting for the screen
+Control Panel → Apps → **Set up gaming** (or the launcher's "Set up gaming", or the installer)
+runs `gaming.sh` in the background after one password: the drivers for the machine's GPU
+with their 32-bit parts, Steam (with Proton), the Modrinth App for Minecraft (it brings its
+own Java), GameMode, MangoHud, gamescope and power profiles. For big modpacks, give Minecraft
+6 to 8 GB in the Modrinth App's settings (it keeps them in its own database, so they can't be
+preset). League of Legends and Valorant can't run on Linux: Riot's Vanguard anti-cheat
+refuses it. Lutris and Heroic (in Get apps) cover Battle.net, EA, Ubisoft, Epic and GOG.
+
+Hyprland lets games draw without waiting for the screen
 (tearing allowed, for the least lag), uses variable refresh in fullscreen, and the shell stops
 its background checks while a game is fullscreen. On a real machine only: the VM has no GPU.
+
+## Updates
+
+Updates need no terminal. Every few hours the desktop checks what's waiting (Arch's packages
+with `checkupdates`, Flatpak apps, Graphite Desk's own commits) and says so once. Control
+Panel → **Updates** installs everything with one button: the system half runs as root in
+`graphite-update.service` (an administrator may start it without a password), the person's
+half (their apps, the Ubuntu space, a `git pull` of Graphite Desk) alongside it, with its
+progress on the page. Arch's news since the last update is listed first, a new kernel asks
+for a restart, and **Install updates automatically** runs it once a day.
 
 ## Text
 
 Text is drawn the MacType way: slight hinting, subpixel smoothing and FreeType's stem
 darkening for fuller strokes (`fonts/fonts.conf`, and `FREETYPE_PROPERTIES` in
-`hyprland.lua`). Settings → **Smoother text** turns the stem darkening off and on.
+`hyprland.lua`). Control Panel → Personalisation → **Smoother text** turns the stem darkening off and on.
 
 ## Keys
 
 | Keys | |
 | --- | --- |
-| Super | Launcher |
+| Super (on its own) | Search: apps, files, settings; its gear opens the Control Panel |
+| Ctrl+Shift+Esc | Task Manager |
 | Alt+Space | Compact search |
 | Alt+Tab / Alt+Shift+Tab | Switch windows (let go of Alt to switch) |
 | Super+Left / Right | Snap to the left or right half (tiling: move focus) |

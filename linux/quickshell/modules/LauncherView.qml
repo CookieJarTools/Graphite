@@ -41,6 +41,7 @@ FocusScope {
 
     function reset() {
         input.text = "";
+        ShellState.showHints = false;
         scope = "All";
         selected = mode === "launcher" ? 0 : -1;
         pendingPower = "";
@@ -290,7 +291,7 @@ FocusScope {
                 Section {
                     visible: !root.searching && root.mode === "launcher" && Search.places.length > 0
                     title: "Places"
-                    note: "Alt + number"
+                    note: ShellState.showHints ? "Alt + number" : ""
                 }
 
                 Flow {
@@ -510,9 +511,9 @@ FocusScope {
 
             Item { Layout.fillWidth: true }
 
-            // Key hints.
+            // Key hints: only after a fast wiggle of the mouse (see the HoverHandler below).
             Repeater {
-                model: root.searching ? [["↑↓", "Move"], ["Enter", "Open"], ["Tab", "Scope"], ["Ctrl+Enter", "As admin"]]
+                model: !ShellState.showHints ? [] : root.searching ? [["↑↓", "Move"], ["Enter", "Open"], ["Tab", "Scope"], ["Ctrl+Enter", "As admin"]]
                     : root.mode === "home" ? [["Super", "Search"], ["Super E", "Files"], ["Alt Space", "Quick search"]]
                     : root.compact ? [["Enter", "Open"], ["Esc", "Close"]]
                     : [["Type an alias", "Jump"], ["Alt 1–9", "Places"]]
@@ -526,6 +527,28 @@ FocusScope {
                         color: Theme.inkMuted
                         font.pixelSize: Theme.hintSize
                     }
+                }
+            }
+
+            // The Control Panel (settings) and the task manager.
+            BarButton {
+                implicitWidth: 32
+                implicitHeight: 32
+                glyph: "emblem-system-symbolic"
+                onClicked: {
+                    root.done();
+                    ShellState.openSettings("");
+                }
+            }
+
+            BarButton {
+                visible: !root.compact
+                implicitWidth: 32
+                implicitHeight: 32
+                glyph: "utilities-system-monitor-symbolic"
+                onClicked: {
+                    root.done();
+                    ShellState.taskManagerOpen = true;
                 }
             }
 
@@ -547,6 +570,30 @@ FocusScope {
                     active: root.pendingPower === modelData.action
                     onClicked: root.pressPower(modelData)
                 }
+            }
+        }
+    }
+
+    // The key hints stay hidden until the mouse is wiggled fast from side to side for a couple
+    // of seconds (a dozen quick turns), then show until the launcher next opens.
+    HoverHandler {
+        property real lastX: 0
+        property int direction: 0
+        property var turns: []
+
+        onPointChanged: {
+            const x = point.position.x;
+            const moved = x - lastX;
+            lastX = x;
+            if (Math.abs(moved) < 4 || ShellState.showHints) return;
+            const now = Date.now();
+            const heading = moved > 0 ? 1 : -1;
+            if (heading === direction) return;
+            direction = heading;
+            turns = turns.filter(time => now - time < 2500).concat([now]);
+            if (turns.length >= 12) {
+                ShellState.showHints = true;
+                turns = [];
             }
         }
     }

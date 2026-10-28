@@ -23,8 +23,13 @@ Singleton {
     // ---------- commands ----------
 
     readonly property var commands: [
-        { name: "Graphite settings", alias: "cs", glyph: "preferences-system-symbolic", keys: [], run: () => ShellState.openSettings() },
-        { name: "Toggle dark mode", alias: "dark", glyph: "weather-clear-night-symbolic", keys: [], run: () => ShellSettings.set("dark", !(ShellSettings.values.dark !== false)) },
+        { name: "Control Panel", alias: "cp", glyph: "preferences-system-symbolic", keys: [], run: () => ShellState.openSettings("") },
+        { name: "Wi-Fi and network settings", alias: "wifi", glyph: "network-wireless-symbolic", keys: [], run: () => ShellState.openSettings("network") },
+        { name: "Bluetooth and devices", alias: "bt", glyph: "bluetooth-active-symbolic", keys: [], run: () => ShellState.openSettings("devices") },
+        { name: "Display settings", alias: "disp", glyph: "video-display-symbolic", keys: [], run: () => ShellState.openSettings("display") },
+        { name: "Sound settings", alias: "snd", glyph: "audio-volume-high-symbolic", keys: [], run: () => ShellState.openSettings("sound") },
+        { name: "Accounts and password", alias: "acc", glyph: "avatar-default-symbolic", keys: [], run: () => ShellState.openSettings("accounts") },
+        { name: "Toggle dark mode", alias: "dark", glyph: "weather-clear-night-symbolic", keys: [], run: () => ShellSettings.update(settings => { settings.themeMode = ""; settings.dark = settings.dark === false; }) },
         { name: "Terminal", alias: "term", glyph: "utilities-terminal-symbolic", keys: ["Super", "Enter"], run: () => Quickshell.execDetached(["kitty"]) },
         { name: "Files", alias: "fm", glyph: "system-file-manager-symbolic", keys: ["Super", "E"], run: () => root.openFolder(root.home) },
         { name: "Edit window zones", alias: "zones", glyph: "view-grid-symbolic", keys: [], run: () => { ShellState.zoneEditorOpen = true; } },
@@ -32,7 +37,7 @@ Singleton {
         { name: "App store", alias: "store", glyph: "system-software-install-symbolic", keys: [], run: () => Desktop.openAppStore() },
         { name: "Update everything", alias: "up", glyph: "software-update-available-symbolic", keys: [], run: () => Desktop.updateEverything() },
         { name: "Set up gaming", alias: "game", glyph: "input-gaming-symbolic", keys: [], run: () => Desktop.setUpGaming() },
-        { name: "System monitor", alias: "tm", glyph: "utilities-system-monitor-symbolic", keys: [], run: () => Quickshell.execDetached(["kitty", "-e", "top"]) },
+        { name: "Task Manager", alias: "tm", glyph: "utilities-system-monitor-symbolic", keys: ["Ctrl", "Shift", "Esc"], run: () => { ShellState.taskManagerOpen = true; } },
         { name: "Lock", alias: "lock", glyph: "system-lock-screen-symbolic", keys: ["Super", "L"], run: () => root.power("lock") },
         { name: "Sleep", alias: "sleep", glyph: "system-suspend-symbolic", keys: [], run: () => root.power("sleep") },
         { name: "Sign out", alias: "out", glyph: "system-log-out-symbolic", keys: [], run: () => root.power("signout") },

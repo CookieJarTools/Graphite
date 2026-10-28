@@ -1,0 +1,11 @@
+[Unit]
+Description=Graphite Desk system update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The computer stays awake until it has finished.
+ExecStart=/usr/bin/systemd-inhibit --what=sleep:shutdown --who="Graphite Desk" --why="Installing updates" /usr/local/lib/graphite/system-update
+Nice=10
+IOSchedulingClass=idle

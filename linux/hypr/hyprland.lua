@@ -12,6 +12,9 @@ local shell = "qs -c graphite"
 hl.on("hyprland.start", function()
     hl.exec_cmd(shell)
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
+    -- Idle (lock, screen off, sleep: the Control Panel writes its settings) and startup apps.
+    hl.exec_cmd("hypridle")
+    hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/autostart.sh\"")
     -- The VM's guest tools: shared clipboard and resizing with the window (VirtualBox or VMware).
     hl.exec_cmd("command -v VBoxClient-all >/dev/null && VBoxClient-all; command -v vmware-user >/dev/null && vmware-user")
 end)
@@ -210,8 +213,9 @@ hl.layer_rule({ match = { namespace = "graphite-(panel|menu|toasts|launcher|swit
 local terminal = "kitty"
 local files = "nautilus"
 
--- The shell: the Super key alone opens the launcher; Alt+Tab switches windows.
-hl.bind("SUPER_L", hl.dsp.global("quickshell:launcher"), { release = true })
+-- The shell: the Super key alone opens the launcher (pressed and let go with nothing else in
+-- between, as on Windows: watched in the keyboard event below, as a release bind on the key
+-- never goes off); Alt+Tab switches windows; Ctrl+Shift+Esc opens the task manager.
 hl.bind("ALT + Tab", hl.dsp.global("quickshell:switcher-next"))
 hl.bind("ALT + SHIFT + Tab", hl.dsp.global("quickshell:switcher-previous"))
 hl.bind("ALT_L", hl.dsp.global("quickshell:switcher-commit"), { release = true })
@@ -223,15 +227,30 @@ hl.bind("SUPER + L", hl.dsp.global("quickshell:lock"))
 -- event below. Not binds for those: a bind going off in the middle of a drag ends the drag.
 local passOn = { non_consuming = true, ignore_mods = true }
 local passOnRelease = { non_consuming = true, ignore_mods = true, release = true }
+local superAlone = false -- Super is down and nothing else has been pressed with it
 hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-down"), passOn)
 hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-up"), passOnRelease)
+-- Super + drag moves a window; letting go of Super after it opens nothing.
+hl.bind("mouse:272", function() superAlone = false end, passOn)
+hl.bind("mouse:273", function() superAlone = false end, passOn)
 
-local modifierKeys = { [50] = "shift", [62] = "shift", [37] = "ctrl", [105] = "ctrl" } -- XKB codes
+local superKeys = { [133] = true, [134] = true } -- XKB codes, left and right
+local modifierKeys = { [50] = "shift", [62] = "shift", [37] = "ctrl", [105] = "ctrl" }
 local modifierState = { shift = false, ctrl = false }
 hl.on("input.keyboard.key", function(keycode, _, state)
+    local down = state == 1
+    if superKeys[keycode] then
+        if down then
+            superAlone = true
+        elseif superAlone then
+            superAlone = false
+            hl.exec_cmd(shell .. " ipc call launcher toggle")
+        end
+        return
+    end
+    if down then superAlone = false end
     local name = modifierKeys[keycode]
     if not name then return end
-    local down = state == 1
     if modifierState[name] == down then return end -- held keys repeat
     modifierState[name] = down
     hl.exec_cmd("qs -c graphite ipc call zones " .. name .. " " .. tostring(down))
@@ -271,3 +290,13 @@ end
 -- Mouse: Super + drag moves a window, Super + right-drag resizes it.
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
+
+-- Ctrl+Shift+Esc: the task manager, as on Windows.
+hl.bind("CTRL + SHIFT + Escape", hl.dsp.global("quickshell:taskmanager"))
+
+-- ---------- the Control Panel's choices ----------
+
+-- Screens, the mouse and touchpad, and the keyboard layout as chosen in the Control Panel
+-- (services/Displays.qml writes this file), over everything above.
+local desk = loadfile((os.getenv("HOME") or "") .. "/.config/graphite/desk.lua")
+if desk then pcall(desk) end

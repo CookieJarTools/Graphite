@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- The Control Panel's administrator changes (graphite-admin): an administrator's password,
+     remembered for a few minutes. -->
+<policyconfig>
+  <vendor>Graphite Desk</vendor>
+  <action id="org.graphite.admin">
+    <description>Change Graphite Desk's system settings</description>
+    <message>Enter your password to make this change</message>
+    <icon_name>preferences-system</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/graphite/graphite-admin</annotate>
+  </action>
+</policyconfig>

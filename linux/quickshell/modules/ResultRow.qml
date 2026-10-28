@@ -38,6 +38,7 @@ Rectangle {
         UiText {
             Layout.preferredWidth: 44
             textFormat: Text.StyledText
+            opacity: ShellState.showHints || (root.match.length > 0 && !!root.item && !!root.item.alias) ? 1 : 0
             text: root.item ? Search.mark(root.item.alias || "", root.match) : ""
             color: Theme.inkMuted
             font.family: Theme.fontMono
@@ -105,7 +106,7 @@ Rectangle {
         }
 
         Repeater {
-            model: root.item && root.item.command ? root.item.command.keys : []
+            model: ShellState.showHints && root.item && root.item.command ? root.item.command.keys : []
             KeyChip {
                 required property var modelData
                 text: modelData

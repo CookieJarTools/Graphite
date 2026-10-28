@@ -15,6 +15,12 @@ pragma Singleton
 //   smoothText   MacType-like text: FreeType's stem darkening
 //   paletteHotkey   Alt+Space opens the compact search
 //   notificationsSeen   when the calendar was last opened (ms)
+//   displays   { output: { mode, scale, transform, hdr, enabled } } as chosen in the Control
+//              Panel; nightLight { on, temperature }; input { sensitivity, naturalScroll,
+//              touchpadNaturalScroll, tapToClick }; keyboard (a layout, "" for the installer's)
+//              (Displays.qml writes these into Hyprland's desk.lua)
+//   idle       { lock, screenOff, sleep } in minutes, 0 for never (Devices.qml: hypridle)
+//   autoUpdates   updates install by themselves (Updates.qml)
 // Changes go through update(), which saves a moment later.
 
 import QtQuick
@@ -53,7 +59,14 @@ Singleton {
             tiling: false,
             smoothText: true,
             paletteHotkey: true,
-            notificationsSeen: 0
+            notificationsSeen: 0,
+            displays: {},
+            nightLight: { on: false, temperature: 4500 },
+            input: { sensitivity: 0, naturalScroll: false, touchpadNaturalScroll: true, tapToClick: true },
+            keyboard: "",
+            idle: { lock: 10, screenOff: 15, sleep: 30 },
+            autoUpdates: false,
+            themeMode: "" // "auto" follows the time of day; otherwise `dark` decides
         };
     }
 
@@ -87,6 +100,14 @@ Singleton {
         printErrors: false
     }
 
+    // What the installer's "Look and feel" and "Privacy" steps chose (installer.qml writes it).
+    FileView {
+        id: firstRun
+        path: Quickshell.env("HOME") + "/.config/graphite/first-run.json"
+        blockLoading: true
+        printErrors: false
+    }
+
     Timer {
         id: saveSoon
         interval: 400
@@ -107,6 +128,15 @@ Singleton {
                 settings[key] = key === "taskbar" ? Object.assign(settings.taskbar, saved.taskbar) : saved[key];
             }
         } else {
+            // A first start after installing: what was chosen in the installer.
+            try {
+                const chosen = JSON.parse(firstRun.text());
+                for (const key of ["dark", "themeMode", "autoUpdates", "keyboard"]) {
+                    if (chosen[key] !== undefined) settings[key] = chosen[key];
+                }
+            } catch (error) {
+                // not installed by the installer
+            }
             try {
                 const pins = JSON.parse(oldPins.text());
                 if (Array.isArray(pins)) settings.taskbar.items = pins.map(key => ({ type: "app", key: key, pinned: true }));

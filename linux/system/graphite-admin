@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# The Control Panel's few changes that need the administrator: run as root through pkexec
+# (org.graphite.admin.policy asks for an administrator's password, once every few minutes).
+# Installed root-owned in /usr/local/lib/graphite by install.sh, so nothing a normal program
+# can edit ever runs as root. It takes only these verbs, and checks every argument:
+#
+#   firewall on|off                      the firewall (ufw): nothing comes in uninvited
+#   user-add NAME FULL_NAME yes|no       a new person (an administrator or not); password on stdin
+#   user-remove NAME                     a person and their files
+#   user-password NAME                   a new password, on stdin
+#   user-fullname NAME FULL_NAME         the name shown for them
+#   user-admin NAME yes|no               whether they are an administrator
+#   pin NAME                             their sign-in PIN (4 digits), on stdin; empty removes it
+#   hint NAME                            their password hint for the login screen, on stdin
+#   clean                                old package downloads and logs
+#   install                              Graphite's system parts again, from /opt/graphite-desk
+set -euo pipefail
+
+name_ok() { [[ "$1" =~ ^[a-z][a-z0-9_-]{0,30}$ ]] || { echo "Not a valid name." >&2; exit 2; }; }
+person_ok() {
+    name_ok "$1"
+    local uid
+    uid="$(id -u "$1" 2>/dev/null)" || { echo "No such person." >&2; exit 2; }
+    [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || { echo "That account belongs to the system." >&2; exit 2; }
+}
+read_secret() { IFS= read -r secret || true; [ -n "$secret" ] || { echo "Nothing was given." >&2; exit 2; }; }
+
+verb="${1:-}"
+shift || true
+case "$verb" in
+    firewall)
+        case "${1:-}" in
+            on) ufw default deny incoming >/dev/null; ufw default allow outgoing >/dev/null; ufw --force enable ;;
+            off) ufw disable ;;
+            *) exit 2 ;;
+        esac
+        ;;
+    user-add)
+        person="${1:-}"; full="${2:-}"; admin="${3:-no}"
+        name_ok "$person"
+        [[ "$full" =~ ^[^:,]{1,60}$ ]] || { echo "Not a valid full name." >&2; exit 2; }
+        read_secret
+        groups="video,input"
+        [ "$admin" = yes ] && groups="wheel,$groups"
+        useradd -m -G "$groups" -c "$full" -s /bin/bash "$person"
+        printf '%s:%s\n' "$person" "$secret" | chpasswd
+        # Their desktop: the same Graphite Desk, from the shared copy.
+        home="/home/$person"
+        mkdir -p "$home/.config/quickshell" "$home/.config/hypr" "$home/.config/graphite"
+        ln -sfn /opt/graphite-desk/linux/quickshell "$home/.config/quickshell/graphite"
+        ln -sfn /opt/graphite-desk/linux/hypr/hyprland.lua "$home/.config/hypr/hyprland.lua"
+        chown -R "$person:$person" "$home"
+        ;;
+    user-remove)
+        person_ok "${1:-}"
+        [ "$1" != "$(id -nu "${PKEXEC_UID:-0}" 2>/dev/null)" ] || { echo "You can't remove yourself." >&2; exit 2; }
+        loginctl terminate-user "$1" 2>/dev/null || true
+        userdel -r "$1" 2>/dev/null || userdel "$1"
+        rm -f "/var/lib/graphite/hints/$1"
+        rm -rf "/var/lib/graphite/pins/$1"
+        ;;
+    user-password)
+        person_ok "${1:-}"
+        read_secret
+        printf '%s:%s\n' "$1" "$secret" | chpasswd
+        ;;
+    user-fullname)
+        person_ok "${1:-}"
+        [[ "${2:-}" =~ ^[^:,]{1,60}$ ]] || { echo "Not a valid full name." >&2; exit 2; }
+        usermod -c "$2" "$1"
+        ;;
+    user-admin)
+        person_ok "${1:-}"
+        if [ "${2:-}" = yes ]; then gpasswd -a "$1" wheel >/dev/null; else gpasswd -d "$1" wheel >/dev/null; fi
+        ;;
+    pin)
+        # A PIN for signing in (4 digits, or up to 8) on stdin, kept as a salted hash that only
+        # the person (for the lock screen) and root (the login screen) can read; empty removes it.
+        person_ok "${1:-}"
+        IFS= read -r pin || true
+        install -d -m 755 /var/lib/graphite /var/lib/graphite/pins
+        dir="/var/lib/graphite/pins/$1"
+        rm -rf "$dir" "/run/graphite-pins/$1"
+        if [ -n "$pin" ]; then
+            [[ "$pin" =~ ^[0-9]{4,8}$ ]] || { echo "A PIN is 4 to 8 digits." >&2; exit 2; }
+            install -d -m 700 -o "$1" -g "$1" "$dir"
+            openssl passwd -6 -stdin <<<"$pin" > "$dir/hash"
+            chown "$1:$1" "$dir/hash"
+            chmod 600 "$dir/hash"
+        fi
+        ;;
+    hint)
+        person_ok "${1:-}"
+        IFS= read -r hint || true
+        mkdir -p /var/lib/graphite/hints
+        chmod 755 /var/lib/graphite /var/lib/graphite/hints
+        if [ -n "$hint" ]; then
+            printf '%s\n' "${hint:0:80}" > "/var/lib/graphite/hints/$1"
+            chmod 644 "/var/lib/graphite/hints/$1"
+        else
+            rm -f "/var/lib/graphite/hints/$1"
+        fi
+        ;;
+    clean)
+        paccache -rk1 >/dev/null 2>&1 || true
+        paccache -ruk0 >/dev/null 2>&1 || true
+        journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+        flatpak uninstall --system --unused -y --noninteractive >/dev/null 2>&1 || true
+        ;;
+    install)
+        bash /opt/graphite-desk/linux/system/install.sh
+        ;;
+    *)
+        echo "Unknown request." >&2
+        exit 2
+        ;;
+esac

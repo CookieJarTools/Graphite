@@ -95,11 +95,20 @@ Singleton {
         tagPanel = { screen: screenName, hwnd: hwnd, title: title, x: x };
     }
 
-    function openSettings() {
+    // The Control Panel, on one of its pages (ControlPanel.qml's ids: "network", "display"...).
+    property string settingsPage: "network"
+
+    function openSettings(page) {
         closePanels();
         closeLaunchers();
+        if (page) settingsPage = page;
         settingsOpen = true;
     }
+
+    property bool taskManagerOpen: false
+
+    // The launcher's key hints, shown after a fast wiggle of the mouse (LauncherView).
+    property bool showHints: false
 
     // Open windows, most recently used first; ones never activated come last.
     function windowsByRecency() {

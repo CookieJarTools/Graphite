@@ -27,9 +27,29 @@ Scope {
         pam.start();
     }
 
+    // The lock screen's own PAM service, which takes a PIN too (system/install.sh); the plain
+    // login one where Graphite's system parts aren't in place.
+    property string pamService: "login"
+    property bool hasPin: false
+
+    Process {
+        running: true
+        command: ["test", "-f", "/etc/pam.d/graphite-lock"]
+        onExited: code => root.pamService = code === 0 ? "graphite-lock" : "login"
+    }
+
+    // Whether there is a PIN to ask for (checked each time it locks: it may have been set since).
+    Process {
+        id: pinCheck
+        running: true
+        command: ["test", "-d", "/var/lib/graphite/pins/" + root.user]
+        onExited: code => root.hasPin = code === 0
+    }
+
     PamContext {
         id: pam
         user: root.user
+        config: root.pamService
 
         onPamMessage: {
             if (responseRequired) {
@@ -43,7 +63,7 @@ Scope {
             if (result === PamResult.Success) {
                 root.accepted(); // the welcome plays, then it unlocks
             } else {
-                root.refused("That password isn't right");
+                root.refused("");
             }
         }
 
@@ -77,6 +97,7 @@ Scope {
 
     readonly property bool isLocked: ShellState.locked
     onIsLockedChanged: {
+        if (root.isLocked) pinCheck.running = true;
         Quickshell.execDetached(["sh", "-c", root.isLocked ? "echo 1 > \"$1\"" : "rm -f \"$1\"", "sh", root.marker]);
         if (root.isLocked) root.opened();
     }
@@ -93,10 +114,10 @@ Scope {
                 anchors.fill: parent
                 focus: true
                 users: [{ name: root.user, full: root.fullName }]
+                hasPin: root.hasPin
                 user: root.user
                 busy: root.busy
                 showPower: false
-                hint: "Enter your password to unlock"
                 onSubmit: password => root.check(password)
                 Component.onCompleted: reset()
 

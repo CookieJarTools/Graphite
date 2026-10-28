@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Signing in with a PIN, as on Windows: PAM runs this (pam_exec with expose_authtok, as
+# "sufficient", in front of the password check) with what was typed on its input. It succeeds
+# only for a PIN (4 to 8 digits) matching the person's, kept as a salted hash in
+# /var/lib/graphite/pins/<name>/hash (graphite-admin pin sets it); anything else falls through
+# to the password. Three wrong PINs and the PIN rests for 10 minutes (the screens then ask for
+# the password).
+#
+# The login screen runs it as root, the lock screen as the person: as root it never writes in
+# the person's folder (its count is kept in /run instead).
+user="${PAM_USER:-}"
+[[ "$user" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || exit 1
+dir="/var/lib/graphite/pins/$user"
+hash="$dir/hash"
+[ -f "$hash" ] && [ ! -L "$hash" ] || exit 1
+
+IFS= read -r -d '' entered || true
+[[ "$entered" =~ ^[0-9]{4,8}$ ]] || exit 1
+
+if [ "$(id -u)" = 0 ]; then
+    mkdir -p -m 700 /run/graphite-pins
+    fails="/run/graphite-pins/$user"
+else
+    fails="$dir/fails"
+fi
+count=0
+if [ -f "$fails" ] && [ -n "$(find "$fails" -mmin -10 2>/dev/null)" ]; then
+    count="$(cat "$fails" 2>/dev/null)"
+    [[ "$count" =~ ^[0-9]+$ ]] || count=0
+fi
+[ "$count" -ge 3 ] && exit 1
+
+stored="$(cat "$hash")"
+salt="$(cut -d'$' -f3 <<<"$stored")"
+if [ -n "$salt" ] && [ "$(openssl passwd -6 -salt "$salt" -stdin <<<"$entered")" = "$stored" ]; then
+    rm -f "$fails"
+    exit 0
+fi
+rm -f "$fails"
+echo $((count + 1)) > "$fails"
+exit 1

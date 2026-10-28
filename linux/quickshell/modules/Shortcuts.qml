@@ -25,6 +25,22 @@ Scope {
     }
 
     GlobalShortcut {
+        name: "taskmanager"
+        description: "Open the task manager (Ctrl+Shift+Esc)"
+        onPressed: {
+            ShellState.closeLaunchers();
+            ShellState.taskManagerOpen = true;
+        }
+    }
+
+    IpcHandler {
+        target: "taskmanager"
+
+        function open(): void { ShellState.taskManagerOpen = true; }
+        function close(): void { ShellState.taskManagerOpen = false; }
+    }
+
+    GlobalShortcut {
         name: "lock"
         description: "Lock the screen (Super+L)"
         onPressed: ShellState.locked = true
@@ -117,7 +133,8 @@ Scope {
     IpcHandler {
         target: "settings"
 
-        function open(): void { ShellState.openSettings(); }
+        function open(): void { ShellState.openSettings(""); }
+        function page(name: string): void { ShellState.openSettings(name); }
         function close(): void { ShellState.settingsOpen = false; }
         function tiling(on: bool): void { Taskbar.setTiling(on); }
         function autohide(on: bool): void { ShellSettings.setTaskbar("alwaysAutoHide", on); }

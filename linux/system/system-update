@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# The system half of "Update everything", run as root by graphite-update.service (which any
+# administrator may start without a password, see 50-graphite.rules): Arch's keyring first,
+# then every package, the system's Flatpak apps, and a tidy of old downloads. Its progress is
+# /var/lib/graphite/update.json, which the Control Panel reads:
+#   { "state": "running" | "done" | "failed", "step": "...", "percent": 0-100,
+#     "time": seconds, "restart": true when a new kernel waits for a restart }
+# With --auto (graphite-update.timer) it only runs when someone has turned on automatic
+# updates (~/.config/graphite/auto-updates says "on").
+set -uo pipefail
+state=/var/lib/graphite/update.json
+log=/var/log/graphite-update.log
+mkdir -p /var/lib/graphite
+chmod 755 /var/lib/graphite
+restart=false
+
+status() {
+    printf '{"state":"%s","step":"%s","percent":%d,"time":%d,"restart":%s}\n' \
+        "$1" "${2//\"/}" "$3" "$(date +%s)" "$restart" > "$state.tmp"
+    chmod 644 "$state.tmp"
+    mv "$state.tmp" "$state"
+}
+
+if [ "${1:-}" = --auto ]; then
+    grep -qs '^on' /home/*/.config/graphite/auto-updates || exit 0
+fi
+
+: > "$log"
+status running "Getting ready" 2
+
+# The keyring first, so new packages' signatures are known.
+if ! pacman -Sy --noconfirm --needed archlinux-keyring >>"$log" 2>&1; then
+    status failed "Couldn't reach the update servers. Is the internet on?" 0
+    exit 1
+fi
+
+status running "Downloading updates" 5
+pacman -Su --noconfirm 2>&1 | tee -a "$log" | grep --line-buffered -E '^\(\s*[0-9]+/[0-9]+\) (upgrading|installing)' | \
+    while read -r line; do
+        done_count="$(sed -E 's/^\(\s*([0-9]+)\/([0-9]+)\).*/\1/' <<<"$line")"
+        all="$(sed -E 's/^\(\s*([0-9]+)\/([0-9]+)\).*/\2/' <<<"$line")"
+        status running "Installing updates ($done_count of $all)" $(( 10 + 70 * done_count / all ))
+    done
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    status failed "The update didn't finish. Try again in a little while." 0
+    exit 1
+fi
+
+# A new kernel is only used after a restart.
+[ -d "/usr/lib/modules/$(uname -r)" ] || restart=true
+
+if command -v flatpak >/dev/null; then
+    status running "Updating apps" 85
+    flatpak update --system -y --noninteractive >>"$log" 2>&1 || true
+fi
+
+status running "Tidying up" 95
+paccache -rk2 >>"$log" 2>&1 || true
+
+status done "Up to date" 100

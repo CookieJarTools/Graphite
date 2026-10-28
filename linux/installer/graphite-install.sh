@@ -1,18 +1,26 @@
 #!/usr/bin/env bash
-# The Graphite Desk installer: puts Arch Linux with Graphite Desk on this computer, asking only
-# what it has to in plain screens: the network (Wi-Fi, when there is no cable), the disk to
-# use (all of it: everything on it is erased, after typing ERASE), the person's name and
-# password, the time zone and keyboard, and whether to set up gaming. Then it installs, with a
-# progress bar, and restarts into Graphite's login screen.
+# The Graphite Desk installer: puts Arch Linux with Graphite Desk on this computer. The USB
+# stick opens its graphical front end (quickshell/installer.qml), which asks everything in a
+# few friendly screens and runs this with the answers; without a screen it asks in plain text
+# screens itself (dialog): the network (Wi-Fi, when there is no cable), the disk to use (all of
+# it: everything on it is erased, after typing ERASE), the person's name and password, the
+# time zone and keyboard, and whether to set up gaming. Then it installs and restarts into
+# Graphite's login screen.
 #
-# It runs from the Graphite Desk USB stick (build-iso.sh makes it), which starts it by itself;
-# Graphite Desk's repository (with its git history) is on the stick in /usr/share/graphite-desk
-# and goes to /opt/graphite-desk, owned by the person: they can change it, pull updates and
-# push, and the login screen can still read it. The log is /tmp/graphite-install.log, copied
-# into the new system.
+# It runs from the Graphite Desk USB stick (build-iso.sh makes it); Graphite Desk's
+# repository (with its git history) is on the stick in /usr/share/graphite-desk and goes to
+# /opt/graphite-desk, owned by the person: they can change it, pull updates and push, and the
+# login screen can still read it. The Wi-Fi joined on the stick is kept for the new system.
+# The log is /tmp/graphite-install.log, copied into the new system.
 #
-#   GRAPHITE_ANSWERS=file graphite-install   answers instead of questions (for testing):
-#       DISK, FULL_NAME, USER_NAME, PASSWORD, TIME_ZONE, KEYBOARD, GAMING (yes|no)
+#   GRAPHITE_ANSWERS=file graphite-install   answers instead of questions:
+#       DISK, FULL_NAME, USER_NAME, PASSWORD, TIME_ZONE, KEYBOARD, GAMING (yes|no), and
+#       optionally LOCALE (en_GB.UTF-8...), HOST_NAME, HINT, ENCRYPT (yes|no: the disk, with
+#       the password), APPS (Flathub ids), THEME (dark|light|auto), AUTO_UPDATES (yes|no),
+#       CLAUDE_CODE (yes|no), PIN (4 digits, for signing in quickly)
+#   GRAPHITE_PROGRESS=lines                  progress as lines for the graphical front end
+#       ("PROGRESS <percent> <text>", "STAGE <disk|system|account|security|games|apps|finish>",
+#       "ERROR <text>", "DONE") instead of dialog's screens
 set -uo pipefail
 
 source_dir=/usr/share/graphite-desk
@@ -22,10 +30,17 @@ export DIALOGRC=/usr/share/graphite-desk/linux/installer/dialogrc
 title="Graphite Desk"
 backtitle="Graphite Desk installer"
 
+lines=false
+[ "${GRAPHITE_PROGRESS:-}" = lines ] && lines=true
+
 ask() { dialog --backtitle "$backtitle" --title "$title" --stdout "$@"; }
-say() { dialog --backtitle "$backtitle" --title "$title" --msgbox "$1" "${2:-9}" 64; }
+say() { $lines || dialog --backtitle "$backtitle" --title "$title" --msgbox "$1" "${2:-9}" 64; }
 fail() {
-    dialog --backtitle "$backtitle" --title "Something went wrong" --msgbox "$1\n\nThe details are in $log. Restart to try again; nothing on the computer has been changed unless it says so above." 13 70
+    if $lines; then
+        echo "ERROR $1"
+    else
+        dialog --backtitle "$backtitle" --title "Something went wrong" --msgbox "$1\n\nThe details are in $log. Restart to try again; nothing on the computer has been changed unless it says so above." 13 70
+    fi
     exit 1
 }
 
@@ -37,6 +52,7 @@ fi
 # ---------- the computer ----------
 
 if [ ! -d /sys/firmware/efi ]; then
+    $lines && fail "This computer started the installer the old way (BIOS). Restart and choose the USB stick's UEFI entry."
     say "This computer started the installer the old way (BIOS).\n\nRestart, open the boot menu (often F12, F11 or Esc), and choose the USB stick's entry that says UEFI." 11
     exit 1
 fi
@@ -45,16 +61,17 @@ fi
 
 online() { curl -s --max-time 5 -o /dev/null https://archlinux.org; }
 
+# Wi-Fi through NetworkManager, as the new system has it: the network joined here is copied
+# into the new system, so it's online at its first start.
 connect_wifi() {
-    local device networks ssid password
-    device="$(iwctl device list 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | awk '/station/ {print $1; exit}')"
-    if [ -z "$device" ]; then
+    local networks ssid password
+    if ! nmcli -t -f TYPE device 2>/dev/null | grep -qx wifi; then
         say "There's no internet, and no Wi-Fi was found.\n\nPlug in a network cable, then press Enter." 10
         return
     fi
-    iwctl station "$device" scan >/dev/null 2>&1
+    nmcli device wifi rescan >/dev/null 2>&1
     sleep 4
-    mapfile -t networks < <(iwctl station "$device" get-networks 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | tail -n +5 | sed 's/^[ >]*//' | awk 'NF {sub(/ +(psk|open|8021x) +.*$/, ""); print}' | grep -v '^$')
+    mapfile -t networks < <(nmcli -t -f SSID device wifi list 2>/dev/null | sed 's/\\:/:/g' | grep -v '^$' | sort -u)
     if [ ${#networks[@]} -eq 0 ]; then
         say "No Wi-Fi networks were found nearby.\n\nPlug in a network cable, or move closer to the router, then press Enter." 10
         return
@@ -62,12 +79,17 @@ connect_wifi() {
     local items=()
     for ssid in "${networks[@]}"; do items+=("$ssid" ""); done
     ssid="$(ask --menu "Choose your Wi-Fi network:" 18 64 10 "${items[@]}")" || return
-    password="$(ask --insecure --passwordbox "Password for \"$ssid\":" 9 64)" || return
-    iwctl --passphrase "$password" station "$device" connect "$ssid" >>"$log" 2>&1
-    sleep 6
+    password="$(ask --insecure --passwordbox "Password for \"$ssid\" (empty if it has none):" 9 64)" || return
+    if [ -n "$password" ]; then
+        nmcli device wifi connect "$ssid" password "$password" >>"$log" 2>&1
+    else
+        nmcli device wifi connect "$ssid" >>"$log" 2>&1
+    fi
+    sleep 4
 }
 
 until online; do
+    $lines && fail "There's no internet. Connect to a network first."
     connect_wifi
 done
 
@@ -130,8 +152,18 @@ if [ -z "${KEYBOARD:-}" ]; then
         it "Italian" nl "Dutch" se "Swedish" no "Norwegian" dk "Danish" fi "Finnish" pl "Polish" \
         pt "Portuguese" br "Portuguese (Brazil)" ch "Swiss" be "Belgian")" || KEYBOARD=gb
 fi
-locale="en_US.UTF-8"
-case "$KEYBOARD" in gb | ie) locale="en_GB.UTF-8" ;; esac
+locale="${LOCALE:-en_US.UTF-8}"
+[ -z "${LOCALE:-}" ] && case "$KEYBOARD" in gb | ie) locale="en_GB.UTF-8" ;; esac
+grep -q "^#\?$locale UTF-8" /etc/locale.gen 2>/dev/null || locale="en_US.UTF-8"
+
+# The graphical front end's choices (the text screens don't ask these).
+ENCRYPT="${ENCRYPT:-no}"
+APPS="${APPS:-}"
+THEME="${THEME:-dark}"
+AUTO_UPDATES="${AUTO_UPDATES:-no}"
+HINT="${HINT:-}"
+HOST_NAME="${HOST_NAME:-graphite-pc}"
+[[ "$HOST_NAME" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || HOST_NAME=graphite-pc
 
 if [ -z "${GAMING:-}" ]; then
     if ask --yesno "Set it up for games too?\n\nSteam, Minecraft (Prism Launcher, tuned for modpacks), GameMode and an FPS counter. You can also do this later from Settings." 11 64; then
@@ -154,32 +186,52 @@ cpu_microcode() {
     if grep -q GenuineIntel /proc/cpuinfo; then echo intel-ucode; elif grep -q AuthenticAMD /proc/cpuinfo; then echo amd-ucode; fi
 }
 
-# The steps, each moving the bar; the output goes to the log.
-install_steps() {
-    step() { printf 'XXX\n%s\n%s\nXXX\n' "$1" "$2"; }
+# The steps, each moving the bar; the output goes to the log. For the graphical front end each
+# also says which stage it is in (STAGE), and the bar's place (PROGRESS).
+step() {
+    if $lines; then echo "PROGRESS $1 $2"; else printf 'XXX\n%s\n%s\nXXX\n' "$1" "$2"; fi
+}
+stage() { $lines && echo "STAGE $1"; return 0; }
 
+install_steps() {
+    stage disk
     step 2 "Preparing the disk..."
     umount -R "$target" >>"$log" 2>&1
+    cryptsetup close cryptroot >>"$log" 2>&1
     wipefs -af "$DISK" >>"$log" 2>&1
     sgdisk --zap-all "$DISK" >>"$log" 2>&1
     sgdisk -n 1:0:+1G -t 1:ef00 -c 1:boot -n 2:0:0 -t 2:8300 -c 2:graphite "$DISK" >>"$log" 2>&1 || { echo "disk" > /tmp/graphite-failed; return; }
     partprobe "$DISK" >>"$log" 2>&1; sleep 2
     mkfs.fat -F 32 -n BOOT "$(part 1)" >>"$log" 2>&1
-    mkfs.ext4 -F -L graphite "$(part 2)" >>"$log" 2>&1 || { echo "format" > /tmp/graphite-failed; return; }
-    mount "$(part 2)" "$target" && mount --mkdir "$(part 1)" "$target/boot" || { echo "mount" > /tmp/graphite-failed; return; }
+    # Encrypted: the whole system behind the person's password, asked when the computer starts.
+    local root_device
+    root_device="$(part 2)"
+    if [ "$ENCRYPT" = yes ]; then
+        step 4 "Encrypting the disk..."
+        printf '%s' "$PASSWORD" | cryptsetup luksFormat --type luks2 --batch-mode --key-file=- "$(part 2)" >>"$log" 2>&1 || { echo "encrypt" > /tmp/graphite-failed; return; }
+        printf '%s' "$PASSWORD" | cryptsetup open --key-file=- "$(part 2)" cryptroot >>"$log" 2>&1 || { echo "encrypt" > /tmp/graphite-failed; return; }
+        root_device=/dev/mapper/cryptroot
+    fi
+    mkfs.ext4 -F -L graphite "$root_device" >>"$log" 2>&1 || { echo "format" > /tmp/graphite-failed; return; }
+    mount "$root_device" "$target" && mount --mkdir "$(part 1)" "$target/boot" || { echo "mount" > /tmp/graphite-failed; return; }
 
+    stage system
     step 6 "Turning on 32-bit packages and the fastest mirrors..."
     sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
     pacman -Sy --noconfirm >>"$log" 2>&1
 
     local packages=(
         base linux linux-firmware linux-headers sudo nano man-db $(cpu_microcode)
-        networkmanager bluez bluez-utils pipewire wireplumber pipewire-pulse pipewire-alsa
+        networkmanager network-manager-applet networkmanager-openvpn bluez bluez-utils
+        pipewire wireplumber pipewire-pulse pipewire-alsa
         hyprland quickshell qt6-wayland qt6-svg xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpolkitagent
+        hypridle hyprsunset brightnessctl
         greetd papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono noto-fonts noto-fonts-emoji dconf
         kitty nautilus firefox libnotify grim
+        loupe celluloid papers
         distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
-        power-profiles-daemon zram-generator pciutils git
+        power-profiles-daemon zram-generator pciutils git pacman-contrib ufw
+        cups cups-pk-helper system-config-printer avahi nss-mdns
     )
     # Installed into a virtual machine: its tools (shared clipboard, resizing with the window).
     local guest_services=""
@@ -194,7 +246,6 @@ install_steps() {
 
     step 10 "Downloading and installing Arch Linux and Graphite Desk (the long part)..."
     # pacstrap's own progress, as the bar between 10 and 75.
-    local total=${#packages[@]}
     pacstrap -K "$target" "${packages[@]}" 2>&1 | tee -a "$log" | grep --line-buffered -E '^\(\s*[0-9]+/[0-9]+\) installing' | \
         while read -r line; do
             local done_count all
@@ -204,18 +255,36 @@ install_steps() {
         done
     [ -x "$target/usr/bin/Hyprland" ] || { echo "packages" > /tmp/graphite-failed; return; }
 
-    step 76 "Setting up the system..."
+    stage account
+    step 76 "Setting up the system and your account..."
     genfstab -U "$target" >> "$target/etc/fstab"
     sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' "$target/etc/pacman.conf"
     mkdir -p "$target/opt/graphite-desk"
     cp -a "$source_dir/." "$target/opt/graphite-desk/"
 
-    local root_uuid
-    root_uuid="$(blkid -s PARTUUID -o value "$(part 2)")"
     local microcode
     microcode="$(cpu_microcode)"
-    local kernel_options="root=PARTUUID=$root_uuid rw quiet splash loglevel=3"
+    local kernel_options
+    if [ "$ENCRYPT" = yes ]; then
+        kernel_options="rd.luks.name=$(blkid -s UUID -o value "$(part 2)")=cryptroot root=/dev/mapper/cryptroot rw quiet splash loglevel=3"
+    else
+        kernel_options="root=PARTUUID=$(blkid -s PARTUUID -o value "$(part 2)") rw quiet splash loglevel=3"
+    fi
     $nvidia && kernel_options="$kernel_options nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
+
+    # The Wi-Fi joined on the stick, for the new system (root's own, readable by root only).
+    local connection
+    for connection in /etc/NetworkManager/system-connections/*.nmconnection; do
+        [ -f "$connection" ] || continue
+        install -d -m 700 "$target/etc/NetworkManager/system-connections"
+        sed -e '/^interface-name=/d' -e '/^permissions=/d' -e '/^mac-address=/d' "$connection" > "$target/etc/NetworkManager/system-connections/$(basename "$connection")"
+        chmod 600 "$target/etc/NetworkManager/system-connections/$(basename "$connection")"
+    done
+
+    local dark=true theme_mode="" auto_updates=false auto_word=off
+    [ "$THEME" = light ] && dark=false
+    [ "$THEME" = auto ] && theme_mode=auto
+    [ "$AUTO_UPDATES" = yes ] && auto_updates=true && auto_word=on
 
     cat > "$target/root/configure.sh" <<CONFIGURE
 set -e
@@ -225,11 +294,17 @@ sed -i "s/^#\\($locale UTF-8\\)/\\1/" /etc/locale.gen
 locale-gen
 echo "LANG=$locale" > /etc/locale.conf
 echo "KEYMAP=${console[$KEYBOARD]:-us}" > /etc/vconsole.conf
-echo "graphite-pc" > /etc/hostname
+echo "$HOST_NAME" > /etc/hostname
 
 useradd -m -G wheel,video,input -c "$FULL_NAME" -s /bin/bash "$USER_NAME"
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
+
+# An encrypted disk: unlocked at start-up (the initramfs asks for the password).
+if [ "$ENCRYPT" = yes ]; then
+    sed -i 's/^HOOKS=.*/HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)/' /etc/mkinitcpio.conf
+    mkinitcpio -P
+fi
 
 # Start-up: systemd-boot, straight into Graphite Desk.
 bootctl install --esp-path=/boot
@@ -254,7 +329,10 @@ fi
 # Memory: compressed swap in RAM.
 printf '[zram0]\nzram-size = min(ram / 2, 8192)\n' > /etc/systemd/zram-generator.conf
 
-systemctl enable NetworkManager.service bluetooth.service power-profiles-daemon.service fstrim.timer systemd-timesyncd.service $guest_services
+# Printers on the network are found by name.
+sed -i 's/^hosts: mymachines /hosts: mymachines mdns_minimal [NOTFOUND=return] /' /etc/nsswitch.conf
+
+systemctl enable NetworkManager.service bluetooth.service power-profiles-daemon.service fstrim.timer systemd-timesyncd.service cups.socket avahi-daemon.service $guest_services
 
 # The login screen, and the person's desktop from the copy in /opt.
 bash /opt/graphite-desk/linux/greetd/setup.sh /opt/graphite-desk/linux "$KEYBOARD"
@@ -263,41 +341,88 @@ mkdir -p "\$home/.config/quickshell" "\$home/.config/hypr" "\$home/.config/graph
 ln -sfn /opt/graphite-desk/linux/quickshell "\$home/.config/quickshell/graphite"
 ln -sfn /opt/graphite-desk/linux/hypr/hyprland.lua "\$home/.config/hypr/hyprland.lua"
 $($nvidia && echo 'echo nvidia > "$home/.config/graphite/gpu"')
+# What was chosen in the installer, for the desktop's first start.
+echo '{"dark": $dark, "themeMode": "$theme_mode", "autoUpdates": $auto_updates}' > "\$home/.config/graphite/first-run.json"
+printf $auto_word > "\$home/.config/graphite/auto-updates"
 chown -R "$USER_NAME:$USER_NAME" "\$home" /opt/graphite-desk
 CONFIGURE
     if ! arch-chroot "$target" bash /root/configure.sh >>"$log" 2>&1; then echo "configure" > /tmp/graphite-failed; return; fi
-    # The password, apart from the script (never written to the new system's files).
+    # The password and its hint, apart from the script (never written to the new system's files).
     printf '%s:%s\n' "$USER_NAME" "$PASSWORD" | arch-chroot "$target" chpasswd >>"$log" 2>&1 || { echo "password" > /tmp/graphite-failed; return; }
+    if [ -n "$HINT" ]; then
+        install -d -m 755 "$target/var/lib/graphite" "$target/var/lib/graphite/hints"
+        printf '%s\n' "${HINT:0:80}" > "$target/var/lib/graphite/hints/$USER_NAME"
+        chmod 644 "$target/var/lib/graphite/hints/$USER_NAME"
+    fi
     rm -f "$target/root/configure.sh"
 
+    stage security
+    step 84 "Securing this PC (firewall, updates)..."
+    arch-chroot "$target" bash /opt/graphite-desk/linux/system/install.sh >>"$log" 2>&1 || echo "The security setup didn't finish." >>"$log"
+    # The sign-in PIN, when one was chosen (kept only as a salted hash).
+    if [[ "${PIN:-}" =~ ^[0-9]{4,8}$ ]]; then
+        echo "$PIN" | arch-chroot "$target" /usr/local/lib/graphite/graphite-admin pin "$USER_NAME" >>"$log" 2>&1 || echo "The PIN wasn't set." >>"$log"
+    fi
+
     if [ "$GAMING" = yes ]; then
+        stage games
         step 85 "Setting up for games (Steam, Minecraft)..."
         arch-chroot "$target" env GRAPHITE_USER="$USER_NAME" bash /opt/graphite-desk/linux/gaming.sh --from-installer >>"$log" 2>&1 || echo "gaming" > /tmp/graphite-gaming-failed
     fi
 
-    step 97 "Finishing..."
+    # The apps picked in the installer, from Flathub, for everyone on the computer.
+    local apps=() app count=0
+    for app in $APPS; do [[ "$app" =~ ^[A-Za-z0-9._-]+$ ]] && apps+=("$app"); done
+    if [ ${#apps[@]} -gt 0 ]; then
+        stage apps
+        arch-chroot "$target" flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >>"$log" 2>&1
+        for app in "${apps[@]}"; do
+            count=$(( count + 1 ))
+            step $(( 88 + 8 * (count - 1) / ${#apps[@]} )) "Installing your apps ($count of ${#apps[@]})..."
+            arch-chroot "$target" flatpak install --system -y --noninteractive flathub "$app" >>"$log" 2>&1 || echo "$app" >> /tmp/graphite-apps-failed
+        done
+    fi
+
+    # Claude Code: Anthropic's own installer, for the person (it lands in ~/.local/bin).
+    if [ "${CLAUDE_CODE:-no}" = yes ]; then
+        stage apps
+        step 96 "Installing Claude Code..."
+        arch-chroot "$target" runuser -l "$USER_NAME" -c 'curl -fsSL https://claude.ai/install.sh | bash' >>"$log" 2>&1 || echo "claude-code" >> /tmp/graphite-apps-failed
+    fi
+
+    stage finish
+    step 97 "Final touches..."
     cp "$log" "$target/var/log/graphite-install.log"
     sync
     step 100 "Done."
     sleep 1
 }
 
-rm -f /tmp/graphite-failed /tmp/graphite-gaming-failed
+rm -f /tmp/graphite-failed /tmp/graphite-gaming-failed /tmp/graphite-apps-failed
 : > "$log"
-install_steps | dialog --backtitle "$backtitle" --title "Installing Graphite Desk" --gauge "Starting..." 10 72 0
+if $lines; then
+    install_steps
+else
+    install_steps | dialog --backtitle "$backtitle" --title "Installing Graphite Desk" --gauge "Starting..." 10 72 0
+fi
 
 if [ -f /tmp/graphite-failed ]; then
     case "$(cat /tmp/graphite-failed)" in
         packages) fail "Downloading the packages didn't finish. Is the internet still on?" ;;
-        disk | format | mount) fail "The disk couldn't be prepared. The disk has been erased; nothing else was installed." ;;
+        disk | format | mount | encrypt) fail "The disk couldn't be prepared. The disk has been erased; nothing else was installed." ;;
         *) fail "Setting up the new system didn't finish." ;;
     esac
 fi
 gaming_note=""
-[ -f /tmp/graphite-gaming-failed ] && gaming_note="\n\nThe games setup didn't finish; run it again from Settings, Set up gaming."
+[ -f /tmp/graphite-gaming-failed ] && gaming_note="\n\nThe games setup didn't finish; run it again from the Control Panel (Apps, Set up gaming)."
 umount -R "$target" 2>/dev/null
+cryptsetup close cryptroot 2>/dev/null
 
-if [ -z "${GRAPHITE_ANSWERS:-}" ]; then
+if $lines; then
+    [ -f /tmp/graphite-gaming-failed ] && echo "NOTE games"
+    [ -f /tmp/graphite-apps-failed ] && echo "NOTE apps $(tr '\n' ' ' < /tmp/graphite-apps-failed)"
+    echo "DONE"
+elif [ -z "${GRAPHITE_ANSWERS:-}" ]; then
     say "Graphite Desk is installed.$gaming_note\n\nPress Enter to restart. Once the screen goes dark, take out the USB stick; the computer starts your new desktop. Sign in with the password you chose." 13
     # Everything is written and unmounted: no need to wait for the USB stick's services to stop
     # (which hangs when the stick is pulled out early).

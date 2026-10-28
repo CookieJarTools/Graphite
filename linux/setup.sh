@@ -20,14 +20,16 @@ packages=(
     # Look
     papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono dconf
     # Sound, network, Bluetooth (the quick settings panel)
-    pipewire wireplumber pipewire-pulse networkmanager bluez bluez-utils
+    pipewire wireplumber pipewire-pulse networkmanager network-manager-applet bluez bluez-utils
+    # The Control Panel's helpers: idle, night light, brightness, update checks, firewall, printers
+    hypridle hyprsunset brightnessctl pacman-contrib ufw cups cups-pk-helper system-config-printer avahi nss-mdns
     # Apps to test with
-    kitty nautilus firefox libnotify
+    kitty nautilus firefox libnotify loupe celluloid papers
     # Installing apps by opening the download (apps/install-app.sh): Ubuntu apps in a
     # container, AppImages, Flatpak and the app store
     distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
 )
-services=(NetworkManager.service bluetooth.service)
+services=(NetworkManager.service bluetooth.service cups.socket avahi-daemon.service)
 
 # The VM software's guest tools: shared folders, clipboard, resizing with the window.
 case "$(systemd-detect-virt || true)" in
@@ -46,6 +48,9 @@ sudo pacman -Syu --needed --noconfirm "${packages[@]}"
 
 echo "Starting services..."
 sudo systemctl enable --now "${services[@]}"
+
+echo "Putting Graphite's system parts in place (updates without a terminal, the firewall)..."
+sudo bash "$here/system/install.sh"
 
 # VMware's shared folders (this checkout among them) mounted at every start, not just today.
 if [ "$(systemd-detect-virt || true)" = vmware ] && ! grep -q "vmhgfs-fuse" /etc/fstab; then

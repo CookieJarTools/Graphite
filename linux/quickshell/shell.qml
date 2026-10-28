@@ -10,8 +10,18 @@ import qs.services
 ShellRoot {
     id: root
 
-    // The colours follow the Dark mode setting, the shell's and the apps' (linux/gtk/apply.sh).
-    readonly property bool dark: !ShellSettings.values || ShellSettings.values.dark !== false
+    // The colours follow the Dark mode setting, the shell's and the apps' (linux/gtk/apply.sh):
+    // dark, light, or with the time of day (light from 7 in the morning to 7 in the evening).
+    property int hour: new Date().getHours()
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        onTriggered: root.hour = new Date().getHours()
+    }
+    readonly property bool dark: !ShellSettings.values ? true
+        : ShellSettings.values.themeMode === "auto" ? (root.hour < 7 || root.hour >= 19)
+        : ShellSettings.values.dark !== false
     Binding {
         target: Theme
         property: "dark"
@@ -21,6 +31,11 @@ ShellRoot {
     Component.onCompleted: {
         Desktop.applyLook(dark);
         Desktop.register(); // downloaded apps open in the installer
+        // Services that work in the background from the start (singletons only exist once
+        // used): idle and sleep (hypridle), night light and the screens, update checks.
+        Power.refresh();
+        Displays.refresh();
+        Updates.lastChecked;
     }
 
     Variants {
@@ -61,7 +76,8 @@ ShellRoot {
 
     Toasts {}
 
-    SettingsWindow {}
+    ControlPanel {}
+    TaskManager {}
 
     AppsWindow {}
 

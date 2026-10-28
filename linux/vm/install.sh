@@ -49,9 +49,11 @@ packages=(
     # Look
     papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono dconf
     # Sound, network, Bluetooth
-    pipewire wireplumber pipewire-pulse networkmanager bluez bluez-utils
+    pipewire wireplumber pipewire-pulse networkmanager network-manager-applet bluez bluez-utils
+    # The Control Panel's helpers: idle, night light, brightness, update checks, firewall, printers
+    hypridle hyprsunset brightnessctl pacman-contrib ufw cups cups-pk-helper system-config-printer avahi nss-mdns
     # Apps to test with
-    kitty nautilus firefox libnotify
+    kitty nautilus firefox libnotify loupe celluloid papers
     # The login screen (Graphite's greeter, run by greetd)
     greetd
     # Installing apps by opening the download: Ubuntu apps in a container, AppImages, Flatpak
