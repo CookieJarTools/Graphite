@@ -1,7 +1,7 @@
+pragma Singleton
 // The shell is the notification server (org.freedesktop.Notifications): every app's
 // notifications come here, show as pop-ups in the top-right corner (Toasts.qml) and stay
 // listed in the calendar panel until dismissed.
-pragma Singleton
 
 import QtQuick
 import Quickshell
@@ -19,7 +19,8 @@ Singleton {
     property var popups: []
 
     // A dot on the clock while something arrived since the calendar was last opened.
-    property real seenUntil: Date.now()
+    // Kept in settings, so a restart of the shell does not bring the dot back.
+    readonly property real seenUntil: ShellSettings.values ? ShellSettings.values.notificationsSeen || 0 : Date.now()
     readonly property bool unseen: history.some(entry => entry.time > seenUntil)
 
     NotificationServer {
@@ -67,6 +68,6 @@ Singleton {
     }
 
     function markSeen() {
-        seenUntil = Date.now();
+        ShellSettings.set("notificationsSeen", Date.now());
     }
 }

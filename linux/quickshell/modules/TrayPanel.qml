@@ -15,7 +15,8 @@ PanelFrame {
     name: "tray"
     readonly property int count: SystemTray.items.values.length
     readonly property int columns: Math.max(1, Math.min(5, count))
-    panelWidth: columns * 38 + Theme.space4 * 2
+    // Wide enough for the icons, or for "No tray icons" when there are none.
+    panelWidth: (count === 0 ? emptyText.implicitWidth : columns * 38) + Theme.space4 * 2
     property string hovered: ""
 
     QsMenuAnchor {
@@ -83,6 +84,7 @@ PanelFrame {
     }
 
     UiText {
+        id: emptyText
         visible: root.count === 0
         text: "No tray icons"
         color: Theme.inkMuted

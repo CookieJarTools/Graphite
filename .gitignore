@@ -22,3 +22,5 @@ linux/vm/*
 !linux/vm/*.sh
 !linux/vm/*.md
 !linux/vm/user-data
+# a scratch command for run.sh
+linux/vm/cmd*.sh

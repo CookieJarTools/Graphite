@@ -79,7 +79,7 @@ function remember(config, entryId, window) {
   if (same) return false;
   entry.title = window.title;
   entry.zoomed = Boolean(window.zoomed);
-  entry.bounds = { ...window.bounds };
+  entry.bounds = Object.assign({}, window.bounds); // not spread: the Linux shell's QML JavaScript has none
   return true;
 }
 
@@ -105,7 +105,7 @@ function tagWindow(config, state, window, tagId) {
     existing.tag = tagId;
     return;
   }
-  const entry = { id: newId('w'), tag: tagId, key: window.key, title: window.title, zoomed: Boolean(window.zoomed), bounds: window.bounds ? { ...window.bounds } : null };
+  const entry = { id: newId('w'), tag: tagId, key: window.key, title: window.title, zoomed: Boolean(window.zoomed), bounds: window.bounds ? Object.assign({}, window.bounds) : null };
   config.tagged.push(entry);
   state.live.set(window.hwnd, entry.id);
   state.seen.add(window.hwnd);

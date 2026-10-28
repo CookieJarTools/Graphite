@@ -31,6 +31,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "graphite-toasts"
 
+    property var shown: ({})
+
     ColumnLayout {
         id: stack
 
@@ -40,7 +42,16 @@ PanelWindow {
         Repeater {
             model: Notifs.popups
 
-            Toast { Layout.fillWidth: true }
+            Toast {
+                Layout.fillWidth: true
+                // Only a notification not shown before slides in (the list is rebuilt whole).
+                fresh: {
+                    const id = modelData.notification ? modelData.notification.id : -1;
+                    const seen = root.shown[id] === true;
+                    root.shown[id] = true;
+                    return !seen;
+                }
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ function emptyConfig() {
 
 const appRef = (key) => 'app:' + key;
 const folderRef = (id) => 'folder:' + id;
+const refOf = (item) => (item.type === 'folder' ? folderRef(item.id) : appRef(item.key));
 
 /**
  * Builds what the bar shows.
@@ -103,7 +104,7 @@ function buildModel(config, context) {
   // several windows becomes one pill per window.
   const separate = new Set(config.separate || []);
   return items.flatMap(splitByTag).flatMap((item) => (item.type === 'app' && item.windows.length > 1 && (!config.combine || separate.has(item.key))
-    ? item.windows.map((window) => ({ ...item, ref: item.ref + '#' + window.hwnd, windows: [window], focused: window.focused, attention: window.attention }))
+    ? item.windows.map((window) => Object.assign({}, item, { ref: item.ref + '#' + window.hwnd, windows: [window], focused: window.focused, attention: window.attention }))
     : [item]));
 }
 
@@ -126,10 +127,11 @@ function splitByTag(item) {
     focused: windows.some((window) => window.focused),
     attention: windows.some((window) => window.attention),
   });
-  const pills = untagged.length ? [{ ...item, ...withWindows(untagged) }] : [];
+  // Object.assign rather than object spread: the Linux shell's QML JavaScript has no spread.
+  const pills = untagged.length ? [Object.assign({}, item, withWindows(untagged))] : [];
   for (const [tagId, windows] of groups) {
     const carriesPin = item.pinned && pills.length === 0;
-    pills.push({ ...item, ...withWindows(windows), ref: item.ref + '#tag:' + tagId, tag: windows[0].tag, pinned: carriesPin });
+    pills.push(Object.assign({}, item, withWindows(windows), { ref: item.ref + '#tag:' + tagId, tag: windows[0].tag, pinned: carriesPin }));
   }
   return pills;
 }
@@ -179,8 +181,6 @@ function reorder(config, refs, visible) {
   const rest = config.items.filter((item) => !ordered.includes(item) && !ordered.some((placed) => refOf(placed) === refOf(item)));
   config.items = [...ordered, ...rest];
 }
-
-const refOf = (item) => (item.type === 'folder' ? folderRef(item.id) : appRef(item.key));
 
 /**
  * Drops `sourceRef` onto `targetRef`: two apps make a folder at the target's place; an app

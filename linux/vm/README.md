@@ -41,9 +41,19 @@ password from `credentials.txt` in a file of its own):
 | `reload.sh` | Reloads Hyprland's config and reports errors |
 
 In VirtualBox, Hyprland draws with the virtual GPU, but apps can't hand it GPU buffers, so
-`hyprland.lua` gives apps Mesa's software GL there (`LIBGL_ALWAYS_SOFTWARE`). With Windows'
-hypervisor on (WSL, Virtual Machine Platform), VirtualBox runs on top of it and is a little
-slower.
+`hyprland.lua` gives apps Mesa's software GL there (`LIBGL_ALWAYS_SOFTWARE`) and turns off
+blur, shadows and window animations, which cost the most drawn by the CPU.
+
+**If the VM is slow:** with Windows' hypervisor on (WSL 2, Virtual Machine Platform, Memory
+integrity), VirtualBox runs on top of it, much slower. Turning it off makes the VM far faster,
+but WSL 2 and Docker stop working until it is back on:
+
+1. Windows Security → Device security → Core isolation → Memory integrity: off.
+2. In an administrator terminal: `bcdedit /set hypervisorlaunchtype off`, then restart.
+   (`bcdedit /set hypervisorlaunchtype auto` and a restart bring it back.)
+
+More cores help too, with the VM switched off:
+`VBoxManage modifyvm "Graphite Desk (Arch)" --cpus 6`.
 
 Everything here except the scripts and this file stays out of git: the ISOs, the VM and its
 disk, `credentials.txt`.

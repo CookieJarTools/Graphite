@@ -18,11 +18,14 @@ packages=(
     # The desktop
     hyprland quickshell qt6-wayland qt6-svg xdg-desktop-portal-hyprland hyprpolkitagent hyprlock
     # Look
-    papirus-icon-theme adwaita-icon-theme inter-font ttf-jetbrains-mono
+    papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono dconf
     # Sound, network, Bluetooth (the quick settings panel)
     pipewire wireplumber pipewire-pulse networkmanager bluez bluez-utils
     # Apps to test with
     kitty nautilus firefox libnotify
+    # Installing apps by opening the download (apps/install-app.sh): Ubuntu apps in a
+    # container, AppImages, Flatpak and the app store
+    distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
 )
 services=(NetworkManager.service bluetooth.service)
 

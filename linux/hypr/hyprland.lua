@@ -18,19 +18,45 @@ end)
 
 -- ---------- environment ----------
 
+-- The pointer: Capitaine (light), cleaner resize shapes than Adwaita's (linux/gtk/apply.sh
+-- sets the same for apps).
 hl.env("XCURSOR_SIZE", "24")
-hl.env("XCURSOR_THEME", "Adwaita")
+hl.env("XCURSOR_THEME", "capitaine-cursors-light")
+hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORM", "wayland")
 
 -- In VirtualBox, Hyprland itself draws on the virtual GPU, but the GPU buffers apps hand it
 -- are refused ("invalid arguments for wl_surface.attach") and the app is disconnected, so
 -- apps (the shell among them) draw with Mesa's software GL instead.
+-- Text, the MacType way: FreeType's stem darkening gives smoother, fuller strokes (with
+-- fonts/fonts.conf). Settings' "Smoother text" writes "standard" to ~/.config/graphite/text
+-- to turn it off; apps opened afterwards follow.
+local text = io.open((os.getenv("HOME") or "") .. "/.config/graphite/text")
+local textMode = text and text:read("l") or "smooth"
+if text then text:close() end
+if textMode ~= "standard" then
+    hl.env("FREETYPE_PROPERTIES", "cff:no-stem-darkening=0 autofitter:no-stem-darkening=0 type1:no-stem-darkening=0 t1cid:no-stem-darkening=0")
+end
+
+-- NVIDIA on Wayland (linux/gaming.sh writes "nvidia" here when it finds one).
+local gpu = io.open((os.getenv("HOME") or "") .. "/.config/graphite/gpu")
+if gpu then
+    if gpu:read("l") == "nvidia" then
+        hl.env("LIBVA_DRIVER_NAME", "nvidia")
+        hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+        hl.env("NVD_BACKEND", "direct")
+    end
+    gpu:close()
+end
+
+local inVirtualBox = false
 local vendor = io.open("/sys/class/dmi/id/sys_vendor")
 if vendor then
-    if vendor:read("l") == "innotek GmbH" then
-        hl.env("LIBGL_ALWAYS_SOFTWARE", "1")
-    end
+    inVirtualBox = vendor:read("l") == "innotek GmbH"
     vendor:close()
+end
+if inVirtualBox then
+    hl.env("LIBGL_ALWAYS_SOFTWARE", "1")
 end
 
 -- ---------- screens ----------
@@ -54,6 +80,7 @@ hl.config({
         border_size = 1,
         resize_on_border = true,
         layout = "dwindle",
+        allow_tearing = true, -- only for windows with the "immediate" rule: games (below)
         col = {
             active_border = accent,
             inactive_border = edge,
@@ -86,8 +113,14 @@ hl.config({
         follow_mouse = 1,
     },
 
-    -- Window tabs are Hyprland's groups, drawn as a strip of titles over the window.
+    -- Window tabs are Hyprland's groups, drawn as a strip of titles over the window. As on
+    -- Windows: drag a window by its title onto another to make them tabs, drag a tab off the
+    -- strip to pull it out; a middle click on a tab closes it.
     group = {
+        drag_into_group = 1,
+        merge_groups_on_drag = true,
+        merge_floated_into_tiled_on_groupbar = true,
+        insert_after_current = true,
         col = {
             border_active = accent,
             border_inactive = edge,
@@ -99,6 +132,7 @@ hl.config({
             font_size = 11,
             font_weight_active = "semibold",
             render_titles = true,
+            middle_click_close = true,
             gradients = true,
             gradient_rounding = 6, -- radius-sm
             rounding = 6,
@@ -115,6 +149,7 @@ hl.config({
     },
 
     misc = {
+        vrr = 2, -- variable refresh rate for fullscreen windows (games), where the screen has it
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         background_color = "0x141516", -- backdrop, should the shell not be running
@@ -125,6 +160,36 @@ hl.config({
         no_hardware_cursors = 1,
     },
 })
+
+-- Windows behave as on Windows: every one floats, opening centred at the size it asks for,
+-- moved by its title bar (or Super + drag) and resized from its edges. Super + arrows snap it
+-- to a half of the screen or maximise it (Shortcuts.qml, "snap"). The shell's "Tile windows"
+-- setting writes "tiling" to ~/.config/graphite/windows and reloads this file; then new
+-- windows tile instead.
+local function windowMode()
+    local file = io.open((os.getenv("HOME") or "") .. "/.config/graphite/windows")
+    if not file then return "floating" end
+    local mode = file:read("l")
+    file:close()
+    return mode == "tiling" and "tiling" or "floating"
+end
+
+if windowMode() == "floating" then
+    hl.window_rule({ match = { class = ".*" }, float = true, center = true })
+end
+
+-- Games (Steam and Proton, Minecraft): frames go out as soon as they are drawn (tearing
+-- allowed), for the least input lag.
+hl.window_rule({ match = { class = "^(steam_app_.*|Minecraft.*|minecraft.*|gamescope)$" }, immediate = true })
+
+-- In VirtualBox everything is drawn by the CPU (see LIBGL_ALWAYS_SOFTWARE above), so the
+-- costly effects go: blur, shadows and Hyprland's own window animations. Real hardware keeps them.
+if inVirtualBox then
+    hl.config({
+        decoration = { blur = { enabled = false }, shadow = { enabled = false } },
+        animations = { enabled = false },
+    })
+end
 
 -- The shell's surfaces: blur behind the see-through ones, nothing behind fully clear pixels.
 hl.layer_rule({ match = { namespace = "graphite-(panel|menu|toasts|launcher|switcher)" }, blur = true, ignore_alpha = 0.5 })
@@ -139,6 +204,27 @@ hl.bind("SUPER_L", hl.dsp.global("quickshell:launcher"), { release = true })
 hl.bind("ALT + Tab", hl.dsp.global("quickshell:switcher-next"))
 hl.bind("ALT + SHIFT + Tab", hl.dsp.global("quickshell:switcher-previous"))
 hl.bind("ALT_L", hl.dsp.global("quickshell:switcher-commit"), { release = true })
+hl.bind("ALT + space", hl.dsp.global("quickshell:palette"))
+hl.bind("SUPER + L", hl.dsp.exec_cmd("hyprlock"))
+
+-- Window zones (Shift + drag a window, Ctrl to span): the shell hears the left button go down
+-- and up (a bind that does not take the click from apps), and Shift and Ctrl from the keyboard
+-- event below. Not binds for those: a bind going off in the middle of a drag ends the drag.
+local passOn = { non_consuming = true, ignore_mods = true }
+local passOnRelease = { non_consuming = true, ignore_mods = true, release = true }
+hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-down"), passOn)
+hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-up"), passOnRelease)
+
+local modifierKeys = { [50] = "shift", [62] = "shift", [37] = "ctrl", [105] = "ctrl" } -- XKB codes
+local modifierState = { shift = false, ctrl = false }
+hl.on("input.keyboard.key", function(keycode, _, state)
+    local name = modifierKeys[keycode]
+    if not name then return end
+    local down = state == 1
+    if modifierState[name] == down then return end -- held keys repeat
+    modifierState[name] = down
+    hl.exec_cmd("qs -c graphite ipc call zones " .. name .. " " .. tostring(down))
+end)
 
 -- Apps
 hl.bind("SUPER + Return", hl.dsp.exec_cmd(terminal))
@@ -149,10 +235,11 @@ hl.bind("SUPER + Q", hl.dsp.window.close())
 hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind("SUPER + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind("SUPER + V", hl.dsp.window.float())
-hl.bind("SUPER + left", hl.dsp.focus({ direction = "l" }))
-hl.bind("SUPER + right", hl.dsp.focus({ direction = "r" }))
-hl.bind("SUPER + up", hl.dsp.focus({ direction = "u" }))
-hl.bind("SUPER + down", hl.dsp.focus({ direction = "d" }))
+-- Super + arrows snap as on Windows: halves, maximise, restore or minimise (the shell does it).
+hl.bind("SUPER + left", hl.dsp.global("quickshell:snap-left"))
+hl.bind("SUPER + right", hl.dsp.global("quickshell:snap-right"))
+hl.bind("SUPER + up", hl.dsp.global("quickshell:snap-up"))
+hl.bind("SUPER + down", hl.dsp.global("quickshell:snap-down"))
 hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({ direction = "l", group_aware = true }))
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ direction = "r", group_aware = true }))
 hl.bind("SUPER + SHIFT + up", hl.dsp.window.move({ direction = "u", group_aware = true }))

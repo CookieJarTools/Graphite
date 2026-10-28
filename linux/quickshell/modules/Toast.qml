@@ -13,6 +13,7 @@ Rectangle {
 
     required property var modelData
     readonly property var notification: modelData.notification
+    property bool fresh: false
 
     implicitHeight: lines.implicitHeight + Theme.space3 * 2
     radius: Theme.radiusMd
@@ -20,10 +21,41 @@ Rectangle {
     border.color: Theme.glassEdge
     border.width: 1
 
+    // In from the right; out to the right, then gone (hidden, or dismissed for good).
+    transform: Translate { id: slide }
+    Component.onCompleted: if (fresh) arrive.start()
+
+    ParallelAnimation {
+        id: arrive
+        NumberAnimation { target: root; property: "opacity"; from: 0; to: 1; duration: 220; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeEnter }
+        NumberAnimation { target: slide; property: "x"; from: 32; to: 0; duration: 220; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeEnter }
+    }
+
+    property bool dismissing: false
+    SequentialAnimation {
+        id: leave
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "opacity"; to: 0; duration: 140; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeExit }
+            NumberAnimation { target: slide; property: "x"; to: 32; duration: 140; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeExit }
+        }
+        ScriptAction {
+            script: {
+                if (!root.notification) return;
+                if (root.dismissing) Notifs.dismiss(root.notification);
+                else Notifs.hidePopup(root.notification);
+            }
+        }
+    }
+
+    function goAway(dismiss) {
+        dismissing = dismiss;
+        leave.start();
+    }
+
     Timer {
         interval: Notifs.popupMilliseconds
         running: !mouse.containsMouse && root.notification !== null && root.notification.urgency !== NotificationUrgency.Critical
-        onTriggered: { if (root.notification) Notifs.hidePopup(root.notification); }
+        onTriggered: root.goAway(false)
     }
 
     MouseArea {
@@ -62,7 +94,7 @@ Rectangle {
                 implicitWidth: 20
                 implicitHeight: 20
                 glyph: "window-close-symbolic"
-                onClicked: { if (root.notification) Notifs.dismiss(root.notification); }
+                onClicked: root.goAway(true)
             }
         }
 

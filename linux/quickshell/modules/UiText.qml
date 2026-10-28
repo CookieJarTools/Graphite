@@ -3,6 +3,8 @@ import QtQuick
 import qs.config
 
 Text {
+    // Hinted, as fontconfig sets it (fonts/fonts.conf), rather than Qt's softer own rendering.
+    renderType: Text.NativeRendering
     color: Theme.ink
     font.family: Theme.fontSans
     font.pixelSize: Theme.bodySize

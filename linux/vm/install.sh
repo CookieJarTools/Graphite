@@ -47,13 +47,15 @@ packages=(
     # The desktop
     hyprland quickshell qt6-wayland qt6-svg xdg-desktop-portal-hyprland hyprpolkitagent hyprlock mesa
     # Look
-    papirus-icon-theme adwaita-icon-theme inter-font ttf-jetbrains-mono
+    papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono dconf
     # Sound, network, Bluetooth
     pipewire wireplumber pipewire-pulse networkmanager bluez bluez-utils
     # Apps to test with
     kitty nautilus firefox libnotify
-    # Screenshots from inside, for checks from the host
-    grim
+    # Installing apps by opening the download: Ubuntu apps in a container, AppImages, Flatpak
+    distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
+    # Checks from the host: screenshots, typing and the pointer from inside
+    grim wtype ydotool
 )
 # The VM software's guest tools: shared folders, clipboard, resizing with the window. Where
 # the checkout shows up: VirtualBox mounts the "StartMenu" share itself (make-vm.ps1 sets

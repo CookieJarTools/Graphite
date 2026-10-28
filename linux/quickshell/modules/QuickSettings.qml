@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
 import Quickshell.Bluetooth
+import Quickshell.Services.UPower
 import qs.config
 import qs.services
 
@@ -32,7 +33,7 @@ PanelFrame {
             label: "Wi-Fi"
             available: Network.available
             on: Network.wifiEnabled
-            detail: !Network.available ? "Unavailable" : Network.wifiEnabled ? (Network.ssid || "On") : "Off"
+            detail: !Network.available ? "Unavailable" : Network.wifiEnabled ? (Network.ssid || "On") : Network.wired ? "Off · wired" : "Off"
             onToggled: Network.setWifi(!Network.wifiEnabled)
         }
 
@@ -143,6 +144,29 @@ PanelFrame {
                 opacity: root.player && root.player.canGoNext ? 1 : 0.35
                 onClicked: { if (root.player && root.player.canGoNext) root.player.next(); }
             }
+        }
+    }
+
+    // The battery (only a real one), and the way to Settings.
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Theme.space2
+
+        readonly property var battery: UPower.displayDevice
+        readonly property bool hasBattery: battery !== null && battery.isLaptopBattery && battery.isPresent
+
+        UiText {
+            Layout.fillWidth: true
+            text: parent.hasBattery
+                ? "Battery " + Math.round(parent.battery.percentage * (parent.battery.percentage <= 1 ? 100 : 1)) + "%" + (UPower.onBattery ? "" : " · charging")
+                : ""
+            color: Theme.inkMuted
+            font.pixelSize: Theme.hintSize
+        }
+
+        BarButton {
+            glyph: "emblem-system-symbolic"
+            onClicked: ShellState.openSettings()
         }
     }
 }

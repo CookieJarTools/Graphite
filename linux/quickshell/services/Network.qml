@@ -1,7 +1,7 @@
+pragma Singleton
 // Wi-Fi through NetworkManager's nmcli: whether the radio is on, the connected network's
 // name, and switching the radio. Read every few seconds while someone is looking (the quick
 // settings panel sets watching).
-pragma Singleton
 
 import QtQuick
 import Quickshell
@@ -14,10 +14,35 @@ Singleton {
     property bool wifiEnabled: false
     property string ssid: ""
     property bool available: false // nmcli answered
+    property bool online: true     // some connection is up (the bar dims its glyph otherwise)
+    property bool wired: false     // an Ethernet connection is up
 
     function refresh() {
         radio.running = true;
         active.running = true;
+        devices.running = true;
+    }
+
+    Process {
+        id: devices
+        command: ["nmcli", "-t", "-f", "TYPE,STATE", "device"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const rows = this.text.split("\n").filter(row => row.trim());
+                if (rows.length === 0) return;
+                root.wired = rows.some(row => row.startsWith("ethernet:connected"));
+                root.online = rows.some(row => /^(ethernet|wifi):connected$/.test(row));
+            }
+        }
+    }
+
+    // The bar's glyph keeps up slowly even while nobody has the panel open.
+    Timer {
+        interval: 15000
+        repeat: true
+        running: !root.watching
+        triggeredOnStart: true
+        onTriggered: devices.running = true
     }
 
     function setWifi(on) {
