@@ -48,6 +48,7 @@ FloatingWindow {
             title: "Apps and games",
             rows: [
                 { id: "apps", label: "Apps", hint: "Everything installed, to open or uninstall; and more apps with one click. Downloaded .deb, AppImage and Flatpak files install themselves when opened.", action: "Open", run: () => { ShellState.settingsOpen = false; Desktop.openApps(); } },
+                { id: "update", label: "Update everything", hint: "The system, your apps and Graphite Desk itself, in one go", action: "Update", run: () => Desktop.updateEverything() },
                 { id: "gaming", label: "Set up gaming", hint: "Graphics drivers for this computer, Steam, Minecraft (Prism Launcher, tuned for modpacks), GameMode and an FPS overlay", action: "Set up", run: () => Desktop.setUpGaming() }
             ]
         },

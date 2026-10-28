@@ -121,6 +121,7 @@ Scope {
         function close(): void { ShellState.settingsOpen = false; }
         function tiling(on: bool): void { Taskbar.setTiling(on); }
         function autohide(on: bool): void { ShellSettings.setTaskbar("alwaysAutoHide", on); }
+        function reload(): void { Quickshell.reload(true); }
         function zones(): void { ShellState.zoneEditorOpen = true; }
         function apps(page: string): void { ShellState.appsPage = page || "installed"; ShellState.appsOpen = true; }
         function zoneState(): string { return JSON.stringify({ pointerDown: Zones.pointerDown, shift: Zones.shift, ctrl: Zones.ctrl }); }

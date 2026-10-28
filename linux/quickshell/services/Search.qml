@@ -30,6 +30,7 @@ Singleton {
         { name: "Edit window zones", alias: "zones", glyph: "view-grid-symbolic", keys: [], run: () => { ShellState.zoneEditorOpen = true; } },
         { name: "Apps", alias: "apps", glyph: "view-app-grid-symbolic", keys: [], run: () => Desktop.openApps() },
         { name: "App store", alias: "store", glyph: "system-software-install-symbolic", keys: [], run: () => Desktop.openAppStore() },
+        { name: "Update everything", alias: "up", glyph: "software-update-available-symbolic", keys: [], run: () => Desktop.updateEverything() },
         { name: "Set up gaming", alias: "game", glyph: "input-gaming-symbolic", keys: [], run: () => Desktop.setUpGaming() },
         { name: "System monitor", alias: "tm", glyph: "utilities-system-monitor-symbolic", keys: [], run: () => Quickshell.execDetached(["kitty", "-e", "top"]) },
         { name: "Lock", alias: "lock", glyph: "system-lock-screen-symbolic", keys: ["Super", "L"], run: () => root.power("lock") },

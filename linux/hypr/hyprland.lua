@@ -64,6 +64,16 @@ end
 -- Every screen at its preferred size and scale 1 (Hyprland's guess for a VM window is 2).
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
+-- ---------- keyboard ----------
+
+-- The layout chosen when installing (/etc/graphite/keyboard), else UK.
+local keyboardLayout = "gb"
+local keyboardFile = io.open("/etc/graphite/keyboard")
+if keyboardFile then
+    keyboardLayout = keyboardFile:read("l") or keyboardLayout
+    keyboardFile:close()
+end
+
 -- ---------- look: Graphite (design/graphite-desk/tokens.json) ----------
 
 local accent = "0xffe3ab4f"        -- accent
@@ -109,7 +119,7 @@ hl.config({
     },
 
     input = {
-        kb_layout = "gb",
+        kb_layout = keyboardLayout,
         follow_mouse = 1,
     },
 

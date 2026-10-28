@@ -6,11 +6,26 @@
 # start, and garbage collection tuned for short pauses (Aikar's flags), under GameMode and on
 # the discrete GPU. Graphite Desk's Settings runs this in a terminal ("Set up gaming"); run it
 # again any time, it only adds what is missing. Real hardware: a VM has no GPU for games.
+#
+#   gaming.sh                    in a terminal, asks for the password as it goes
+#   gaming.sh --from-installer   from the installer (as root, for the user in $GRAPHITE_USER,
+#                                inside the new system, nothing started, nothing asked)
 set -euo pipefail
 
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-if [ "$(systemd-detect-virt || true)" != none ]; then
+installing=false
+if [ "${1:-}" = "--from-installer" ]; then
+    installing=true
+    sudo() { "$@"; }        # already root
+    USER="${GRAPHITE_USER:?the user to set up}"
+    HOME="/home/$USER"
+fi
+start=(--now)
+$installing && start=()
+
+if ! $installing && [ "$(systemd-detect-virt || true)" != none ]; then
     echo "Note: this is a virtual machine; games need a real GPU, so expect them to be slow here."
 fi
 
@@ -21,24 +36,20 @@ fi
 sudo pacman -Sy --noconfirm
 
 packages=(steam gamemode lib32-gamemode mangohud lib32-mangohud gamescope power-profiles-daemon
-          prismlauncher jre21-openjdk jre17-openjdk jre8-openjdk vulkan-icd-loader lib32-vulkan-icd-loader
-          mesa lib32-mesa pciutils)
+          prismlauncher jre21-openjdk jre17-openjdk jre8-openjdk pciutils linux-headers)
 
-# The GPU's drivers.
-gpus="$(lspci -nn 2>/dev/null | grep -E 'VGA|3D|Display' || true)"
+# The GPU's drivers (installer/gpu-packages.sh: the same list the installer uses).
+mapfile -t gpu < <(bash "$here/installer/gpu-packages.sh")
 nvidia=false
-if grep -qi nvidia <<<"$gpus"; then
-    nvidia=true
-    packages+=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils nvidia-settings linux-headers libva-nvidia-driver)
-fi
-grep -qiE 'AMD|ATI|Radeon' <<<"$gpus" && packages+=(vulkan-radeon lib32-vulkan-radeon libva-mesa-driver)
-grep -qi intel <<<"$gpus" && packages+=(vulkan-intel lib32-vulkan-intel intel-media-driver)
-echo "Graphics found:"; echo "${gpus:-  (none reported)}"
+for package in "${gpu[@]}"; do
+    if [ "$package" = "#nvidia" ]; then nvidia=true; else packages+=("$package"); fi
+done
+echo "Graphics found:"; lspci -nn 2>/dev/null | grep -E 'VGA|3D|Display' || echo "  (none reported)"
 
 say "Installing ${#packages[@]} packages..."
 sudo pacman -S --needed --noconfirm "${packages[@]}"
 
-sudo systemctl enable --now power-profiles-daemon.service
+sudo systemctl enable "${start[@]}" power-profiles-daemon.service
 getent group gamemode >/dev/null && sudo usermod -aG gamemode "$USER"
 
 # NVIDIA on Wayland needs its kernel mode setting on (systemd-boot's entry, as the installer
@@ -76,6 +87,12 @@ AutomaticJavaSwitch=true
 AutomaticJavaDownload=true
 PRISM
     echo "Minecraft gets ${memory} MB."
+fi
+
+# From the installer, as root: what was written in the home is the user's.
+if $installing; then
+    chown -R "$USER:$USER" "$HOME/.local" "$HOME/.config" 2>/dev/null || true
+    exit 0
 fi
 
 say "Done."

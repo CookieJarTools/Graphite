@@ -113,6 +113,11 @@ Singleton {
         ShellState.appsOpen = true;
     }
 
+    // The system, the apps and Graphite Desk itself (linux/update.sh), in a terminal.
+    function updateEverything() {
+        Quickshell.execDetached(["kitty", "--title", "Updating everything", "bash", linux + "/update.sh"]);
+    }
+
     // In a terminal, as it asks for the password and reports what it does.
     function setUpGaming() {
         Quickshell.execDetached(["kitty", "--title", "Setting up gaming", "bash", linux + "/gaming.sh"]);

@@ -24,3 +24,5 @@ linux/vm/*
 !linux/vm/user-data
 # a scratch command for run.sh
 linux/vm/cmd*.sh
+# the built USB image (linux/installer/build-iso.sh)
+linux/installer/out/
