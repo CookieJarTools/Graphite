@@ -470,7 +470,7 @@ ShellRoot {
                             id: stepRow
                             required property string modelData
                             required property int index
-                            readonly property bool current: root.page === index + 1 || (index === 8 && root.page >= 9)
+                            readonly property bool current: root.page === index + 1 || (index === 8 && root.page === 9)
                             readonly property bool done: root.page > index + 1 && !(index === 8 && root.page === 9)
                             Layout.fillWidth: true
                             implicitHeight: 32

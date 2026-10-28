@@ -124,8 +124,12 @@ sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/local/bin/graphite-in
 
 # Made inside the build folder, then copied out: big writes to a VM's shared folder can fail.
 mkarchiso -v -w "$work/work" -o "$work/out" "$profile"
-rm -f "$out"/graphite-desk-*.iso
-cp "$work/out"/*.iso "$out"/
+# Named for the hour it was made, so an older image a test VM still has open can stay.
+for image in "$work/out"/*.iso; do
+    name="$(basename "$image" -x86_64.iso)-$(date +%H%M)-x86_64.iso"
+    rm -f "$out"/graphite-desk-*.iso 2>/dev/null || true
+    cp "$image" "$out/$name"
+done
 clean
 chown -R --reference="$repo" "$out"
 ls -lh "$out"
