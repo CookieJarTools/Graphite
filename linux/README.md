@@ -12,6 +12,8 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Floating taskbar: pinned and running apps, folders, tagged windows, previews, auto-hide | `modules/Bar.qml`, `TaskButton.qml`, `Popover.qml`, `Previews.qml`, `TagPanel.qml` |
 | The bar's arrangement and window tags (the Windows version's own code) | `services/Taskbar.qml`, `services/lib/` (from `taskbar-model.js`, `window-tags.js`) |
 | Menus (bar, apps, windows, folders, launcher) | `modules/Menu.qml`, `services/Menus.qml` |
+| Login screen (greetd runs it on a small Hyprland), with a welcome animation on the right password | `quickshell/greeter.qml`, `modules/LoginView.qml`, `hypr/greeter.lua`, `greetd/setup.sh` |
+| Lock screen (Super+L, Lock, before sleep): the same look, the password checked by PAM | `modules/LockScreen.qml` |
 | Settings window | `modules/SettingsWindow.qml`, kept in `settings.json` (`services/ShellSettings.qml`) |
 | Quick settings: Wi-Fi, Bluetooth, volume, media | `modules/QuickSettings.qml` |
 | Calendar with the notifications still kept | `modules/CalendarPanel.qml`, `NoteCard.qml` |

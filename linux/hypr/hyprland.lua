@@ -149,6 +149,7 @@ hl.config({
     },
 
     misc = {
+        allow_session_lock_restore = true, -- a restarted shell takes the lock screen back over
         vrr = 2, -- variable refresh rate for fullscreen windows (games), where the screen has it
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
@@ -205,7 +206,7 @@ hl.bind("ALT + Tab", hl.dsp.global("quickshell:switcher-next"))
 hl.bind("ALT + SHIFT + Tab", hl.dsp.global("quickshell:switcher-previous"))
 hl.bind("ALT_L", hl.dsp.global("quickshell:switcher-commit"), { release = true })
 hl.bind("ALT + space", hl.dsp.global("quickshell:palette"))
-hl.bind("SUPER + L", hl.dsp.exec_cmd("hyprlock"))
+hl.bind("SUPER + L", hl.dsp.global("quickshell:lock"))
 
 -- Window zones (Shift + drag a window, Ctrl to span): the shell hears the left button go down
 -- and up (a bind that does not take the click from apps), and Shift and Ctrl from the keyboard

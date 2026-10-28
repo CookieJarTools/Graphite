@@ -40,10 +40,12 @@ Singleton {
         { name: "Reload the shell", alias: "rl", glyph: "view-refresh-symbolic", keys: [], run: () => Quickshell.reload(true) }
     ]
 
+    // Lock is the shell's own lock screen; sleeping locks first, so waking asks for the password.
     function power(action) {
+        if (action === "lock" || action === "sleep") ShellState.locked = true;
+        if (action === "lock") return;
         const commands = {
-            lock: ["hyprlock"],
-            sleep: ["systemctl", "suspend"],
+            sleep: ["sh", "-c", "sleep 0.5; systemctl suspend"],
             signout: ["hyprctl", "dispatch", "hl.dsp.exit()"], // Hyprland's own exit dispatcher
             restart: ["systemctl", "reboot"],
             shutdown: ["systemctl", "poweroff"]

@@ -65,5 +65,7 @@ ShellRoot {
 
     AppsWindow {}
 
+    LockScreen {}
+
     Shortcuts { switcher: switcher }
 }

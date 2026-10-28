@@ -25,6 +25,18 @@ Scope {
     }
 
     GlobalShortcut {
+        name: "lock"
+        description: "Lock the screen (Super+L)"
+        onPressed: ShellState.locked = true
+    }
+
+    IpcHandler {
+        target: "lock"
+
+        function lock(): void { ShellState.locked = true; }
+    }
+
+    GlobalShortcut {
         name: "palette"
         description: "Open or close the compact search (Alt+Space)"
         onPressed: { if (!ShellSettings.values || ShellSettings.values.paletteHotkey !== false) ShellState.togglePalette(); }

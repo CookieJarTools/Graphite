@@ -19,6 +19,7 @@ Singleton {
     property bool settingsOpen: false
     property bool zoneEditorOpen: false
     property bool appsOpen: false
+    property bool locked: false // the lock screen (LockScreen.qml)
     property string appsPage: "installed" // or "get"
 
     // A menu: { screen, x, y, above, items } in the screen's coordinates; items are

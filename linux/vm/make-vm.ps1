@@ -89,6 +89,7 @@ $lf = { param($text) $text -replace "`r`n", "`n" }
 [IO.File]::WriteAllText("$cidata\user-data", (& $lf ([IO.File]::ReadAllText("$here\user-data"))), $utf8)
 [IO.File]::WriteAllText("$cidata\meta-data", "instance-id: graphite-install`nlocal-hostname: archiso`n", $utf8)
 [IO.File]::WriteAllText("$cidata\install.sh", (& $lf ([IO.File]::ReadAllText("$here\install.sh"))), $utf8)
+[IO.File]::WriteAllText("$cidata\greetd-setup.sh", (& $lf ([IO.File]::ReadAllText("$here\..\greetd\setup.sh"))), $utf8)
 [IO.File]::WriteAllText("$cidata\vm.env", (@(
     "USER_NAME='$userName'",
     "PASSWORD_HASH='$hash'",

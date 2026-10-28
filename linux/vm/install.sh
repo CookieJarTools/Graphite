@@ -52,6 +52,8 @@ packages=(
     pipewire wireplumber pipewire-pulse networkmanager bluez bluez-utils
     # Apps to test with
     kitty nautilus firefox libnotify
+    # The login screen (Graphite's greeter, run by greetd)
+    greetd
     # Installing apps by opening the download: Ubuntu apps in a container, AppImages, Flatpak
     distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
     # Checks from the host: screenshots, typing and the pointer from inside
@@ -86,6 +88,7 @@ fi
 
 root_partuuid="$(blkid -s PARTUUID -o value "$(part 2)")"
 cp "$here/vm.env" /mnt/root/vm.env
+cp "$here/greetd-setup.sh" /mnt/root/greetd-setup.sh
 {
     echo "GUEST_SERVICES='$guest_services'"
     echo "SHARE='$share'"
@@ -137,24 +140,10 @@ session   include   system-auth
 PAM
 fi
 
-# Signed in on the first console automatically, and the desktop started there.
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<GETTY
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin $USER_NAME %I \$TERM
-GETTY
+# Graphite's login screen at start (greetd), reading Graphite Desk from the shared folder.
+bash /root/greetd-setup.sh "$SHARE/linux" gb
 
 home="/home/$USER_NAME"
-cat >> "$home/.bash_profile" <<PROFILE
-
-# Graphite Desk: the desktop starts on the first console, once the shared folder holding its
-# config is there (the VM's tools mount it a moment after sign-in).
-if [ -z "\$WAYLAND_DISPLAY" ] && [ "\$(tty)" = /dev/tty1 ]; then
-    for _ in \$(seq 30); do [ -e "$SHARE/linux/hypr/hyprland.lua" ] && break; sleep 1; done
-    exec start-hyprland
-fi
-PROFILE
 
 # The shell and Hyprland's config, straight from the Windows checkout.
 mkdir -p "$home/.config/quickshell" "$home/.config/hypr"
@@ -165,7 +154,7 @@ CONFIGURE
 
 echo "ROOT_PARTUUID=$root_partuuid" >> /mnt/root/vm.env
 arch-chroot /mnt bash /root/configure.sh
-rm /mnt/root/configure.sh /mnt/root/vm.env
+rm /mnt/root/configure.sh /mnt/root/vm.env /mnt/root/greetd-setup.sh
 
 echo "== Done, $(date). Switching off; make-vm.ps1 takes the discs out and starts the new system. =="
 cp "$log" /mnt/root/graphite-install.log
