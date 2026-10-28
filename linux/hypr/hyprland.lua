@@ -12,7 +12,8 @@ local shell = "qs -c graphite"
 hl.on("hyprland.start", function()
     hl.exec_cmd(shell)
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
-    hl.exec_cmd("vmware-user") -- VMware: shared clipboard and resizing with the window
+    -- The VM's guest tools: shared clipboard and resizing with the window (VirtualBox or VMware).
+    hl.exec_cmd("command -v VBoxClient-all >/dev/null && VBoxClient-all; command -v vmware-user >/dev/null && vmware-user")
 end)
 
 -- ---------- environment ----------
@@ -20,6 +21,22 @@ end)
 hl.env("XCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Adwaita")
 hl.env("QT_QPA_PLATFORM", "wayland")
+
+-- In VirtualBox, Hyprland itself draws on the virtual GPU, but the GPU buffers apps hand it
+-- are refused ("invalid arguments for wl_surface.attach") and the app is disconnected, so
+-- apps (the shell among them) draw with Mesa's software GL instead.
+local vendor = io.open("/sys/class/dmi/id/sys_vendor")
+if vendor then
+    if vendor:read("l") == "innotek GmbH" then
+        hl.env("LIBGL_ALWAYS_SOFTWARE", "1")
+    end
+    vendor:close()
+end
+
+-- ---------- screens ----------
+
+-- Every screen at its preferred size and scale 1 (Hyprland's guess for a VM window is 2).
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 -- ---------- look: Graphite (design/graphite-desk/tokens.json) ----------
 

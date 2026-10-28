@@ -15,3 +15,10 @@ renderer/tokens.css
 *.user
 Thumbs.db
 desktop.ini
+
+# The test VM: its disk, the installer ISOs and its generated password (linux/vm/README.md)
+linux/vm/*
+!linux/vm/*.ps1
+!linux/vm/*.sh
+!linux/vm/*.md
+!linux/vm/user-data

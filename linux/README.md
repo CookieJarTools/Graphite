@@ -31,29 +31,15 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Super+1..9, Super+Shift+1..9 | Go to, or move a window to, a workspace |
 | Super+drag, Super+right-drag | Move, resize |
 
-## Test it in a VMware VM
+## Test it in a VM
 
-Windows 11 Home has no Hyper-V, so the VM is VMware Workstation Pro (free for personal use).
+`vm/make-vm.ps1` builds a VirtualBox VM that installs Arch Linux and this shell by itself and
+starts straight into it; see [vm/README.md](vm/README.md). The checkout is shared into the
+VM, so the shell runs from it.
 
-1. **Install VMware Workstation Pro** from Broadcom's site (a free account is needed).
-2. **Get Arch Linux**: the ISO from <https://archlinux.org/download/>.
-3. **Create the VM**: *Typical*, the ISO, guest OS *Linux / Other Linux 6.x kernel 64-bit*,
-   4 cores, 8 GB of memory, a 40 GB disk. Then in its settings:
-   - *Display*: tick **Accelerate 3D graphics** (Hyprland needs the GPU), 2 GB graphics memory.
-   - *Options > Advanced*: firmware **UEFI**.
-   - *Options > Shared Folders*: **Always enabled**, add `F:\Dev\StartMenu` as `StartMenu`.
-4. **Install Arch**: boot the ISO and run `archinstall`. Choose: profile *Minimal*, audio
-   *pipewire*, network *NetworkManager*, a user with sudo. Reboot into the new system.
-5. **Mount the shared folder** (this once; setup makes it permanent):
-   ```bash
-   sudo pacman -S --needed open-vm-tools
-   sudo mkdir -p /mnt/hgfs && sudo vmhgfs-fuse .host:/ /mnt/hgfs -o allow_other
-   ```
-6. **Run the setup**: `bash /mnt/hgfs/StartMenu/linux/setup.sh`
-7. **Start it**: log in on the console and run `start-hyprland`.
-
-VMware keeps some keys (Ctrl+Alt) for itself; click into the VM window first so the guest
-gets Super and Alt+Tab.
+On an Arch install of your own (a VM or a real machine), `setup.sh` installs what the shell
+needs and links the configs to the checkout; then start the desktop with `start-hyprland`.
+In a VM, click into its window first so the guest gets Super and Alt+Tab.
 
 ## Working on it
 

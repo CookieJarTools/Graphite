@@ -1,0 +1,6 @@
+#cloud-config
+# Read by cloud-init in the Arch Linux live ISO (NoCloud: the disc labelled CIDATA, made by
+# make-vm.ps1). It runs the unattended install from that disc; the install restarts the VM
+# into the new system when it is done.
+runcmd:
+  - [bash, -c, "mkdir -p /run/cidata && mount -o ro /dev/disk/by-label/CIDATA /run/cidata && bash /run/cidata/install.sh"]
