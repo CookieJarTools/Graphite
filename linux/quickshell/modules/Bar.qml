@@ -31,7 +31,13 @@ Scope {
         const workspace = active.lastIpcObject.workspace;
         return active.lastIpcObject.fullscreen > 0 && !(workspace && String(workspace.name).startsWith("special:"));
     }
-    readonly property bool autoHide: !!taskbar.alwaysAutoHide || (!!taskbar.autoHideWhenMaximised && maximisedHere)
+    // An empty workspace has nothing the bar would be in the way of: it stays.
+    readonly property var workspaceHere: {
+        const monitor = Hyprland.monitorFor(modelData);
+        return monitor ? monitor.activeWorkspace : null;
+    }
+    readonly property bool emptyHere: workspaceHere !== null && Array.from(workspaceHere.toplevels.values).length === 0
+    readonly property bool autoHide: !emptyHere && (!!taskbar.alwaysAutoHide || (!!taskbar.autoHideWhenMaximised && maximisedHere))
     property bool revealed: false
     readonly property bool inUse: (ShellState.barBusy && (ShellState.panelScreen === screenName || (ShellState.popover && ShellState.popover.screen === screenName)
         || (ShellState.menu && ShellState.menu.screen === screenName) || (ShellState.tagPanel && ShellState.tagPanel.screen === screenName)))
