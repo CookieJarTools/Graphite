@@ -90,6 +90,9 @@ if [ "${1:-}" = "--remove" ]; then
     fi
     if flatpak info "$id" >/dev/null 2>&1; then
         notify "Uninstalling $id..."
+        # Closed first: a copy left running (in the tray, say) would carry on after it's gone.
+        flatpak kill "$id" >/dev/null 2>&1 || true
+        rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/graphite/warm/$id.list"
         if flatpak info --user "$id" >/dev/null 2>&1; then
             flatpak uninstall --user -y --noninteractive "$id" >/dev/null 2>&1 || fail "Flatpak couldn't remove it."
         else
