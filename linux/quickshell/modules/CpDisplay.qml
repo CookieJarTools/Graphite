@@ -33,7 +33,7 @@ ColumnLayout {
 
             UiText {
                 Layout.fillWidth: true
-                text: "Keep these display settings? Going back in " + Displays.countdown + " s"
+                text: "Keep these display settings? Changing back in " + Displays.countdown + " s"
                 font.weight: Font.DemiBold
             }
 
@@ -63,7 +63,7 @@ ColumnLayout {
 
             CpRow {
                 label: "Resolution and refresh rate"
-                hint: "Bigger numbers: sharper, and smoother"
+                hint: "Higher is sharper and smoother"
                 enabled: !screenSection.modelData.disabled
 
                 CpChoice {
@@ -78,7 +78,7 @@ ColumnLayout {
 
             CpRow {
                 label: "Scale"
-                hint: "Makes text, apps and the bar bigger"
+                hint: "Change the size of text and apps"
                 enabled: !screenSection.modelData.disabled
 
                 CpChoice {
@@ -97,8 +97,8 @@ ColumnLayout {
                     options: [
                         { value: 0, label: "Landscape" },
                         { value: 1, label: "Portrait" },
-                        { value: 2, label: "Landscape (upside down)" },
-                        { value: 3, label: "Portrait (upside down)" }
+                        { value: 2, label: "Landscape, flipped" },
+                        { value: 3, label: "Portrait, flipped" }
                     ]
                     onPicked: value => Displays.change(screenSection.modelData.name, "transform", value)
                 }
@@ -106,7 +106,7 @@ ColumnLayout {
 
             CpRow {
                 label: "HDR"
-                hint: "Brighter highlights and richer colour, for screens and games that support it"
+                hint: "Only for screens and games that support it"
                 enabled: !screenSection.modelData.disabled
 
                 ToggleSwitch {
@@ -145,7 +145,7 @@ ColumnLayout {
         CpRow {
             glyph: "night-light-symbolic"
             label: "Night light"
-            hint: "Warmer colours, easier on the eyes in the evening"
+            hint: "Warmer colours for the evening"
 
             ToggleSwitch {
                 on: Displays.nightLight

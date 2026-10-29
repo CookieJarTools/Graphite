@@ -306,7 +306,7 @@ ShellRoot {
         { id: "security", name: "Securing this PC" },
         { id: "games", name: "Setting up for games", only: () => root.gaming },
         { id: "apps", name: "Installing " + apps.length + (apps.length === 1 ? " app" : " apps"), only: () => root.apps.length > 0 },
-        { id: "finish", name: "Final touches" }
+        { id: "finish", name: "Finishing" }
     ].filter(item => !item.only || item.only())
 
     function quote(text) {
@@ -388,11 +388,11 @@ ShellRoot {
 
     readonly property var tips: [
         "Press the Windows key to search for apps, files and settings.",
-        "Ctrl+Shift+Esc opens the Task Manager, as on Windows.",
+        "Press Ctrl+Shift+Esc to open the Task Manager.",
         "Hold Shift while dragging a window to snap it into a zone.",
-        "Updates install from the Control Panel with one click; no typing needed.",
-        "Downloaded .deb, AppImage and Flatpak files install themselves when you open them.",
-        "Super+Left and Super+Right snap a window to half the screen.",
+        "Install updates from Updates in the Control Panel.",
+        "To install a downloaded .deb, AppImage or Flatpak file, open it.",
+        "Press Windows key + Left or Right to snap a window to half the screen.",
         "Right-click the taskbar for its settings and the Task Manager."
     ]
     property int tip: 0
@@ -582,7 +582,7 @@ ShellRoot {
 
                         UiText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "Let's set up your PC"
+                            text: "Set up your PC"
                             font.pixelSize: 26
                             font.weight: Font.Bold
                         }
@@ -592,7 +592,7 @@ ShellRoot {
                             Layout.preferredWidth: 400
                             horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.WordWrap
-                            text: "A few quick choices and you're in. It takes about ten minutes, and you can change everything later in the Control Panel."
+                            text: "This takes about ten minutes. You can change these settings later in the Control Panel."
                             color: Theme.inkMuted
                         }
                     }
@@ -604,14 +604,14 @@ ShellRoot {
                         spacing: Theme.space2
 
                         UiText {
-                            text: root.page === 9 ? "Almost there" : "Step " + root.page + " of " + root.questions
+                            text: root.page === 9 ? "Last step" : "Step " + root.page + " of " + root.questions
                             color: Theme.inkMuted
                             font.pixelSize: Theme.hintSize
                         }
 
                         UiText {
                             Layout.fillWidth: true
-                            text: ["", "Where are you?", "Which keyboard do you have?", "Connect to a network", "Where should Graphite Desk go?", "Who's going to use this PC?", "Privacy and security", "Make it yours", "Install your apps", root.failed ? "Something went wrong" : "Getting everything ready"][root.page] || ""
+                            text: ["", "Where are you?", "Which keyboard do you have?", "Connect to a network", "Where should Graphite Desk go?", "Create your account", "Privacy and security", "Choose a look", "Install apps", root.failed ? "Something went wrong" : "Installing"][root.page] || ""
                             font.pixelSize: 22
                             font.weight: Font.Bold
                         }
@@ -622,13 +622,13 @@ ShellRoot {
                             wrapMode: Text.WordWrap
                             text: ["",
                                 "Sets your language, date format and time zone.",
-                                "Type below to check the keys come out right.",
-                                "You'll need the internet to install, and for updates and the apps you pick.",
-                                "Everything on the disk you choose is erased: Windows, files and photos.",
+                                "Type below to check your keys work as expected.",
+                                "You need the internet to install Graphite Desk, updates and apps.",
+                                "Everything on the disk you choose is deleted, including Windows and your files.",
                                 "This is the name you'll see when you sign in.",
-                                "Sensible protection, on from the start.",
-                                "Pick a look. You can change it any time.",
-                                "We'll install these while we finish up. " + root.apps.length + " selected.",
+                                "Choose how to protect this PC.",
+                                "You can change this later.",
+                                "These are installed with Graphite Desk. " + root.apps.length + " selected.",
                                 root.failed ? root.failText : "This can take a while. Keep your PC plugged in."][root.page] || ""
                             color: root.page === 4 || (root.page === 9 && root.failed) ? Theme.danger : Theme.inkMuted
                         }
@@ -651,14 +651,14 @@ ShellRoot {
 
                         UiText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "You're all set, " + fullName.text.trim().split(" ")[0]
+                            text: "Welcome, " + fullName.text.trim().split(" ")[0]
                             font.pixelSize: 26
                             font.weight: Font.Bold
                         }
 
                         UiText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "Your desk is ready. Restart to sign in."
+                            text: "Graphite Desk is installed. Restart to sign in."
                             color: Theme.inkMuted
                         }
 
@@ -691,7 +691,7 @@ ShellRoot {
                         UiText {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: Theme.space4
-                            text: "Once the screen goes dark, take out the USB stick."
+                            text: "When the screen goes dark, remove the USB stick."
                             color: Theme.inkMuted
                             font.pixelSize: Theme.hintSize
                         }
@@ -999,6 +999,20 @@ ShellRoot {
                     spacing: 2
 
                     property string opened: ""
+                    // Names in order, changed only when the list changes and never while one is
+                    // open: a new scan rebuilt the rows and emptied the password being typed.
+                    property var shown: []
+                    function sync() {
+                        if (opened !== "" && shown.includes(opened)) return;
+                        const names = Network.networks.map(network => network.name);
+                        if (names.join("|") !== shown.join("|")) shown = names;
+                    }
+                    Connections {
+                        target: Network
+                        function onNetworksChanged() { networkList.sync(); }
+                    }
+                    onOpenedChanged: sync()
+                    Component.onCompleted: sync()
 
                     UiText {
                         visible: !Network.available && !Network.wired
@@ -1013,38 +1027,39 @@ ShellRoot {
                     }
 
                     Repeater {
-                        model: Network.networks
+                        model: networkList.shown
 
                         ColumnLayout {
                             id: networkRow
-                            required property var modelData
-                            readonly property bool secure: Network.isSecure(modelData)
+                            required property string modelData // the network's name
+                            readonly property var net: Network.networks.find(network => network.name === modelData) || ({ name: modelData, connected: false, known: false, signalStrength: 0 })
+                            readonly property bool secure: Network.isSecure(net)
                             Layout.fillWidth: true
                             spacing: Theme.space1
 
                             Option {
-                                glyph: Network.glyphFor(networkRow.modelData)
-                                label: networkRow.modelData.name
-                                detail: root.joining === networkRow.modelData.name ? "Connecting..." : networkRow.modelData.connected ? "Connected" : networkRow.secure ? "Secured" : "Open"
-                                chosen: networkRow.modelData.connected || networkList.opened === networkRow.modelData.name
+                                glyph: Network.glyphFor(networkRow.net)
+                                label: networkRow.net.name
+                                detail: root.joining === networkRow.net.name ? "Connecting..." : networkRow.net.connected ? "Connected" : networkRow.secure ? "Secured" : "Open"
+                                chosen: networkRow.net.connected || networkList.opened === networkRow.net.name
                                 onPicked: {
-                                    networkList.opened = networkRow.modelData.name;
+                                    networkList.opened = networkRow.net.name;
                                     root.joinError = "";
-                                    if (!networkRow.secure && !networkRow.modelData.connected) root.join(networkRow.modelData, "");
+                                    if (!networkRow.secure && !networkRow.net.connected) root.join(networkRow.net, "");
                                     else wifiPassword.focusField();
                                 }
                             }
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                visible: networkRow.secure && !networkRow.modelData.connected && networkList.opened === networkRow.modelData.name
+                                visible: networkRow.secure && !networkRow.net.connected && networkList.opened === networkRow.net.name
                                 spacing: Theme.space2
 
                                 FieldBox {
                                     id: wifiPassword
                                     Layout.fillWidth: true
                                     password: true
-                                    placeholder: "Password for " + networkRow.modelData.name
+                                    placeholder: "Password for " + networkRow.net.name
                                     onAccepted: connectButton.clicked()
                                 }
 
@@ -1054,7 +1069,7 @@ ShellRoot {
                                     text: "Connect"
                                     enabled: wifiPassword.text.length > 0 && root.joining === ""
                                     onClicked: {
-                                        root.join(networkRow.modelData, wifiPassword.text);
+                                        root.join(networkRow.net, wifiPassword.text);
                                         wifiPassword.text = "";
                                     }
                                 }
@@ -1105,7 +1120,7 @@ ShellRoot {
                 Layout.topMargin: Theme.space3
                 visible: root.disk !== null
                 label: "Erase " + (root.disk ? root.disk.model : "") + " and install Graphite Desk"
-                detail: "Everything on it goes, for good. Copy anything you want to keep first."
+                detail: "This deletes everything on the disk. Back up your files first."
                 on: root.eraseAgreed
                 onToggled: root.eraseAgreed = !root.eraseAgreed
             }
@@ -1138,7 +1153,7 @@ ShellRoot {
 
             UiText {
                 visible: fullName.text.trim().length > 0
-                text: "You'll sign in as " + root.userName + "; this PC is called " + root.hostName
+                text: "User name: " + root.userName + " · PC name: " + root.hostName
                 color: Theme.inkMuted
                 font.pixelSize: Theme.hintSize
             }
@@ -1189,14 +1204,14 @@ ShellRoot {
             }
 
             UiText {
-                text: secret.text.length === 0 ? "" : secret.text.length < 8 ? "Passwords need at least 8 characters" : ["", "Weak password", "Okay password", "Good password", "Strong password"][root.strength]
+                text: secret.text.length === 0 ? "" : secret.text.length < 8 ? "Use at least 8 characters" : ["", "Weak password", "Okay password", "Good password", "Strong password"][root.strength]
                 color: secret.text.length < 8 ? Theme.danger : Theme.inkMuted
                 font.pixelSize: Theme.hintSize
             }
 
             UiText {
                 Layout.topMargin: Theme.space2
-                text: "PIN for signing in quickly (optional)"
+                text: "PIN (optional)"
                 font.weight: Font.Medium
                 font.pixelSize: Theme.actionSize
             }
@@ -1217,7 +1232,7 @@ ShellRoot {
 
                 UiText {
                     Layout.fillWidth: true
-                    text: pinStore.text.length && pinStore.text.length < 4 ? "A PIN is 4 digits" : "Sign in with it instead of the password, as on Windows"
+                    text: pinStore.text.length && pinStore.text.length < 4 ? "Use 4 digits" : "A quicker way to sign in"
                     color: pinStore.text.length && pinStore.text.length < 4 ? Theme.danger : Theme.inkMuted
                     font.pixelSize: Theme.hintSize
                 }
@@ -1232,7 +1247,7 @@ ShellRoot {
 
             FieldBox {
                 Layout.fillWidth: true
-                placeholder: "Shown after three wrong tries; not the password itself"
+                placeholder: "Shown after three wrong passwords"
                 onAccepted: root.next()
                 text: hintStore.text
                 onTextChanged: hintStore.text = text
@@ -1250,21 +1265,21 @@ ShellRoot {
 
             Switchable {
                 label: "Encrypt the disk"
-                detail: "Without your password, nobody can read the disk, even if it's taken out. You type the password when the PC starts."
+                detail: "No one can read the disk without your password. You enter it when the PC starts."
                 on: root.encrypt
                 onToggled: root.encrypt = !root.encrypt
             }
 
             Switchable {
                 label: "Firewall"
-                detail: "Nothing from the network can reach this PC unless it asked. Always on; it can be changed in the Control Panel."
+                detail: "Blocks unwanted connections. You can turn it off later in the Control Panel."
                 on: root.firewall
                 onToggled: root.firewall = true
             }
 
             Switchable {
                 label: "Install updates automatically"
-                detail: "Once a day, in the background, so this PC stays safe without you thinking about it."
+                detail: "Checks and installs updates once a day."
                 on: root.autoUpdates
                 onToggled: root.autoUpdates = !root.autoUpdates
             }
@@ -1348,7 +1363,7 @@ ShellRoot {
 
             Switchable {
                 label: "Set up for games"
-                detail: "Steam, Minecraft (the Modrinth App), your graphics drivers, GameMode and an FPS counter"
+                detail: "Installs graphics drivers, Steam, the Modrinth App for Minecraft, GameMode and an FPS counter"
                 on: root.gaming
                 onToggled: root.gaming = !root.gaming
             }
@@ -1587,7 +1602,7 @@ ShellRoot {
                 Layout.fillWidth: true
                 visible: root.failed
                 wrapMode: Text.WordWrap
-                text: "The details are in /tmp/graphite-install.log. Try again, or go Back to change your choices."
+                text: "Details are in /tmp/graphite-install.log. Try again, or click Back to change your choices."
                 color: Theme.inkMuted
             }
 

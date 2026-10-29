@@ -208,12 +208,14 @@ Singleton {
         }
         const input = settings.input || {};
         const inputFields = [
-            `sensitivity = ${Number(input.sensitivity || 0).toFixed(2)}`,
+            `sensitivity = ${Number(input.sensitivity ?? -0.4).toFixed(2)}`,
             `natural_scroll = ${!!input.naturalScroll}`,
             `touchpad = { natural_scroll = ${input.touchpadNaturalScroll !== false}, tap_to_click = ${input.tapToClick !== false} }`
         ];
         if (settings.keyboard) inputFields.push(`kb_layout = ${lua(settings.keyboard)}`);
         lines.push(`hl.config({ input = { ${inputFields.join(", ")} } })`);
+        // Shortcuts changed in the Control Panel, and ones that open apps (Hotkeys.qml).
+        for (const line of Hotkeys.luaLines()) lines.push(line);
         desk.setText(lines.join("\n") + "\n");
         reloadSoon.restart();
     }

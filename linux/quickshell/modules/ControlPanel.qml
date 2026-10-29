@@ -37,11 +37,14 @@ FloatingWindow {
         { id: "power", name: "Power & battery", glyph: "battery-good-symbolic", words: "battery power mode performance sleep lock screen off idle", source: "CpPower.qml" },
         { id: "personalise", name: "Personalisation", glyph: "preferences-desktop-appearance-symbolic", words: "dark light theme colours text font taskbar auto-hide home windows tiling zones snap", source: "CpPersonalise.qml" },
         { id: "apps", name: "Apps", glyph: "view-app-grid-symbolic", words: "apps install uninstall store flathub default browser startup games steam", source: "CpApps.qml" },
+        { id: "shortcuts", name: "Shortcuts", glyph: "input-keyboard-symbolic", words: "keyboard shortcut keys hotkey change screenshot print", source: "CpShortcuts.qml" },
         { id: "accounts", name: "Accounts", glyph: "avatar-default-symbolic", words: "account name password hint people users add remove administrator", source: "CpAccounts.qml" },
         { id: "time", name: "Time & language", glyph: "preferences-system-time-symbolic", words: "time date clock time zone region computer name hostname", source: "CpTime.qml" },
         { id: "updates", name: "Updates", glyph: "software-update-available-symbolic", words: "update upgrade install automatic restart news", source: "CpUpdates.qml" },
         { id: "security", name: "Privacy & security", glyph: "security-high-symbolic", words: "firewall security privacy lock encryption permissions camera microphone location", source: "CpSecurity.qml" },
-        { id: "system", name: "System", glyph: "computer-symbolic", words: "about storage disk space clean processor memory graphics version reload", source: "CpSystem.qml" }
+        { id: "drives", name: "Drives", glyph: "drive-harddisk-symbolic", words: "drive disk usb stick format erase wipe partition storage eject mount", source: "CpDrives.qml" },
+        { id: "system", name: "System", glyph: "computer-symbolic", words: "about storage disk space clean processor memory graphics version reload", source: "CpSystem.qml" },
+        { id: "troubleshoot", name: "Troubleshoot", glyph: "dialog-information-symbolic", words: "problem fix broken help app won't open not opening slow crash driver nvidia firefox", source: "CpTroubleshoot.qml" }
     ]
 
     readonly property var shownPages: {

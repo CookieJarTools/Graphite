@@ -24,9 +24,32 @@ Scope {
         onPressed: ShellState.toggleLauncher()
     }
 
+    // Shortcuts that open an app (Hotkeys.qml) come in here, so it opens as from the launcher.
+    IpcHandler {
+        target: "apps"
+
+        function launch(id: string): void { Apps.launchKey(id); }
+    }
+
+    GlobalShortcut {
+        name: "taskview"
+        description: "Show all windows and desktops (Super+Tab)"
+        onPressed: {
+            ShellState.closeLaunchers();
+            ShellState.closePanels();
+            ShellState.taskViewOpen = !ShellState.taskViewOpen;
+        }
+    }
+
+    IpcHandler {
+        target: "taskview"
+
+        function toggle(): void { ShellState.taskViewOpen = !ShellState.taskViewOpen; }
+    }
+
     GlobalShortcut {
         name: "taskmanager"
-        description: "Open the task manager (Ctrl+Shift+Esc)"
+        description: "Open Task Manager (Ctrl+Shift+Esc)"
         onPressed: {
             ShellState.closeLaunchers();
             ShellState.taskManagerOpen = true;
@@ -54,7 +77,7 @@ Scope {
 
     GlobalShortcut {
         name: "palette"
-        description: "Open or close the compact search (Alt+Space)"
+        description: "Open or close quick search (Alt+Space)"
         onPressed: { if (!ShellSettings.values || ShellSettings.values.paletteHotkey !== false) ShellState.togglePalette(); }
     }
 

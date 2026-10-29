@@ -104,7 +104,7 @@ FocusScope {
             pinResting = true;
             pinRest.restart();
             usePin = false;
-            say("For your security, sign in with your password this time.", true);
+            say("Too many wrong PINs. Sign in with your password.", true);
             return;
         }
         failures += 1;

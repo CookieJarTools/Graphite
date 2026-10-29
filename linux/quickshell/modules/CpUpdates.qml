@@ -24,7 +24,7 @@ ColumnLayout {
             label: Updates.running ? "Updating..."
                 : page.failed ? "The update didn't finish"
                 : Updates.checking ? "Checking for updates..."
-                : Updates.total > 0 ? Updates.total + (Updates.total === 1 ? " update is ready" : " updates are ready")
+                : Updates.total > 0 ? Updates.total + (Updates.total === 1 ? " update available" : " updates available")
                 : "You're up to date"
             hint: Updates.running ? [page.system.state === "running" ? page.system.step : "", Updates.userStep].filter(part => part).join(" · ")
                 : page.failed ? page.system.step
@@ -76,7 +76,7 @@ ColumnLayout {
             visible: !!page.system.restart && !Updates.running
             glyph: "system-reboot-symbolic"
             label: "Restart to finish"
-            hint: "A new version of the system's core is ready; it's used after a restart"
+            hint: "Some updates need a restart to finish"
 
             PillButton {
                 primary: true
@@ -89,7 +89,7 @@ ColumnLayout {
             visible: Updates.partsChanged && !Updates.running
             glyph: "dialog-password-symbolic"
             label: "Finish updating Graphite Desk"
-            hint: "Some of Graphite's system parts changed; putting them in place needs your password"
+            hint: "Some system files changed. Enter your password to finish."
 
             PillButton {
                 primary: true
@@ -110,7 +110,7 @@ ColumnLayout {
                 required property var modelData
                 glyph: "dialog-information-symbolic"
                 label: modelData.title
-                hint: "Arch Linux news, " + Qt.formatDate(modelData.date, "d MMMM") + ". Some updates need a step by hand; this says which."
+                hint: "Arch Linux news, " + Qt.formatDate(modelData.date, "d MMMM") + ". Some updates need you to do something first."
                 opens: true
                 onClicked: Quickshell.execDetached(["xdg-open", modelData.link])
             }
@@ -118,7 +118,7 @@ ColumnLayout {
     }
 
     CpSection {
-        title: "What's waiting"
+        title: "Available updates"
         visible: Updates.total > 0 && !Updates.running
 
         CpRow {
@@ -127,7 +127,7 @@ ColumnLayout {
                 Updates.appCount ? Updates.appCount + " app" + (Updates.appCount === 1 ? "" : "s") : "",
                 Updates.deskCount ? "Graphite Desk" : ""
             ].filter(part => part).join(", ")
-            hint: "The system, your apps and Graphite Desk update together"
+            hint: "All of these install together"
             opens: Updates.packages.length > 0
             onClicked: page.showList = !page.showList
 
@@ -150,7 +150,7 @@ ColumnLayout {
 
         CpRow {
             label: "Install updates automatically"
-            hint: "Once a day, in the background; Arch's news is still shown here when an update needs a step by hand"
+            hint: "Checks and installs once a day"
             ToggleSwitch {
                 on: Updates.autoUpdates
                 onToggled: Updates.setAutoUpdates(!Updates.autoUpdates)

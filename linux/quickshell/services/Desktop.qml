@@ -29,15 +29,15 @@ Singleton {
 
     // Apps a newcomer is likely to want, one click each from Flathub.
     readonly property var featured: [
-        { id: "app.zen_browser.zen", name: "Zen Browser", detail: "A calm, private web browser" },
-        { id: "com.valvesoftware.Steam", name: "Steam", detail: "Games, with Proton for Windows games" },
-        { id: "net.lutris.Lutris", name: "Lutris", detail: "Battle.net, EA, Ubisoft and more games" },
-        { id: "io.bassi.Amberol", name: "Amberol", detail: "Plays your music" },
+        { id: "app.zen_browser.zen", name: "Zen Browser", detail: "Private web browser" },
+        { id: "com.valvesoftware.Steam", name: "Steam", detail: "Games, including many Windows games" },
+        { id: "net.lutris.Lutris", name: "Lutris", detail: "Games from Battle.net, EA, Ubisoft and more" },
+        { id: "io.bassi.Amberol", name: "Amberol", detail: "Music player" },
         { id: "org.gnome.gThumb", name: "gThumb", detail: "Browse and edit photos" },
-        { id: "org.gnome.Shotwell", name: "Shotwell", detail: "Your photo library" },
+        { id: "org.gnome.Shotwell", name: "Shotwell", detail: "Photo library" },
         { id: "com.discordapp.Discord", name: "Discord", detail: "Chat, voice and video" },
         { id: "com.spotify.Client", name: "Spotify", detail: "Music" },
-        { id: "org.videolan.VLC", name: "VLC", detail: "Plays any video" },
+        { id: "org.videolan.VLC", name: "VLC", detail: "Video player" },
         { id: "com.obsproject.Studio", name: "OBS Studio", detail: "Record and stream" },
         { id: "com.visualstudio.code", name: "Visual Studio Code", detail: "Code editor" },
         { id: "org.libreoffice.LibreOffice", name: "LibreOffice", detail: "Documents and spreadsheets" },
@@ -46,7 +46,7 @@ Singleton {
         { id: "com.google.Chrome", name: "Google Chrome", detail: "Web browser" },
         { id: "com.modrinth.ModrinthApp", name: "Modrinth App", detail: "Minecraft and modpacks" },
         { id: "com.heroicgameslauncher.hgl", name: "Heroic", detail: "Epic and GOG games" },
-        { id: "org.blender.Blender", name: "Blender", detail: "3D" }
+        { id: "org.blender.Blender", name: "Blender", detail: "3D modelling" }
     ]
 
     // Flathub ids being installed now, and installed (from `flatpak list`).
@@ -167,7 +167,7 @@ Singleton {
                 for (const file of this.text.split("\n").filter(line => line)) {
                     const base = file.split("/").pop();
                     Quickshell.execDetached(["sh", "-c",
-                        `[ "$(notify-send -a 'Graphite Desk' -i system-software-install --action=default=Install --wait "Install $2?" "It finished downloading. Click here to install it.")" = default ] && bash "$3" "$1"`,
+                        `[ "$(notify-send -a 'Graphite Desk' -i system-software-install --action=default=Install --wait "Install $2?" "Download finished. Click to install it.")" = default ] && bash "$3" "$1"`,
                         "sh", file, base, root.linux + "/apps/install-app.sh"]);
                 }
             }
@@ -223,11 +223,11 @@ Singleton {
     // In the background: the password once (pkexec's window), then notifications as it goes.
     function setUpGaming() {
         Quickshell.execDetached(["sh", "-c", [
-            "notify-send -a 'Graphite Desk' -i applications-games 'Setting up gaming' 'Steam, Minecraft and your graphics drivers are on their way. This takes a few minutes.'",
+            "notify-send -a 'Graphite Desk' -i applications-games 'Setting up gaming' 'Installing Steam, Minecraft and graphics drivers. This takes a few minutes.'",
             `if pkexec env GRAPHITE_USER="$USER" bash "${linux}/gaming.sh" --background > /tmp/graphite-gaming.log 2>&1; then`,
-            "  notify-send -a 'Graphite Desk' -i applications-games 'Gaming is ready' 'Steam and the Modrinth App are in your apps. If it says so in the log, restart for new drivers.'",
+            "  notify-send -a 'Graphite Desk' -i applications-games 'Gaming set up' 'Steam and the Modrinth App are installed. If new drivers were installed, restart.'",
             "else",
-            "  notify-send -a 'Graphite Desk' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from the Control Panel (Apps). Details: /tmp/graphite-gaming.log'",
+            "  notify-send -a 'Graphite Desk' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from Apps in the Control Panel. Details: /tmp/graphite-gaming.log'",
             "fi"
         ].join("\n")]);
     }

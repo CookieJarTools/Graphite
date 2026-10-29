@@ -62,17 +62,17 @@ if [ "${1:-}" = "--remove" ]; then
                 rm -f "$path" "$applications/$id.desktop" "$icon"
                 ;;
             pacman)
-                pkexec pacman -R --noconfirm "$package" || fail "Uninstalling needs the password."
+                pkexec pacman -R --noconfirm "$package" || fail "Your password is needed to uninstall it."
                 ;;
         esac
         rm -f "$manifests/$id"
-        notify "Uninstalled" "$id is gone."
+        notify "Uninstalled" "$id was removed."
         exit 0
     fi
     if flatpak info "$id" >/dev/null 2>&1; then
         notify "Uninstalling $id..."
         flatpak uninstall -y --noninteractive "$id" >/dev/null 2>&1 || fail "Flatpak couldn't remove it."
-        notify "Uninstalled" "$id is gone."
+        notify "Uninstalled" "$id was removed."
         exit 0
     fi
     # A system package, unless it is part of the desktop itself.
@@ -80,15 +80,15 @@ if [ "${1:-}" = "--remove" ]; then
     if [ -f "$entry" ] && package="$(pacman -Qqo "$entry" 2>/dev/null)"; then
         case "$package" in
             hyprland | quickshell* | kitty | nautilus | gnome-software | hyprpolkitagent | xdg-desktop-portal* | networkmanager | bluez* | pipewire* | wireplumber)
-                fail "$package is part of the desktop, so it stays." ;;
+                fail "$package is part of the desktop and can't be removed." ;;
         esac
         name="$(grep -m1 '^Name=' "$entry" | cut -d= -f2-)"
-        notify "Uninstalling ${name:-$package}..." "It asks for your password."
-        pkexec pacman -Rns --noconfirm "$package" >/dev/null 2>&1 || fail "Uninstalling needs the password (or other apps need it)."
-        notify "Uninstalled" "${name:-$package} is gone."
+        notify "Uninstalling ${name:-$package}..." "Enter your password when asked."
+        pkexec pacman -Rns --noconfirm "$package" >/dev/null 2>&1 || fail "No password was entered, or other apps need it."
+        notify "Uninstalled" "${name:-$package} was removed."
         exit 0
     fi
-    fail "This app wasn't installed here, so it can't be removed here."
+    fail "This app can't be uninstalled from here."
 fi
 
 # ---------- from Flathub ----------
@@ -101,8 +101,8 @@ if [ "${1:-}" = "--flathub" ]; then
     # Its own name (Zen Browser, not app.zen_browser.zen), from Flathub, for what's said.
     name="$(flatpak remote-info --user flathub "$app" 2>/dev/null | sed -n '2s/^\([^-]*\) - .*/\1/p' | sed 's/ *$//')"
     name="${name:-$app}"
-    notify "Installing $name..." "From Flathub; big apps take a few minutes."
-    flatpak install --user -y --noninteractive flathub "$app" >/dev/null 2>&1 || fail "Flathub couldn't install it (is the internet on?)."
+    notify "Installing $name..." "From Flathub. Large apps can take a few minutes."
+    flatpak install --user -y --noninteractive flathub "$app" >/dev/null 2>&1 || fail "Flathub couldn't install it. Check your internet connection."
     notify "$name is installed" "Press the Windows key and type its name to open it."
     exit 0
 fi
@@ -113,8 +113,8 @@ if [ "${1:-}" = "--package" ]; then
     package="${2:-}"
     [[ "$package" =~ ^[a-z0-9@._+-]+$ ]] || fail "That isn't a package name."
     name="$package"
-    notify "Installing $name..." "From Arch Linux; it asks for your password."
-    pkexec pacman -S --needed --noconfirm "$package" >/dev/null 2>&1 || fail "It didn't install (no password, or offline)."
+    notify "Installing $name..." "From Arch Linux. Enter your password when asked."
+    pkexec pacman -S --needed --noconfirm "$package" >/dev/null 2>&1 || fail "No password was entered, or you're offline."
     for desktop in $(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$'); do
         manifest "$(basename "$desktop" .desktop)" pacman "package=$package"
     done
@@ -140,19 +140,19 @@ inside_home() {
 install_deb() {
     command -v distrobox >/dev/null || fail "Distrobox is missing; run linux/setup.sh."
     if ! distrobox list --no-color 2>/dev/null | awk -F'|' '{gsub(/ /,"",$2); print $2}' | grep -qx "$box"; then
-        notify "Getting ready for Ubuntu apps" "First time only: setting up an Ubuntu space for them, a few minutes."
-        distrobox create --yes --no-entry --name "$box" --image "$image" >/dev/null 2>&1 || fail "Couldn't set up the Ubuntu space (is the internet on?)."
+        notify "Setting up Ubuntu apps" "This only happens once and takes a few minutes."
+        distrobox create --yes --no-entry --name "$box" --image "$image" >/dev/null 2>&1 || fail "Couldn't set up Ubuntu apps. Check your internet connection."
     fi
     local deb package desktops
     deb="$(inside_home)"
     package="$(in_box dpkg-deb -f "$deb" Package 2>/dev/null | tr -d '\r')"
-    [ -n "$package" ] || fail "$base isn't a readable .deb package."
+    [ -n "$package" ] || fail "$base isn't a valid .deb file."
     name="$package"
     notify "Installing $name..." "From $base"
     in_box sudo apt-get update -qq >/dev/null 2>&1
     in_box sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$deb" >/dev/null 2>&1 || fail "apt couldn't install $base."
     desktops="$(in_box dpkg -L "$package" 2>/dev/null | tr -d '\r' | grep -E '^/usr/share/applications/[^/]+\.desktop$' || true)"
-    [ -n "$desktops" ] || fail "$name installed, but it has no app to open (a command-line tool?)."
+    [ -n "$desktops" ] || fail "$name installed, but it has no app to open. It may be a command-line tool."
     local desktop shown=""
     for desktop in $desktops; do
         # Under its own name, not "Name (on apps)".
@@ -209,8 +209,8 @@ install_pacman() {
     local package
     package="$(bsdtar -xOf "$file" .PKGINFO 2>/dev/null | awk -F' = ' '$1=="pkgname"{print $2}')"
     name="${package:-$base}"
-    notify "Installing $name..." "It asks for your password."
-    pkexec pacman -U --noconfirm "$file" >/dev/null 2>&1 || fail "pacman couldn't install it (or no password)."
+    notify "Installing $name..." "Enter your password when asked."
+    pkexec pacman -U --noconfirm "$file" >/dev/null 2>&1 || fail "It couldn't be installed, or no password was entered."
     local desktop
     for desktop in $(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$'); do
         manifest "$(basename "$desktop" .desktop)" pacman "package=$package"
@@ -223,5 +223,5 @@ case "${base,,}" in
     *.appimage) install_appimage ;;
     *.flatpakref | *.flatpak) install_flatpak ;;
     *.pkg.tar.zst | *.pkg.tar.xz) install_pacman ;;
-    *) notify "Can't install $base" "Graphite installs .deb, .AppImage, Flatpak and Arch packages." ; exit 1 ;;
+    *) notify "Can't install $base" "Only .deb, AppImage, Flatpak and Arch package files can be installed." ; exit 1 ;;
 esac

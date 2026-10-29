@@ -39,7 +39,7 @@ fail() {
     if $lines; then
         echo "ERROR $1"
     else
-        dialog --backtitle "$backtitle" --title "Something went wrong" --msgbox "$1\n\nThe details are in $log. Restart to try again; nothing on the computer has been changed unless it says so above." 13 70
+        dialog --backtitle "$backtitle" --title "Something went wrong" --msgbox "$1\n\nDetails are in $log. Restart to try again. Nothing on the computer was changed unless it says so above." 13 70
     fi
     exit 1
 }
@@ -52,8 +52,8 @@ fi
 # ---------- the computer ----------
 
 if [ ! -d /sys/firmware/efi ]; then
-    $lines && fail "This computer started the installer the old way (BIOS). Restart and choose the USB stick's UEFI entry."
-    say "This computer started the installer the old way (BIOS).\n\nRestart, open the boot menu (often F12, F11 or Esc), and choose the USB stick's entry that says UEFI." 11
+    $lines && fail "The installer was started in BIOS mode. Restart and choose the USB stick's UEFI entry."
+    say "The installer was started in BIOS mode.\n\nRestart, open the boot menu (often F12, F11 or Esc), and choose the USB stick's UEFI entry." 11
     exit 1
 fi
 
@@ -66,7 +66,7 @@ online() { curl -s --max-time 5 -o /dev/null https://archlinux.org; }
 connect_wifi() {
     local networks ssid password
     if ! nmcli -t -f TYPE device 2>/dev/null | grep -qx wifi; then
-        say "There's no internet, and no Wi-Fi was found.\n\nPlug in a network cable, then press Enter." 10
+        say "No internet connection or Wi-Fi was found.\n\nPlug in a network cable, then press Enter." 10
         return
     fi
     nmcli device wifi rescan >/dev/null 2>&1
@@ -79,7 +79,7 @@ connect_wifi() {
     local items=()
     for ssid in "${networks[@]}"; do items+=("$ssid" ""); done
     ssid="$(ask --menu "Choose your Wi-Fi network:" 18 64 10 "${items[@]}")" || return
-    password="$(ask --insecure --passwordbox "Password for \"$ssid\" (empty if it has none):" 9 64)" || return
+    password="$(ask --insecure --passwordbox "Password for \"$ssid\". Leave empty if there isn't one:" 9 64)" || return
     if [ -n "$password" ]; then
         nmcli device wifi connect "$ssid" password "$password" >>"$log" 2>&1
     else
@@ -89,7 +89,7 @@ connect_wifi() {
 }
 
 until online; do
-    $lines && fail "There's no internet. Connect to a network first."
+    $lines && fail "No internet connection. Connect to a network first."
     connect_wifi
 done
 
@@ -108,9 +108,9 @@ if [ -z "${DISK:-}" ]; then
     [ ${#items[@]} -gt 0 ] || fail "No disk was found to install on."
     DISK="$(ask --menu "Which disk should Graphite Desk go on?\n\nEverything on it will be erased." 16 72 6 "${items[@]}")" || exit 1
     disk_note="$(lsblk -dno SIZE,MODEL "$DISK" | xargs)"
-    ask --defaultno --yesno "Everything on this disk will be erased:\n\n    $DISK  ($disk_note)\n\nWindows, files, photos: all of it, for good.\n\nErase it and install Graphite Desk?" 14 64 || exit 1
-    confirm="$(ask --inputbox "To be sure, type ERASE (in capitals):" 9 64)" || exit 1
-    [ "$confirm" = "ERASE" ] || { say "Nothing was erased. Restart to begin again."; exit 1; }
+    ask --defaultno --yesno "Everything on this disk will be erased:\n\n    $DISK  ($disk_note)\n\nThis includes Windows and all your files. It can't be undone.\n\nErase it and install Graphite Desk?" 14 64 || exit 1
+    confirm="$(ask --inputbox "To confirm, type ERASE in capitals:" 9 64)" || exit 1
+    [ "$confirm" = "ERASE" ] || { say "Nothing was erased. Restart to start again."; exit 1; }
 fi
 
 # ---------- the person ----------
@@ -119,23 +119,23 @@ if [ -z "${FULL_NAME:-}" ]; then
     FULL_NAME="$(ask --inputbox "What's your name?" 9 64)" || exit 1
     suggested="$(echo "${FULL_NAME%% *}" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')"
     while true; do
-        USER_NAME="$(ask --inputbox "A short name for signing in (small letters and numbers):" 9 64 "${suggested:-me}")" || exit 1
+        USER_NAME="$(ask --inputbox "User name, in lower-case letters and numbers:" 9 64 "${suggested:-me}")" || exit 1
         [[ "$USER_NAME" =~ ^[a-z][a-z0-9_-]{0,30}$ ]] && break
-        say "Use small letters and numbers, starting with a letter."
+        say "Use lower-case letters and numbers, starting with a letter."
     done
     while true; do
         PASSWORD="$(ask --insecure --passwordbox "Choose a password:" 9 64)" || exit 1
         again="$(ask --insecure --passwordbox "Type it again:" 9 64)" || exit 1
         if [ -z "$PASSWORD" ]; then say "The password can't be empty."; continue; fi
         [ "$PASSWORD" = "$again" ] && break
-        say "Those two didn't match. Try again."
+        say "The passwords don't match. Try again."
     done
 fi
 
 if [ -z "${TIME_ZONE:-}" ]; then
     guess="$(curl -s --max-time 5 https://ipapi.co/timezone 2>/dev/null)"
     [ -f "/usr/share/zoneinfo/$guess" ] || guess="Europe/London"
-    if ask --yesno "Your time zone looks like:\n\n    $guess\n\nIs that right?" 10 64; then
+    if ask --yesno "Is this your time zone?\n\n    $guess" 10 64; then
         TIME_ZONE="$guess"
     else
         items=()
@@ -166,7 +166,7 @@ HOST_NAME="${HOST_NAME:-graphite-pc}"
 [[ "$HOST_NAME" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || HOST_NAME=graphite-pc
 
 if [ -z "${GAMING:-}" ]; then
-    if ask --yesno "Set it up for games too?\n\nSteam, Minecraft (Prism Launcher, tuned for modpacks), GameMode and an FPS counter. You can also do this later from Settings." 11 64; then
+    if ask --yesno "Set up for games?\n\nInstalls Steam, Minecraft, GameMode and an FPS counter. You can also do this later from the Control Panel." 11 64; then
         GAMING=yes
     else
         GAMING=no
@@ -228,7 +228,7 @@ install_steps() {
         hypridle hyprsunset brightnessctl
         greetd papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono noto-fonts noto-fonts-emoji dconf
         kitty nautilus firefox libnotify grim
-        loupe celluloid papers
+        loupe celluloid papers slurp wl-clipboard xdg-user-dirs udisks2 gvfs exfatprogs ntfs-3g dosfstools
         distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
         power-profiles-daemon zram-generator pciutils git pacman-contrib ufw plymouth
         cups cups-pk-helper system-config-printer avahi nss-mdns
@@ -244,7 +244,7 @@ install_steps() {
         if [ "$gpu" = "#nvidia" ]; then nvidia=true; else packages+=("$gpu"); fi
     done < <(bash "$source_dir/linux/installer/gpu-packages.sh")
 
-    step 10 "Downloading and installing Arch Linux and Graphite Desk (the long part)..."
+    step 10 "Downloading and installing Arch Linux and Graphite Desk..."
     # pacstrap's own progress, as the bar between 10 and 75.
     pacstrap -K "$target" "${packages[@]}" 2>&1 | tee -a "$log" | grep --line-buffered -E '^\(\s*[0-9]+/[0-9]+\) installing' | \
         while read -r line; do
@@ -353,7 +353,7 @@ CONFIGURE
     rm -f "$target/root/configure.sh"
 
     stage security
-    step 84 "Securing this PC (firewall, updates)..."
+    step 84 "Setting up the firewall and updates..."
     arch-chroot "$target" bash /opt/graphite-desk/linux/system/install.sh >>"$log" 2>&1 || echo "The security setup didn't finish." >>"$log"
     # The sign-in PIN, when one was chosen (kept only as a salted hash).
     if [[ "${PIN:-}" =~ ^[0-9]{4,8}$ ]]; then
@@ -362,7 +362,7 @@ CONFIGURE
 
     if [ "$GAMING" = yes ]; then
         stage games
-        step 85 "Setting up for games (Steam, Minecraft)..."
+        step 85 "Installing Steam and Minecraft..."
         arch-chroot "$target" env GRAPHITE_USER="$USER_NAME" bash /opt/graphite-desk/linux/gaming.sh --from-installer >>"$log" 2>&1 || echo "gaming" > /tmp/graphite-gaming-failed
     fi
 
@@ -387,7 +387,9 @@ CONFIGURE
     fi
 
     stage finish
-    step 97 "Final touches..."
+    step 97 "Finishing..."
+    # Everything in their home folder theirs (some steps above run as the system).
+    arch-chroot "$target" chown -R "$USER_NAME:$USER_NAME" "/home/$USER_NAME" >>"$log" 2>&1
     cp "$log" "$target/var/log/graphite-install.log"
     # Why the installer's screens didn't open, when the text ones were used instead.
     [ -f /tmp/graphite-gui.log ] && cp /tmp/graphite-gui.log "$target/var/log/graphite-install-screens.log"
@@ -406,13 +408,13 @@ fi
 
 if [ -f /tmp/graphite-failed ]; then
     case "$(cat /tmp/graphite-failed)" in
-        packages) fail "Downloading the packages didn't finish. Is the internet still on?" ;;
-        disk | format | mount | encrypt) fail "The disk couldn't be prepared. The disk has been erased; nothing else was installed." ;;
+        packages) fail "The download didn't finish. Check your internet connection." ;;
+        disk | format | mount | encrypt) fail "The disk couldn't be prepared. It has been erased, but nothing was installed." ;;
         *) fail "Setting up the new system didn't finish." ;;
     esac
 fi
 gaming_note=""
-[ -f /tmp/graphite-gaming-failed ] && gaming_note="\n\nThe games setup didn't finish; run it again from the Control Panel (Apps, Set up gaming)."
+[ -f /tmp/graphite-gaming-failed ] && gaming_note="\n\nGaming setup didn't finish. Try again from Apps in the Control Panel."
 umount -R "$target" 2>/dev/null
 cryptsetup close cryptroot 2>/dev/null
 
@@ -421,7 +423,7 @@ if $lines; then
     [ -f /tmp/graphite-apps-failed ] && echo "NOTE apps $(tr '\n' ' ' < /tmp/graphite-apps-failed)"
     echo "DONE"
 elif [ -z "${GRAPHITE_ANSWERS:-}" ]; then
-    say "Graphite Desk is installed.$gaming_note\n\nPress Enter to restart. Once the screen goes dark, take out the USB stick; the computer starts your new desktop. Sign in with the password you chose." 13
+    say "Graphite Desk is installed.$gaming_note\n\nPress Enter to restart. When the screen goes dark, remove the USB stick. Then sign in with the password you chose." 13
     # Everything is written and unmounted: no need to wait for the USB stick's services to stop
     # (which hangs when the stick is pulled out early).
     reboot -f

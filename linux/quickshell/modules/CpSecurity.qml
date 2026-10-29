@@ -14,8 +14,8 @@ ColumnLayout {
             glyph: "security-high-symbolic"
             label: "Firewall"
             hint: Machine.about.hasFirewall !== "yes" ? "Not installed" : Machine.about.firewall === "on"
-                ? "On: nothing from the network can reach this computer unless it asked for it"
-                : "Off: turn it on, especially on public Wi-Fi"
+                ? "On. Blocks unwanted connections from the network."
+                : "Off. Turn it on, especially on public Wi-Fi."
             enabled: Machine.about.hasFirewall === "yes"
 
             ToggleSwitch {
@@ -27,7 +27,7 @@ ColumnLayout {
         CpRow {
             glyph: "system-lock-screen-symbolic"
             label: "Lock the screen"
-            hint: "Super+L locks it now; it also locks by itself when you leave it (Power & battery) and before sleeping"
+            hint: "Press Windows key + L. It also locks when idle and before sleep."
             PillButton {
                 text: "Lock now"
                 onClicked: ShellState.locked = true
@@ -38,8 +38,8 @@ ColumnLayout {
             glyph: "drive-harddisk-system-symbolic"
             label: "Disk encryption"
             hint: Number(Machine.about.encrypted || 0) > 0
-                ? "On: without your password, the disk can't be read even if it's taken out"
-                : "Off. Encryption is chosen when installing."
+                ? "On. The disk can't be read without your password."
+                : "Off. You can only turn this on during install."
         }
     }
 
@@ -49,7 +49,7 @@ ColumnLayout {
         CpRow {
             glyph: "find-location-symbolic"
             label: "App permissions"
-            hint: "Apps from Flathub each ask before using the camera, microphone, location or your files"
+            hint: "Flathub apps ask before using your camera, microphone, location or files"
         }
     }
 }

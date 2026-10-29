@@ -43,6 +43,11 @@ Singleton {
     function launch(entry) {
         if (!entry) return;
         if (entry.runInTerminal) Quickshell.execDetached(["kitty", "-e"].concat(Array.from(entry.command)));
+        // Through system/launch.sh: if the app can't start, it says why.
+        else if (entry.command.length) Quickshell.execDetached({
+            command: ["setsid", "bash", Quickshell.shellDir + "/../system/launch.sh", entry.name, entry.id].concat(Array.from(entry.command)),
+            workingDirectory: entry.workingDirectory || Quickshell.env("HOME")
+        });
         else entry.execute();
         noteUsed(entry.id);
     }

@@ -339,7 +339,7 @@ PanelWindow {
             }
 
             UiText {
-                text: "Click a zone to split it (Shift: across) · drag a line to move it · right-click to join it with its neighbour"
+                text: "Click a zone to split it, Shift+click to split the other way · Drag a line to resize · Right-click to merge zones"
                 color: Theme.inkMuted
                 font.pixelSize: Theme.hintSize
             }

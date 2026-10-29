@@ -106,6 +106,7 @@ Singleton {
     }
 
     property bool taskManagerOpen: false
+    property bool taskViewOpen: false // Super+Tab (TaskView.qml)
 
     // The launcher's key hints, shown after a fast wiggle of the mouse (LauncherView).
     property bool showHints: false

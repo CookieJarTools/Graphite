@@ -31,19 +31,37 @@ ColumnLayout {
         color: Theme.inkMuted
     }
 
+    // The networks' names in order, changed only when the list itself changes, and not at all
+    // while one is open: a new scan then rebuilt every row, emptying the password being typed.
+    property var shown: []
+
+    function sync() {
+        if (opened !== "" && shown.includes(opened)) return;
+        const names = Network.networks.map(network => network.name);
+        if (names.join("|") !== shown.join("|")) shown = names;
+    }
+
+    Connections {
+        target: Network
+        function onNetworksChanged() { root.sync(); }
+    }
+    onOpenedChanged: sync()
+    Component.onCompleted: sync()
+
     Repeater {
-        model: Network.networks
+        model: root.shown
 
         Rectangle {
             id: row
-            required property var modelData
-            readonly property bool isOpen: root.opened === modelData.name
-            readonly property bool secure: Network.isSecure(modelData)
-            readonly property bool busy: modelData.stateChanging
+            required property string modelData // the network's name
+            readonly property var net: Network.networks.find(network => network.name === modelData) || ({ name: modelData, connected: false, known: false, signalStrength: 0, stateChanging: false, connectionFailed: false })
+            readonly property bool isOpen: root.opened === net.name
+            readonly property bool secure: Network.isSecure(net)
+            readonly property bool busy: net.stateChanging
             property bool tried: false // a connect pressed here (an old failure of its own says nothing)
-            readonly property bool failed: tried && modelData.connectionFailed && !busy
+            readonly property bool failed: tried && net.connectionFailed && !busy
             property bool askPassword: false // a saved password was refused: ask again
-            readonly property bool needsPassword: secure && (!modelData.known || askPassword)
+            readonly property bool needsPassword: secure && (!net.known || askPassword)
 
             Layout.fillWidth: true
             implicitHeight: content.implicitHeight + Theme.space2 * 2
@@ -52,7 +70,7 @@ ColumnLayout {
 
             onFailedChanged: if (failed && secure) {
                 askPassword = true;
-                root.opened = modelData.name;
+                root.opened = net.name;
             }
 
             function connectNow() {
@@ -61,7 +79,7 @@ ColumnLayout {
                     return;
                 }
                 tried = true;
-                Network.connect(modelData, needsPassword ? password.text : "");
+                Network.connect(net, needsPassword ? password.text : "");
                 password.text = "";
                 askPassword = false;
             }
@@ -71,8 +89,8 @@ ColumnLayout {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: {
-                    root.opened = row.isOpen ? "" : row.modelData.name;
-                    if (row.isOpen && row.needsPassword && !row.modelData.connected) password.focusField();
+                    root.opened = row.isOpen ? "" : row.net.name;
+                    if (row.isOpen && row.needsPassword && !row.net.connected) password.focusField();
                 }
             }
 
@@ -87,7 +105,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Theme.space3
 
-                    Glyph { name: Network.glyphFor(row.modelData) }
+                    Glyph { name: Network.glyphFor(row.net) }
 
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -95,18 +113,18 @@ ColumnLayout {
 
                         UiText {
                             Layout.fillWidth: true
-                            text: row.modelData.name
-                            font.weight: row.modelData.connected ? Font.DemiBold : Font.Normal
+                            text: row.net.name
+                            font.weight: row.net.connected ? Font.DemiBold : Font.Normal
                         }
 
                         UiText {
                             Layout.fillWidth: true
                             visible: text.length > 0
-                            text: row.busy ? (row.modelData.connected ? "Disconnecting..." : "Connecting...")
-                                : row.failed ? (row.secure ? "Wrong password? Try it again" : "Couldn't connect")
-                                : row.modelData.connected ? "Connected" + (row.secure ? ", secured" : "")
-                                : row.modelData.known ? "Saved" : row.secure ? "" : "Open network"
-                            color: row.failed ? Theme.danger : row.modelData.connected ? Theme.success : Theme.inkMuted
+                            text: row.busy ? (row.net.connected ? "Disconnecting..." : "Connecting...")
+                                : row.failed ? (row.secure ? "Wrong password. Try again." : "Couldn't connect")
+                                : row.net.connected ? "Connected" + (row.secure ? ", secured" : "")
+                                : row.net.known ? "Saved" : row.secure ? "" : "Open network"
+                            color: row.failed ? Theme.danger : row.net.connected ? Theme.success : Theme.inkMuted
                             font.pixelSize: Theme.hintSize
                         }
                     }
@@ -122,7 +140,7 @@ ColumnLayout {
                 FieldBox {
                     id: password
                     Layout.fillWidth: true
-                    visible: row.isOpen && row.needsPassword && !row.modelData.connected
+                    visible: row.isOpen && row.needsPassword && !row.net.connected
                     placeholder: "Password"
                     password: true
                     onAccepted: row.connectNow()
@@ -136,22 +154,22 @@ ColumnLayout {
                     Item { Layout.fillWidth: true }
 
                     PillButton {
-                        visible: row.modelData.known
+                        visible: row.net.known
                         text: "Forget"
                         onClicked: {
-                            row.modelData.forget();
+                            row.net.forget();
                             root.opened = "";
                         }
                     }
 
                     PillButton {
-                        visible: row.modelData.connected
+                        visible: row.net.connected
                         text: "Disconnect"
-                        onClicked: row.modelData.disconnect()
+                        onClicked: row.net.disconnect()
                     }
 
                     PillButton {
-                        visible: !row.modelData.connected
+                        visible: !row.net.connected
                         primary: true
                         enabled: !row.busy
                         text: "Connect"
@@ -210,7 +228,7 @@ ColumnLayout {
                 id: hiddenPassword
                 Layout.fillWidth: true
                 visible: root.joiningHidden
-                placeholder: "Password (leave empty if it has none)"
+                placeholder: "Password, if it has one"
                 password: true
                 onAccepted: join.clicked()
             }

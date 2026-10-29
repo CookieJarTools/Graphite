@@ -179,7 +179,7 @@ Singleton {
 
     function setPin(name, pin) {
         withSecret(["pkexec", admin, "pin", name], pin || "
-", pin ? "PIN saved: sign in with it from now on" : "PIN removed");
+", pin ? "PIN saved" : "PIN removed");
     }
 
     function setFullName(name, full) {

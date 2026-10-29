@@ -19,7 +19,7 @@ ColumnLayout {
         CpRow {
             glyph: "bluetooth-active-symbolic"
             label: "Bluetooth"
-            hint: !page.adapter ? "This computer has no Bluetooth" : page.adapter.enabled ? "On, and visible to devices nearby while this page is open" : "Off"
+            hint: !page.adapter ? "This computer has no Bluetooth" : page.adapter.enabled ? "On. Visible to nearby devices while this page is open." : "Off"
             enabled: page.adapter !== null
 
             ToggleSwitch {
@@ -45,14 +45,14 @@ ColumnLayout {
 
             SliderBar {
                 Layout.preferredWidth: 200
-                value: ((Displays.input.sensitivity || 0) + 1) / 2
+                value: ((Displays.input.sensitivity ?? -0.4) + 1) / 2
                 onMoved: value => Displays.setInput("sensitivity", Math.round((value * 2 - 1) * 20) / 20)
             }
         }
 
         CpRow {
             label: "Reverse the mouse wheel"
-            hint: "Scroll the page the way the wheel turns"
+            hint: "Scroll the other way"
 
             ToggleSwitch {
                 on: !!Displays.input.naturalScroll
@@ -62,7 +62,7 @@ ColumnLayout {
 
         CpRow {
             label: "Touchpad: natural scrolling"
-            hint: "Content moves with your fingers, as on a phone"
+            hint: "The page moves with your fingers"
 
             ToggleSwitch {
                 on: Displays.input.touchpadNaturalScroll !== false
@@ -85,12 +85,12 @@ ColumnLayout {
 
         CpRow {
             label: "Keyboard layout"
-            hint: "Which letters the keys type"
+            hint: "The language your keyboard types in"
 
             CpChoice {
                 value: (ShellSettings.values && ShellSettings.values.keyboard) || ""
                 options: [
-                    { value: "", label: "As set when installing" },
+                    { value: "", label: "Same as during install" },
                     { value: "gb", label: "English (UK)" }, { value: "us", label: "English (US)" },
                     { value: "ie", label: "English (Ireland)" }, { value: "de", label: "German" },
                     { value: "fr", label: "French" }, { value: "es", label: "Spanish" },
@@ -112,7 +112,7 @@ ColumnLayout {
         CpRow {
             glyph: "printer-symbolic"
             label: "Printers and scanners"
-            hint: "Add a printer; most on your network are found by themselves"
+            hint: "Add a printer or scanner"
             opens: true
             onClicked: Quickshell.execDetached(["system-config-printer"])
         }

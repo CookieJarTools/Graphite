@@ -17,6 +17,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(shell)
     -- Idle (lock, screen off, sleep: the Control Panel writes its settings) and startup apps.
     hl.exec_cmd("hypridle")
+    -- Files, started in the background so its window opens at once when asked for.
+    hl.exec_cmd("nautilus --gapplication-service")
     hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/autostart.sh\"")
     -- The VM's guest tools: shared clipboard and resizing with the window (VirtualBox or VMware).
     hl.exec_cmd("command -v VBoxClient-all >/dev/null && VBoxClient-all; command -v vmware-user >/dev/null && vmware-user")
@@ -44,13 +46,23 @@ if textMode ~= "standard" then
     hl.env("FREETYPE_PROPERTIES", "cff:no-stem-darkening=0 autofitter:no-stem-darkening=0 type1:no-stem-darkening=0 t1cid:no-stem-darkening=0")
 end
 
--- NVIDIA on Wayland, whenever its driver is loaded.
+-- Which desktop this is, for apps, Flatpak and the portals (which pick their helpers by it).
+hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
+hl.env("XDG_SESSION_DESKTOP", "Hyprland")
+hl.env("XDG_SESSION_TYPE", "wayland")
+-- Electron apps (Discord, VS Code...) drawn natively on Wayland.
+hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
+
+-- NVIDIA on Wayland, whenever its driver is loaded (Hyprland's wiki for 0.56). GTK 4 apps use
+-- its OpenGL renderer: the Vulkan one hangs on NVIDIA and starts slower (Arch sets the same,
+-- but in a profile script a desktop started by greetd doesn't read).
 local nvidia = io.open("/sys/module/nvidia_drm/version")
 if nvidia then
     nvidia:close()
     hl.env("LIBVA_DRIVER_NAME", "nvidia")
     hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
     hl.env("NVD_BACKEND", "direct")
+    hl.env("GSK_RENDERER", "ngl")
 end
 
 -- Apps installed from Flathub (theirs and everyone's), alongside the system's: the launcher
@@ -131,6 +143,7 @@ hl.config({
     input = {
         kb_layout = keyboardLayout,
         follow_mouse = 1,
+        sensitivity = -0.4, -- calmer than libinput's own; the Control Panel changes it
     },
 
     -- Window tabs are Hyprland's groups, drawn as a strip of titles over the window. As on
@@ -284,8 +297,8 @@ hl.bind("SUPER + SHIFT + down", hl.dsp.window.move({ direction = "d", group_awar
 
 -- Window tabs (groups): make or break up a group, step through its tabs, pull one out.
 hl.bind("SUPER + G", hl.dsp.group.toggle())
-hl.bind("SUPER + Tab", hl.dsp.group.next())
-hl.bind("SUPER + SHIFT + Tab", hl.dsp.group.prev())
+hl.bind("SUPER + grave", hl.dsp.group.next())
+hl.bind("SUPER + SHIFT + grave", hl.dsp.group.prev())
 hl.bind("SUPER + CTRL + O", hl.dsp.window.move({ out_of_group = true }))
 
 -- Workspaces 1 to 9
@@ -297,6 +310,14 @@ end
 -- Mouse: Super + drag moves a window, Super + right-drag resizes it.
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
+
+-- Screenshots, as on Windows: Print takes the screen, Super+Shift+S an area.
+local screenshot = "bash \"$HOME/.config/quickshell/graphite/../system/screenshot.sh\""
+hl.bind("Print", hl.dsp.exec_cmd(screenshot .. " screen"))
+hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd(screenshot .. " area"))
+
+-- Super+Tab: task view, every window and desktop, as on Windows.
+hl.bind("SUPER + Tab", hl.dsp.global("quickshell:taskview"))
 
 -- Ctrl+Shift+Esc: the task manager, as on Windows.
 hl.bind("CTRL + SHIFT + Escape", hl.dsp.global("quickshell:taskmanager"))

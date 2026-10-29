@@ -91,6 +91,7 @@ ShellRoot {
     ControlPanel {}
     PasswordPrompt {}
     TaskManager {}
+    TaskView {}
 
     AppsWindow {}
 

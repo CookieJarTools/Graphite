@@ -16,6 +16,10 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Lock screen (Super+L, Lock, before sleep): the same look, the password checked by PAM | `modules/LockScreen.qml` |
 | Control Panel: network, Bluetooth and devices, display (resolution, scale, HDR, night light), sound, power, personalisation, apps, accounts, time, updates, privacy and security, system | `modules/ControlPanel.qml`, `Cp*.qml`; `services/Displays.qml`, `Power.qml`, `Machine.qml`, `Updates.qml`; kept in `settings.json` (`services/ShellSettings.qml`) |
 | Task Manager (Ctrl+Shift+Esc): apps and background processes, end task, performance graphs | `modules/TaskManager.qml`, `services/Tasks.qml`, `system/task-sample.sh` |
+| Task view (Super+Tab): every window as a live preview, and the desktops | `modules/TaskView.qml` |
+| Shortcuts page: change any shortcut, add ones that open apps; Print and Super+Shift+S screenshots | `modules/CpShortcuts.qml`, `services/Hotkeys.qml`, `system/screenshot.sh` |
+| Drives page: every drive, connect, eject, format or erase (never the system's) | `modules/CpDrives.qml`, `services/Drives.qml` |
+| Troubleshoot page, and a notice with the reason when an app doesn't open | `modules/CpTroubleshoot.qml`, `services/Diagnose.qml`, `system/diagnose.sh`, `system/launch.sh` |
 | Administrator changes and updates without a terminal: a root-owned helper, an update service, polkit rules | `system/` (`install.sh` puts them in place) |
 | Installer on the USB stick: friendly screens over `installer/graphite-install.sh` | `quickshell/installer.qml`, `installer/gui.lua`, `installer/build-iso.sh` |
 | Quick settings: Wi-Fi networks to join, Bluetooth devices to pair, where the sound goes, aeroplane mode, night light, volume, media | `modules/QuickSettings.qml`, `NetworkList.qml`, `BluetoothList.qml`, `SoundDeviceList.qml` |
@@ -106,8 +110,10 @@ darkening for fuller strokes (`fonts/fonts.conf`, and `FREETYPE_PROPERTIES` in
 | Super+Enter, Super+E | Terminal, files |
 | Super+L | Lock |
 | Super+Q, Super+F, Super+V | Close, maximise, float or tile one window |
-| Super+G | Make or break up a tab group; Super+Tab moves through its tabs |
+| Super+G | Make or break up a tab group; Super+` moves through its tabs |
 | Super+Ctrl+O | Pull a window out of its group |
+| Super+Tab | Task view |
+| Print, Super+Shift+S | Screenshot of the screen, or of an area |
 | Super+1..9, Super+Shift+1..9 | Go to, or move a window to, a workspace |
 | Super+drag, Super+right-drag | Move, resize |
 

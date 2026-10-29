@@ -49,7 +49,7 @@ ColumnLayout {
 
     Heading {
         visible: root.on
-        text: root.nearby.length ? "Nearby" : "Looking for devices... (put yours in pairing mode)"
+        text: root.nearby.length ? "Nearby" : "Looking for devices. Put yours in pairing mode."
     }
 
     Repeater {

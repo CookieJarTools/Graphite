@@ -38,7 +38,7 @@ ColumnLayout {
 
         CpRow {
             label: "Power mode"
-            hint: "Saving power gives a longer battery and a quieter fan; best performance suits games"
+            hint: "Save power for longer battery life, or choose best performance for games"
 
             CpChoice {
                 value: Power.profile
@@ -49,11 +49,11 @@ ColumnLayout {
     }
 
     CpSection {
-        title: "When I leave the computer"
+        title: "When the computer is idle"
 
         CpRow {
             label: "Lock after"
-            hint: "Your password is needed to come back"
+            hint: "You'll need your password to unlock"
 
             CpChoice {
                 value: Power.idle.lock === undefined ? 10 : Power.idle.lock
@@ -74,7 +74,7 @@ ColumnLayout {
 
         CpRow {
             label: "Sleep after"
-            hint: "Sleeping saves power; anything open stays as it was"
+            hint: "Your open apps stay open while it sleeps"
 
             CpChoice {
                 value: Power.idle.sleep === undefined ? 30 : Power.idle.sleep

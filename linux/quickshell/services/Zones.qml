@@ -123,6 +123,7 @@ Singleton {
     property bool dragging: false      // the focused window has moved since the button went down
     property var start: null           // { address: [x, y] } of every window when the button went down
     property string dragged: ""        // the window that has moved since
+    property var grab: null            // where the pointer holds it, once Shift takes the drag over
     property var cursor: ({ x: 0, y: 0 })
     property string monitorName: ""
     property var area: null
@@ -144,6 +145,7 @@ Singleton {
         if (!pointerDown) return;
         if (showing && selection.length && dragged) snap(dragged, union(selection.map(index => zoneRect(zones[index], area))));
         dragged = "";
+        grab = null;
         pointerDown = false;
         dragging = false;
         selection = [];
@@ -215,7 +217,19 @@ Singleton {
                         }
                     }
                 }
-                if (!root.dragging || !root.shift) return;
+                if (!root.dragging || !root.shift) {
+                    root.grab = null;
+                    return;
+                }
+                // Hyprland lets go of a window being dragged when Shift goes down, so from then
+                // on it follows the pointer from here, keeping the spot it was held by.
+                const place = read.places[root.dragged];
+                if (place) {
+                    if (!root.grab) root.grab = { x: read.cursor.x - place[0], y: read.cursor.y - place[1] };
+                    const x = Math.round(read.cursor.x - root.grab.x);
+                    const y = Math.round(read.cursor.y - root.grab.y);
+                    if (x !== place[0] || y !== place[1]) Hyprland.dispatch(`hl.dsp.window.move({ x = ${x}, y = ${y}, exact = true, window = "address:${root.dragged}" })`);
+                }
                 const monitor = Array.from(Hyprland.monitors.values).find(candidate => {
                     const scale = candidate.scale || 1;
                     return read.cursor.x >= candidate.x && read.cursor.x < candidate.x + candidate.width / scale

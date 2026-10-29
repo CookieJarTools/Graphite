@@ -26,12 +26,12 @@ ColumnLayout {
         CpRow {
             glyph: "preferences-system-time-symbolic"
             label: Qt.formatDateTime(clock.date, "HH:mm:ss, dddd d MMMM yyyy")
-            hint: "The time now, in " + (Machine.about.timezone || "your time zone").replace(/_/g, " ")
+            hint: (Machine.about.timezone || "Your time zone").replace(/_/g, " ")
         }
 
         CpRow {
             label: "Set the time automatically"
-            hint: "From the internet; always right"
+            hint: "Gets the time from the internet"
             ToggleSwitch {
                 on: Machine.about.ntp === "yes"
                 onToggled: Machine.setAutomaticTime(Machine.about.ntp !== "yes")
@@ -57,7 +57,7 @@ ColumnLayout {
                     FieldBox {
                         id: zoneSearch
                         Layout.fillWidth: true
-                        placeholder: "Search for a city (London, New York, Tokyo...)"
+                        placeholder: "Search for a city, for example London"
                     }
 
                     Flow {
@@ -88,7 +88,7 @@ ColumnLayout {
 
         CpRow {
             label: "Computer name"
-            hint: "How it shows on your network: " + (Machine.about.host || "")
+            hint: "Name on your network: " + (Machine.about.host || "")
 
             FieldBox {
                 id: hostField

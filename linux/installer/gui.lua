@@ -31,7 +31,7 @@ end
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 hl.config({
-    input = { kb_layout = "gb" },
+    input = { kb_layout = "gb", sensitivity = -0.4 },
     misc = {
         disable_hyprland_logo = true,
         disable_splash_rendering = true,

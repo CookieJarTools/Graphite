@@ -35,7 +35,7 @@ ColumnLayout {
         CpRow {
             glyph: "network-wired-symbolic"
             label: "Ethernet"
-            hint: !Network.wiredDevice ? "No network socket" : Network.wired ? "Connected" : "No cable plugged in"
+            hint: !Network.wiredDevice ? "No Ethernet port" : Network.wired ? "Connected" : "No cable plugged in"
         }
 
         CpRow {
@@ -51,8 +51,8 @@ ColumnLayout {
 
         CpRow {
             glyph: "network-vpn-symbolic"
-            label: "VPN, fixed addresses and more"
-            hint: "Add a VPN, or set an address, proxy or DNS by hand"
+            label: "Advanced network settings"
+            hint: "VPN, IP address, proxy and DNS"
             opens: true
             onClicked: Network.openAdvanced()
         }

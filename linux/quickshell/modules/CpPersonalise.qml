@@ -17,7 +17,7 @@ ColumnLayout {
 
         CpRow {
             label: "Colours"
-            hint: "The desktop's and the apps' colours"
+            hint: "For the desktop and apps"
             CpChoice {
                 value: page.values.themeMode === "auto" ? "auto" : page.values.dark !== false ? "dark" : "light"
                 options: [{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }, { value: "auto", label: "Match time of day" }]
@@ -30,7 +30,7 @@ ColumnLayout {
 
         CpRow {
             label: "Smoother text"
-            hint: "Fuller, smoother letters in every app (like MacType); apps opened from now on"
+            hint: "Applies to apps you open after turning it on"
             ToggleSwitch {
                 on: page.values.smoothText !== false
                 onToggled: Desktop.setSmoothText(page.values.smoothText === false)
@@ -38,8 +38,8 @@ ColumnLayout {
         }
 
         CpRow {
-            label: "Home on an empty screen"
-            hint: "Search and Recent on the backdrop whenever a workspace has no windows"
+            label: "Show Home on an empty desktop"
+            hint: "Shows search and recent files when no windows are open"
             ToggleSwitch {
                 on: page.values.showHome !== false
                 onToggled: ShellSettings.set("showHome", page.values.showHome === false)
@@ -52,7 +52,7 @@ ColumnLayout {
 
         CpRow {
             label: "Show app names"
-            hint: "Next to each icon on the bar"
+            hint: "Next to each icon on the taskbar"
             ToggleSwitch {
                 on: page.values.taskbar.showLabels !== false
                 onToggled: ShellSettings.setTaskbar("showLabels", page.values.taskbar.showLabels === false)
@@ -61,7 +61,7 @@ ColumnLayout {
 
         CpRow {
             label: "Always auto-hide"
-            hint: "The bar slides away; touch the bottom edge to bring it back"
+            hint: "Move the pointer to the bottom edge to show it"
             ToggleSwitch {
                 on: !!page.values.taskbar.alwaysAutoHide
                 onToggled: ShellSettings.setTaskbar("alwaysAutoHide", !page.values.taskbar.alwaysAutoHide)
@@ -83,7 +83,7 @@ ColumnLayout {
 
         CpRow {
             label: "Tile windows"
-            hint: "Windows fill the screen side by side; off, they float and overlap as on Windows"
+            hint: "Arrange windows side by side. When off, they can overlap."
             ToggleSwitch {
                 on: !!page.values.tiling
                 onToggled: Taskbar.setTiling(!page.values.tiling)
@@ -92,7 +92,7 @@ ColumnLayout {
 
         CpRow {
             label: "Snap to zones"
-            hint: "Hold Shift while dragging a window to drop it into a zone; with Ctrl, it fills several"
+            hint: "Hold Shift while dragging a window. Add Ctrl to fill more than one zone."
             ToggleSwitch {
                 on: Zones.enabled
                 onToggled: Zones.setEnabled(!Zones.enabled)
@@ -101,7 +101,7 @@ ColumnLayout {
 
         CpRow {
             label: "Window zones"
-            hint: "Pick a layout, or split and size the zones yourself"
+            hint: "Choose a layout or make your own"
             opens: true
             onClicked: {
                 ShellState.settingsOpen = false;
@@ -110,8 +110,8 @@ ColumnLayout {
         }
 
         CpRow {
-            label: "Alt+Space search"
-            hint: "A compact search over everything, from any app"
+            label: "Quick search (Alt+Space)"
+            hint: "Open a small search box from any app"
             ToggleSwitch {
                 on: page.values.paletteHotkey !== false
                 onToggled: ShellSettings.set("paletteHotkey", page.values.paletteHotkey === false)

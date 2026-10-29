@@ -21,6 +21,7 @@ pragma Singleton
 //              (Displays.qml writes these into Hyprland's desk.lua)
 //   idle       { lock, screenOff, sleep } in minutes, 0 for never (Devices.qml: hypridle)
 //   autoUpdates   updates install by themselves (Updates.qml)
+//   shortcuts, appShortcuts   keyboard shortcuts changed or added (Hotkeys.qml)
 // Changes go through update(), which saves a moment later.
 
 import QtQuick
@@ -62,11 +63,13 @@ Singleton {
             notificationsSeen: 0,
             displays: {},
             nightLight: { on: false, temperature: 4500 },
-            input: { sensitivity: 0, naturalScroll: false, touchpadNaturalScroll: true, tapToClick: true },
+            input: { sensitivity: -0.4, naturalScroll: false, touchpadNaturalScroll: true, tapToClick: true },
             keyboard: "",
             idle: { lock: 10, screenOff: 15, sleep: 30 },
             autoUpdates: false,
-            themeMode: "" // "auto" follows the time of day; otherwise `dark` decides
+            themeMode: "", // "auto" follows the time of day; otherwise `dark` decides
+            shortcuts: {},
+            appShortcuts: []
         };
     }
 

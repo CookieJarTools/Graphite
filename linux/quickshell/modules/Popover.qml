@@ -175,7 +175,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.space2
                 visible: root.renaming
-                text: "Enter  Save    Esc  Keep the old name"
+                text: "Enter  Save    Esc  Cancel"
                 color: Theme.inkMuted
                 font.pixelSize: Theme.hintSize
             }
@@ -184,7 +184,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.margins: Theme.space2
                 visible: root.isFolder && root.rows.length === 0
-                text: "No apps with this label yet"
+                text: "No apps with this label"
                 color: Theme.inkMuted
             }
 

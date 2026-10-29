@@ -24,7 +24,7 @@ packages=(
     # The Control Panel's helpers: idle, night light, brightness, update checks, firewall, printers
     hypridle hyprsunset brightnessctl pacman-contrib ufw cups cups-pk-helper system-config-printer avahi nss-mdns
     # Apps to test with
-    kitty nautilus firefox libnotify loupe celluloid papers
+    kitty nautilus firefox libnotify loupe celluloid papers slurp wl-clipboard xdg-user-dirs udisks2 gvfs exfatprogs ntfs-3g dosfstools
     # Installing apps by opening the download (apps/install-app.sh): Ubuntu apps in a
     # container, AppImages, Flatpak and the app store
     distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils

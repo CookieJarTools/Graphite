@@ -93,7 +93,7 @@ ColumnLayout {
         CpRow {
             visible: page.streams.length === 0
             label: "Nothing is playing"
-            hint: "Each app that plays sound gets its own volume here"
+            hint: "Apps playing sound show here with their own volume"
         }
 
         Repeater {

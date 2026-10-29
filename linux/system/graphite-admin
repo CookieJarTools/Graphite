@@ -12,6 +12,11 @@
 #   user-admin NAME yes|no               whether they are an administrator
 #   pin NAME                             their sign-in PIN (4 digits), on stdin; empty removes it
 #   hint NAME                            their password hint for the login screen, on stdin
+#   fix-home NAME                        their home folder all theirs again
+#   flatpak-update                       everyone's Flathub apps updated (with the driver's parts)
+#   format PARTITION FS LABEL            a new, empty file system on one partition
+#   erase DISK FS LABEL                  a whole drive emptied, with one partition (never the
+#                                        drive the system runs from)
 #   clean                                old package downloads and logs
 #   install                              Graphite's system parts again, from /opt/graphite-desk
 set -euo pipefail
@@ -100,6 +105,57 @@ case "$verb" in
         else
             rm -f "/var/lib/graphite/hints/$1"
         fi
+        ;;
+    fix-home)
+        # Their home folder all theirs again (something run as the system left folders in it).
+        person_ok "${1:-}"
+        chown -R "$1:$1" "/home/$1"
+        ;;
+    flatpak-update)
+        # Everyone's apps from Flathub brought up to date, with the parts for this graphics driver.
+        flatpak update --system -y --noninteractive >/dev/null 2>&1 || true
+        ;;
+    format | erase)
+        # format PARTITION FS LABEL: a new, empty file system on one partition.
+        # erase DISK FS LABEL: everything on a drive gone, with one partition across it.
+        # Never the drive the system runs from. FS: exfat (Windows and Macs read it too), ntfs,
+        # fat32 or ext4 (Linux only; made the person's own).
+        device="${1:-}"; fs="${2:-}"; label="${3:-}"
+        [[ "$device" =~ ^/dev/[a-z0-9]+$ ]] && [ -b "$device" ] || { echo "Not a drive." >&2; exit 2; }
+        [[ "$fs" =~ ^(exfat|ntfs|fat32|ext4)$ ]] || { echo "Not a file system this can make." >&2; exit 2; }
+        [[ "$label" =~ ^[A-Za-z0-9\ _-]{0,11}$ ]] || { echo "Names can have letters, numbers and spaces, up to 11." >&2; exit 2; }
+        disk="$device"
+        [ "$verb" = format ] && disk="/dev/$(lsblk -no PKNAME "$device" | head -1)"
+        [ "$(lsblk -dno TYPE "$disk" 2>/dev/null)" = disk ] || { echo "Not a drive." >&2; exit 2; }
+        for mount in / /boot /home; do
+            source="$(findmnt -no SOURCE "$mount" 2>/dev/null)" || continue
+            source_disk="/dev/$(lsblk -no PKNAME "$(readlink -f "$source")" 2>/dev/null | tail -1)"
+            # Through encryption: the drive under the mapped device.
+            while [ "$(lsblk -dno TYPE "$source_disk" 2>/dev/null)" != disk ] && [ "$source_disk" != /dev/ ]; do
+                source_disk="/dev/$(lsblk -no PKNAME "$source_disk" 2>/dev/null | tail -1)"
+            done
+            [ "$source_disk" = "$disk" ] && { echo "That's the drive Graphite Desk runs from." >&2; exit 2; }
+        done
+        # Nothing on it in use.
+        for part in $(lsblk -lnpo NAME "$disk"); do
+            umount -q "$part" 2>/dev/null || true
+        done
+        owner="${PKEXEC_UID:-0}"
+        if [ "$verb" = erase ]; then
+            wipefs -aq "$disk"
+            sgdisk --zap-all "$disk" >/dev/null
+            code=0700; [ "$fs" = ext4 ] && code=8300
+            sgdisk -n 1:0:0 -t "1:$code" "$disk" >/dev/null
+            partprobe "$disk"; udevadm settle
+            device="$(lsblk -lnpo NAME,TYPE "$disk" | awk '$2=="part" {print $1; exit}')"
+        fi
+        wipefs -aq "$device"
+        case "$fs" in
+            exfat) mkfs.exfat -L "${label:-Drive}" "$device" >/dev/null ;;
+            ntfs) mkfs.ntfs -Q -F -L "${label:-Drive}" "$device" >/dev/null ;;
+            fat32) mkfs.fat -F 32 -n "${label:-DRIVE}" "$device" >/dev/null ;;
+            ext4) mkfs.ext4 -q -F -L "${label:-Drive}" -E "root_owner=$owner:$(id -g "$owner" 2>/dev/null || echo 0)" "$device" ;;
+        esac
         ;;
     clean)
         paccache -rk1 >/dev/null 2>&1 || true

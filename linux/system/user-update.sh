@@ -19,9 +19,9 @@ fi
 if [ -d "$repo/.git" ]; then
     echo "STEP Updating Graphite Desk"
     if [ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]; then
-        echo "NOTE Graphite Desk has changes of your own, so it waits until they are committed."
+        echo "NOTE Graphite Desk wasn't updated because it has uncommitted changes."
     else
-        git -C "$repo" pull --ff-only -q >/dev/null 2>&1 || echo "NOTE Graphite Desk couldn't update (offline, or signed out of GitHub)."
+        git -C "$repo" pull --ff-only -q >/dev/null 2>&1 || echo "NOTE Graphite Desk couldn't update. You may be offline or signed out of GitHub."
     fi
 fi
 echo "DONE"

@@ -30,10 +30,10 @@ start=(--now)
 $installing && start=()
 
 if ! $installing && [ "$(systemd-detect-virt || true)" != none ]; then
-    echo "Note: this is a virtual machine; games need a real GPU, so expect them to be slow here."
+    echo "Note: This is a virtual machine. Games will run slowly without a real graphics card."
 fi
 
-say "Turning on 32-bit packages (multilib), which Steam needs..."
+say "Turning on 32-bit packages for Steam..."
 if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
     sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
 fi
@@ -66,25 +66,26 @@ if $nvidia; then
     done
     mkdir -p "$HOME/.config/graphite"
     echo nvidia > "$HOME/.config/graphite/gpu"
-    echo "Restart the computer once this finishes, for the NVIDIA driver to load."
+    echo "Restart the computer when this finishes to load the NVIDIA driver."
 fi
 
 # Minecraft: the Modrinth App (from Flathub; it fetches the right Java for each version).
 say "Installing the Modrinth App for Minecraft..."
 sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-sudo flatpak install --system -y --noninteractive flathub com.modrinth.ModrinthApp || echo "The Modrinth App didn't install (is the internet on?)."
+sudo flatpak install --system -y --noninteractive flathub com.modrinth.ModrinthApp || echo "The Modrinth App didn't install. Check your internet connection."
 
-# From the installer, as root: what was written in the home is the user's.
-if $installing; then
+# Run as root (the installer, or the Control Panel in the background): what was written in the
+# home is the person's.
+if $quiet; then
     chown -R "$USER:$USER" "$HOME/.local" "$HOME/.config" 2>/dev/null || true
-    exit 0
 fi
+$installing && exit 0
 
 say "Done."
 cat <<'DONE'
 Steam: sign in, then in Settings > Compatibility turn on Steam Play for all titles (Proton).
-For any game, Launch Options:  gamemoderun %command%    (add mangohud for an FPS counter)
-Minecraft: open the Modrinth App, pick a modpack, and in its Settings give it more memory (6 to 8 GB) for big packs.
+For any game, set Launch Options to:  gamemoderun %command%    Add mangohud for an FPS counter.
+Minecraft: open the Modrinth App and choose a modpack. For large modpacks, give it 6 to 8 GB of memory in its Settings.
 DONE
 if $nvidia; then echo "Restart now to load the NVIDIA driver."; fi
 $quiet || read -rp "Press Enter to close."

@@ -75,7 +75,7 @@ ColumnLayout {
         CpRow {
             glyph: "edit-clear-all-symbolic"
             label: "Free up space"
-            hint: "Removes old update downloads, unused app parts and thumbnails. Your files aren't touched."
+            hint: "Deletes old updates and other temporary files. Your files are safe."
             PillButton {
                 text: Machine.cleaning ? "Cleaning..." : "Clean up"
                 enabled: !Machine.cleaning
@@ -89,7 +89,7 @@ ColumnLayout {
 
         CpRow {
             label: "Reload the desktop"
-            hint: "Starts the bar, menus and this window again, if something looks wrong"
+            hint: "Restarts the taskbar and menus. Try this if something looks wrong."
             PillButton {
                 text: "Reload"
                 onClicked: Quickshell.reload(true)

@@ -181,7 +181,7 @@ FloatingWindow {
                         UiText {
                             anchors.fill: parent
                             visible: (ShellState.appsPage === "get" ? flathubQuery : filter).text.length === 0
-                            text: ShellState.appsPage === "get" ? "Search Flathub: Discord, Spotify, Steam..." : "Find an installed app"
+                            text: ShellState.appsPage === "get" ? "Search Flathub, for example Discord or Steam" : "Search installed apps"
                             color: Theme.inkMuted
                         }
                     }
@@ -292,7 +292,7 @@ FloatingWindow {
                         visible: ShellState.appsPage === "get" && flathubQuery.text.trim().length > 0
                         icon: Quickshell.iconPath("web-browser", "applications-internet")
                         name: "Search the web for \"" + flathubQuery.text.trim() + "\""
-                        detail: "Download it from its own website: when it finishes, Graphite offers to install it"
+                        detail: "Download it from its website. You'll be asked to install it."
                         primary: "Search"
                         onPrimaryClicked: Desktop.searchWeb(flathubQuery.text)
                     }
@@ -302,7 +302,7 @@ FloatingWindow {
                         Layout.topMargin: Theme.space4
                         visible: ShellState.appsPage === "get"
                         wrapMode: Text.Wrap
-                        text: "Downloaded an app from a website? It installs itself: Graphite offers to as soon as it finishes downloading, or just open the file (.deb, .AppImage or Flatpak)."
+                        text: "Downloaded an app from a website? When the download finishes, you'll be asked to install it. You can also open the file to install it. This works for .deb, AppImage and Flatpak files."
                         color: Theme.inkMuted
                         font.pixelSize: Theme.hintSize
                     }

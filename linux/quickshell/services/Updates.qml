@@ -80,7 +80,7 @@ Singleton {
                 root.checking = false;
                 if (root.total > 0 && root.total !== before && !root.running) {
                     Quickshell.execDetached(["notify-send", "-a", "Graphite Desk", "-i", "software-update-available",
-                        "Updates are ready", root.total + (root.total === 1 ? " update is" : " updates are") + " waiting. Open Updates in the Control Panel to install them."]);
+                        "Updates available", root.total + (root.total === 1 ? " update is" : " updates are") + " available. Open Updates in the Control Panel to install."]);
                 }
             }
         }

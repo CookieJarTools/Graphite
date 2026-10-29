@@ -29,7 +29,7 @@ Singleton {
         { name: "Display settings", alias: "disp", glyph: "video-display-symbolic", keys: [], run: () => ShellState.openSettings("display") },
         { name: "Sound settings", alias: "snd", glyph: "audio-volume-high-symbolic", keys: [], run: () => ShellState.openSettings("sound") },
         { name: "Accounts and password", alias: "acc", glyph: "avatar-default-symbolic", keys: [], run: () => ShellState.openSettings("accounts") },
-        { name: "Toggle dark mode", alias: "dark", glyph: "weather-clear-night-symbolic", keys: [], run: () => ShellSettings.update(settings => { settings.themeMode = ""; settings.dark = settings.dark === false; }) },
+        { name: "Turn dark mode on or off", alias: "dark", glyph: "weather-clear-night-symbolic", keys: [], run: () => ShellSettings.update(settings => { settings.themeMode = ""; settings.dark = settings.dark === false; }) },
         { name: "Terminal", alias: "term", glyph: "utilities-terminal-symbolic", keys: ["Super", "Enter"], run: () => Quickshell.execDetached(["kitty"]) },
         { name: "Files", alias: "fm", glyph: "system-file-manager-symbolic", keys: ["Super", "E"], run: () => root.openFolder(root.home) },
         { name: "Edit window zones", alias: "zones", glyph: "view-grid-symbolic", keys: [], run: () => { ShellState.zoneEditorOpen = true; } },
@@ -43,7 +43,7 @@ Singleton {
         { name: "Sign out", alias: "out", glyph: "system-log-out-symbolic", keys: [], run: () => root.power("signout") },
         { name: "Restart", alias: "reboot", glyph: "system-reboot-symbolic", keys: [], run: () => root.power("restart") },
         { name: "Shut down", alias: "off", glyph: "system-shutdown-symbolic", keys: [], run: () => root.power("shutdown") },
-        { name: "Reload the shell", alias: "rl", glyph: "view-refresh-symbolic", keys: [], run: () => Quickshell.reload(true) }
+        { name: "Reload the desktop", alias: "rl", glyph: "view-refresh-symbolic", keys: [], run: () => Quickshell.reload(true) }
     ]
 
     // Lock is the shell's own lock screen; sleeping locks first, so waking asks for the password.

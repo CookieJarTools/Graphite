@@ -19,7 +19,7 @@ ColumnLayout {
         CpRow {
             glyph: "view-app-grid-symbolic"
             label: "Installed apps"
-            hint: "Everything installed, to open or uninstall"
+            hint: "Open or uninstall your apps"
             opens: true
             onClicked: {
                 ShellState.settingsOpen = false;
@@ -30,7 +30,7 @@ ColumnLayout {
         CpRow {
             glyph: "system-software-install-symbolic"
             label: "Get apps"
-            hint: "Thousands of apps from Flathub, one click each. Downloaded .deb, AppImage and Flatpak files install themselves when opened."
+            hint: "Install apps from Flathub"
             opens: true
             onClicked: {
                 ShellState.settingsOpen = false;
@@ -107,7 +107,7 @@ ColumnLayout {
         CpRow {
             glyph: "applications-games-symbolic"
             label: "Set up gaming"
-            hint: "Graphics drivers for this computer, Steam, Minecraft (the Modrinth App), GameMode and an FPS overlay"
+            hint: "Installs graphics drivers, Steam, the Modrinth App for Minecraft, GameMode and an FPS counter"
 
             PillButton {
                 text: "Set up"

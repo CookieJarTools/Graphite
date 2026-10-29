@@ -35,12 +35,12 @@ ColumnLayout {
         CpRow {
             glyph: "avatar-default-symbolic"
             label: page.me.full || page.me.name
-            hint: (page.me.admin ? "Administrator" : "Standard account") + " · Local account · signs in as " + page.me.name
+            hint: (page.me.admin ? "Administrator" : "Standard account") + " · Local account · User name: " + page.me.name
         }
 
         CpRow {
             label: "Your name"
-            hint: "Shown on the sign-in screen and in greetings"
+            hint: "Shown on the sign-in screen"
             opens: page.form !== "name"
             onClicked: page.form = "name"
 
@@ -97,7 +97,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         UiText {
                             Layout.fillWidth: true
-                            text: newPasswordAgain.text && newPassword.text !== newPasswordAgain.text ? "Those two don't match" : "It asks for your current password to make the change"
+                            text: newPasswordAgain.text && newPassword.text !== newPasswordAgain.text ? "The passwords don't match" : "You'll need your current password"
                             color: newPasswordAgain.text && newPassword.text !== newPasswordAgain.text ? Theme.danger : Theme.inkMuted
                             font.pixelSize: Theme.hintSize
                         }
@@ -118,7 +118,7 @@ ColumnLayout {
 
         CpRow {
             label: "Sign-in PIN"
-            hint: Machine.hasPin ? "On: sign in and unlock with your 4-digit PIN; your password still works" : "A 4-digit PIN to sign in quickly, as on Windows"
+            hint: Machine.hasPin ? "On. Your password still works too." : "Sign in with a 4-digit PIN"
             opens: page.form !== "pin" && !Machine.hasPin
             onClicked: {
                 page.form = "pin";
@@ -157,12 +157,12 @@ ColumnLayout {
                         id: pinAgain
                         Layout.preferredWidth: 140
                         password: true
-                        placeholder: "Again"
+                        placeholder: "Confirm PIN"
                     }
                     UiText {
                         Layout.fillWidth: true
-                        text: pinField.text && !/^[0-9]{4}$/.test(pinField.text) ? "4 digits"
-                            : pinAgain.text && pinField.text !== pinAgain.text ? "Those don't match" : ""
+                        text: pinField.text && !/^[0-9]{4}$/.test(pinField.text) ? "Use 4 digits"
+                            : pinAgain.text && pinField.text !== pinAgain.text ? "The PINs don't match" : ""
                         color: Theme.danger
                         font.pixelSize: Theme.hintSize
                     }
@@ -182,7 +182,7 @@ ColumnLayout {
 
         CpRow {
             label: "Password hint"
-            hint: "Shown on the sign-in screen after three wrong tries. Don't write the password itself."
+            hint: "Shown after three wrong passwords"
             opens: page.form !== "hint"
             onClicked: page.form = "hint"
 
@@ -194,7 +194,7 @@ ColumnLayout {
                     FieldBox {
                         id: hintText
                         Layout.fillWidth: true
-                        placeholder: "A hint only you would understand (empty removes it)"
+                        placeholder: "Don't use your password. Leave empty to remove."
                     }
                     PillButton { text: "Cancel"; onClicked: page.close() }
                     PillButton {
@@ -221,7 +221,7 @@ ColumnLayout {
                 required property var modelData
                 glyph: "avatar-default-symbolic"
                 label: modelData.full
-                hint: (modelData.admin ? "Administrator" : "Standard account") + " · signs in as " + modelData.name
+                hint: (modelData.admin ? "Administrator" : "Standard account") + " · User name: " + modelData.name
 
                 PillButton {
                     text: personRow.modelData.admin ? "Make standard" : "Make administrator"
@@ -230,7 +230,7 @@ ColumnLayout {
 
                 PillButton {
                     danger: true
-                    text: page.removing === personRow.modelData.name ? "Remove, with their files?" : "Remove"
+                    text: page.removing === personRow.modelData.name ? "Remove user and files?" : "Remove"
                     onClicked: {
                         if (page.removing === personRow.modelData.name) {
                             Machine.removePerson(personRow.modelData.name);
@@ -243,8 +243,8 @@ ColumnLayout {
 
         CpRow {
             glyph: "list-add-symbolic"
-            label: "Add someone"
-            hint: "They get their own desktop, files and settings"
+            label: "Add a user"
+            hint: "Each user has their own files and settings"
             opens: page.form !== "add"
             onClicked: {
                 page.form = "add";
@@ -266,7 +266,7 @@ ColumnLayout {
                     FieldBox {
                         id: addShort
                         Layout.fillWidth: true
-                        placeholder: "A short name for signing in (small letters)"
+                        placeholder: "User name, in lower case"
                     }
                     FieldBox {
                         id: addPassword
@@ -285,7 +285,7 @@ ColumnLayout {
                         }
                         UiText {
                             Layout.fillWidth: true
-                            text: "Administrator (can install apps and change settings)"
+                            text: "Administrator. Can install apps and change settings."
                         }
                         PillButton { text: "Cancel"; onClicked: page.close() }
                         PillButton {
