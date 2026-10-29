@@ -259,12 +259,50 @@ FloatingWindow {
                         }
                     }
 
+                    // The same search in Arch Linux's own packages.
+                    UiText {
+                        Layout.topMargin: Theme.space4
+                        visible: ShellState.appsPage === "get" && flathubQuery.text.trim().length > 0 && Desktop.packages.length > 0
+                        text: "From Arch Linux"
+                        color: Theme.inkMuted
+                        font.pixelSize: Theme.hintSize
+                        font.weight: Font.DemiBold
+                    }
+
+                    Repeater {
+                        model: ShellState.appsPage === "get" && flathubQuery.text.trim() ? Desktop.packages : []
+
+                        AppRow {
+                            required property var modelData
+                            readonly property bool busy: Desktop.installingPackages[modelData.name] === true
+                            Layout.fillWidth: true
+                            icon: Quickshell.iconPath(modelData.name, "package-x-generic")
+                            name: modelData.name
+                            detail: modelData.detail
+                            primary: modelData.installed ? "Installed" : busy ? "Installing..." : "Install"
+                            primaryEnabled: !modelData.installed && !busy
+                            onPrimaryClicked: Desktop.installPackage(modelData.name)
+                        }
+                    }
+
+                    // Not found in either: the app's own website.
+                    AppRow {
+                        Layout.fillWidth: true
+                        Layout.topMargin: Theme.space2
+                        visible: ShellState.appsPage === "get" && flathubQuery.text.trim().length > 0
+                        icon: Quickshell.iconPath("web-browser", "applications-internet")
+                        name: "Search the web for \"" + flathubQuery.text.trim() + "\""
+                        detail: "Download it from its own website: when it finishes, Graphite offers to install it"
+                        primary: "Search"
+                        onPrimaryClicked: Desktop.searchWeb(flathubQuery.text)
+                    }
+
                     UiText {
                         Layout.fillWidth: true
                         Layout.topMargin: Theme.space4
                         visible: ShellState.appsPage === "get"
                         wrapMode: Text.Wrap
-                        text: "Downloaded an app from a website? Just open the file (.deb, .AppImage or Flatpak) and it installs itself, ready in the launcher."
+                        text: "Downloaded an app from a website? It installs itself: Graphite offers to as soon as it finishes downloading, or just open the file (.deb, .AppImage or Flatpak)."
                         color: Theme.inkMuted
                         font.pixelSize: Theme.hintSize
                     }

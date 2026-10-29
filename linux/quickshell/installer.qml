@@ -359,7 +359,8 @@ ShellRoot {
                     root.percent = parseInt(line.slice(9, at));
                     root.stepText = line.slice(at + 1);
                     const elapsed = (Date.now() - root.startedAt) / 60000;
-                    if (root.percent > 5) root.installMinutesLeft = Math.max(1, Math.round(elapsed / root.percent * (100 - root.percent)));
+                    // Guessed once the download is under way (the first steps are quick ones).
+                    if (root.percent > 15) root.installMinutesLeft = Math.max(1, Math.round(elapsed / (root.percent - 10) * (100 - root.percent)));
                 } else if (line.startsWith("STAGE ")) {
                     if (root.stageNow) root.stagesDone = root.stagesDone.concat([root.stageNow]);
                     root.stageNow = line.slice(6);
@@ -1556,7 +1557,7 @@ ShellRoot {
                     font.pixelSize: Theme.hintSize
                 }
                 UiText {
-                    text: "About " + root.installMinutesLeft + " minutes left"
+                    text: "About " + root.installMinutesLeft + (root.installMinutesLeft === 1 ? " minute left" : " minutes left")
                     color: Theme.inkMuted
                     font.pixelSize: Theme.hintSize
                 }

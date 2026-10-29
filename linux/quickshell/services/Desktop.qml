@@ -72,11 +72,106 @@ Singleton {
         const query = text.trim();
         if (!query) {
             results = [];
+            packages = [];
             return;
         }
         searching = true;
         finder.command = ["flatpak", "search", "--columns=application,name,description", query];
         finder.running = true;
+        packageFinder.query = query.toLowerCase();
+        packageFinder.command = ["pacman", "-Ss", "--", query];
+        packageFinder.running = true;
+    }
+
+    // Arch Linux's own packages for the same search (from its main and 32-bit repositories,
+    // the ones whose name has the words first): [{ name, detail, installed }].
+    property var packages: []
+    property var installingPackages: ({})
+
+    Process {
+        id: packageFinder
+        property string query
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = this.text.split("\n");
+                const found = [];
+                for (let index = 0; index < lines.length; index++) {
+                    const match = /^(extra|multilib)\/(\S+) \S+(.*)$/.exec(lines[index]);
+                    if (!match) continue;
+                    // Apps, not their parts: no help or language files, libraries or add-ons.
+                    if (/-(help|doc|docs|devel|headers|lang|l10n|i18n|plugin|plugins|data)(-|$)/.test(match[2])) continue;
+                    if (/^(lib|python-|perl-|ruby-|haskell-|nodejs-|lua-|php-|java-|rust-|go-)/.test(match[2])) continue;
+                    found.push({ name: match[2], detail: (lines[index + 1] || "").trim(), installed: match[3].includes("[installed") });
+                }
+                const words = packageFinder.query.split(/\s+/);
+                const named = found.filter(item => words.every(word => item.name.includes(word)));
+                root.packages = named.concat(found.filter(item => !named.includes(item))).slice(0, 6);
+            }
+        }
+    }
+
+    function installPackage(name) {
+        const busy = Object.assign({}, installingPackages);
+        busy[name] = true;
+        installingPackages = busy;
+        Quickshell.execDetached(["sh", "-c", `bash "$1" --package "$2"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", name]);
+        packageCheck.restart();
+    }
+
+    // Which of the packages being installed are in now.
+    Process {
+        id: packageInstalled
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const done = this.text.split("\n").filter(line => line);
+                const busy = {};
+                for (const name of Object.keys(root.installingPackages)) if (!done.includes(name)) busy[name] = true;
+                root.installingPackages = busy;
+                root.packages = root.packages.map(item => Object.assign({}, item, { installed: item.installed || done.includes(item.name) }));
+            }
+        }
+    }
+    Timer {
+        id: packageCheck
+        interval: 4000
+        repeat: true
+        running: Object.keys(root.installingPackages).length > 0
+        onTriggered: {
+            packageInstalled.command = ["sh", "-c", "pacman -Qq \"$@\" 2>/dev/null", "sh"].concat(Object.keys(root.installingPackages));
+            packageInstalled.running = true;
+        }
+    }
+
+    // Not in either: the web, for the app's own download (a .deb or an AppImage installs itself
+    // when opened, and Downloads is watched below).
+    function searchWeb(text) {
+        Quickshell.execDetached(["xdg-open", "https://duckduckgo.com/?q=" + encodeURIComponent(text.trim() + " download for Linux (.deb OR AppImage)")]);
+    }
+
+    // A finished download that's an app: a notification offers to install it (a click on it does).
+    property double downloadsChecked: Date.now() / 1000
+
+    Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        onTriggered: if (!downloads.running) downloads.running = true
+    }
+
+    Process {
+        id: downloads
+        command: ["sh", "-c", `find "$HOME/Downloads" -maxdepth 1 -type f -newerct @${Math.floor(root.downloadsChecked)} \\( -iname '*.deb' -o -iname '*.appimage' -o -iname '*.flatpakref' -o -iname '*.pkg.tar.zst' \\) 2>/dev/null`]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.downloadsChecked = Date.now() / 1000 - 1;
+                for (const file of this.text.split("\n").filter(line => line)) {
+                    const base = file.split("/").pop();
+                    Quickshell.execDetached(["sh", "-c",
+                        `[ "$(notify-send -a 'Graphite Desk' -i system-software-install --action=default=Install --wait "Install $2?" "It finished downloading. Click here to install it.")" = default ] && bash "$3" "$1"`,
+                        "sh", file, base, root.linux + "/apps/install-app.sh"]);
+                }
+            }
+        }
     }
 
     Process {

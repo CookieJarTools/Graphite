@@ -12,6 +12,7 @@
 #
 #   install-app.sh FILE              install
 #   install-app.sh --flathub APP_ID  install an app from Flathub (the Apps window's Install)
+#   install-app.sh --package NAME    install one of Arch Linux's own packages (asks for the password)
 #   install-app.sh --remove ID       uninstall the app with desktop entry id ID: one this script
 #                                    put there, a Flatpak app, or a system package (asks for
 #                                    the password; the desktop's own parts are kept)
@@ -102,6 +103,21 @@ if [ "${1:-}" = "--flathub" ]; then
     name="${name:-$app}"
     notify "Installing $name..." "From Flathub; big apps take a few minutes."
     flatpak install --user -y --noninteractive flathub "$app" >/dev/null 2>&1 || fail "Flathub couldn't install it (is the internet on?)."
+    notify "$name is installed" "Press the Windows key and type its name to open it."
+    exit 0
+fi
+
+# ---------- from Arch Linux's own packages ----------
+
+if [ "${1:-}" = "--package" ]; then
+    package="${2:-}"
+    [[ "$package" =~ ^[a-z0-9@._+-]+$ ]] || fail "That isn't a package name."
+    name="$package"
+    notify "Installing $name..." "From Arch Linux; it asks for your password."
+    pkexec pacman -S --needed --noconfirm "$package" >/dev/null 2>&1 || fail "It didn't install (no password, or offline)."
+    for desktop in $(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$'); do
+        manifest "$(basename "$desktop" .desktop)" pacman "package=$package"
+    done
     notify "$name is installed" "Press the Windows key and type its name to open it."
     exit 0
 fi
