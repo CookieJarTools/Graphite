@@ -4,7 +4,8 @@
 # plugin (github.com/hyprwm/hyprland-plugins), built here for the Hyprland installed, with
 # Graphite's additions (graphite-decorations.cpp: no bar on windows that draw their own;
 # graphite-drags.cpp: X11 apps that draw their own title bar, as Steam does, are dragged by it,
-# and a drag keeps going when Shift or Ctrl goes down, for window zones).
+# and a drag keeps going when Shift or Ctrl goes down, for window zones; graphite-minimize.cpp:
+# apps' own minimise buttons work).
 # hyprland.lua loads it when it was built for the running Hyprland; hyprland.lua's start-up and
 # the person's updates (system/user-update.sh) run this when it wasn't, as after an update.
 #
@@ -44,11 +45,11 @@ cp "$here"/graphite-* .
 sed -i 's/^void CHyprBar::updateRules() {/bool graphiteWantsServerTitleBar(PHLWINDOW window);\n\n&/' barDeco.cpp
 sed -i '/m_hidden = truthy(PWINDOW->m_ruleApplicator->m_otherProps.props.at(g_pGlobalState->nobarRuleIdx)->effect);/a\    if (!graphiteWantsServerTitleBar(PWINDOW))\n        m_hidden = true;' barDeco.cpp
 # Drags, from the plugin's start.
-sed -i 's/^APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {/void graphiteHookDrags(HANDLE handle);\n\n&/' main.cpp
-sed -i 's/^    return {"hyprbars",/    graphiteHookDrags(PHANDLE);\n\n&/' main.cpp
-grep -q 'graphiteWantsServerTitleBar(PWINDOW)' barDeco.cpp && grep -q 'graphiteHookDrags(PHANDLE)' main.cpp ||
+sed -i 's/^APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {/void graphiteHookDrags(HANDLE handle);\nvoid graphiteHookMinimize(HANDLE handle);\n\n&/' main.cpp
+sed -i 's/^    return {"hyprbars",/    graphiteHookDrags(PHANDLE);\n    graphiteHookMinimize(PHANDLE);\n\n&/' main.cpp
+grep -q 'graphiteWantsServerTitleBar(PWINDOW)' barDeco.cpp && grep -q 'graphiteHookMinimize(PHANDLE)' main.cpp ||
     { echo "hyprbars has changed: Graphite's additions no longer fit." >&2; exit 1; }
-make -s SRC="main.cpp barDeco.cpp BarPassElement.cpp graphite-decorations.cpp graphite-drags.cpp" >&2
+make -s SRC="main.cpp barDeco.cpp BarPassElement.cpp graphite-decorations.cpp graphite-drags.cpp graphite-minimize.cpp" >&2
 mkdir -p "$(dirname "$out")"
 install -m 644 hyprbars.so "$out"
 echo "$stamp" > "$out.stamp"

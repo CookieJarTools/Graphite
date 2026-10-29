@@ -125,13 +125,9 @@ Singleton {
 
     Connections {
         target: Hyprland
+        // (An app's own minimise button moves its window to the minimized workspace through
+        // Graphite's Hyprland plugin: hypr/titlebars/graphite-minimize.cpp.)
         function onRawEvent(event) {
-            // An app's own minimise button: Hyprland only passes the request on.
-            if (event.name === "minimized") {
-                const [address, minimized] = event.data.split(",");
-                if (minimized === "1") root.minimize(address.startsWith("0x") ? address : "0x" + address);
-                return;
-            }
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "windowtitle", "windowtitlev2", "activewindowv2", "fullscreen", "changefloatingmode", "togglegroup", "moveintogroup", "moveoutofgroup", "urgent", "workspace", "focusedmon"].includes(event.name)) root.refresh();
         }
         function onActiveToplevelChanged() { root.refresh(); }
