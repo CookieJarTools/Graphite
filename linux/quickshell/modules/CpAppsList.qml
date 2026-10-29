@@ -2,9 +2,11 @@
 // "apps-installed" and "apps-get", opened from the Apps page, the launcher's Apps and App store
 // commands). Installed lists every app with where it came from (Desktop.sourceLabel), to open
 // or uninstall: Uninstall asks once more before it goes, and the desktop's own parts can't be
-// removed. Get apps shows popular picks and searches Arch's packages and Flathub; Install shows
-// its progress and turns into "Installed". Downloaded files (.deb, AppImage, Flatpak) install
-// themselves when opened, as the page says. Opening an app leaves the Control Panel open.
+// removed. Get apps shows popular picks and searches Arch's packages, Flathub and GitHub (where
+// a project's link finds that project); Install shows its progress and turns into "Installed".
+// A GitHub project says what installing it would put on the computer, and from whom, before it
+// does. Downloaded files (.deb, AppImage, Flatpak) install themselves when opened, as the page
+// says. Opening an app leaves the Control Panel open.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -49,6 +51,8 @@ ColumnLayout {
     // A search on Get apps: Flathub's finds that Arch also has (installed from Arch), the rest
     // of Arch's own, and what only Flathub has.
     readonly property bool searching: flathubQuery.text.trim().length > 0
+    // A GitHub project's link: only GitHub has anything to say.
+    readonly property bool githubLink: Desktop.githubRepo(flathubQuery.text) !== ""
     readonly property var archOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] !== undefined || offer.id === "com.valvesoftware.Steam")
     readonly property var flathubOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] === undefined && offer.id !== "com.valvesoftware.Steam")
     readonly property var archPackages: Desktop.packages.filter(item => !archOffers.some(offer => Desktop.archFor[offer.id] === item.name))
@@ -193,7 +197,7 @@ ColumnLayout {
 
     UiText {
         Layout.topMargin: Theme.space4
-        visible: root.kind === "get" && root.searching
+        visible: root.kind === "get" && root.searching && !root.githubLink
         text: Desktop.searching ? "Searching Flathub..." : root.flathubOffers.length ? "From Flathub" : "Nothing more on Flathub"
         color: Theme.inkMuted
         font.pixelSize: Theme.hintSize
@@ -206,11 +210,27 @@ ColumnLayout {
         OfferRow {}
     }
 
+    // GitHub: the project a link names, or GitHub's most starred matches for the words.
+    UiText {
+        Layout.topMargin: Theme.space4
+        visible: root.kind === "get" && root.searching && (Desktop.githubSearching || Desktop.githubResults.length > 0 || (Desktop.githubErrors[""] || "") !== "")
+        text: Desktop.githubSearching && Desktop.githubResults.length === 0 ? "Searching GitHub..." : (Desktop.githubErrors[""] || "") !== "" ? Desktop.githubErrors[""] : "From GitHub"
+        color: Theme.inkMuted
+        font.pixelSize: Theme.hintSize
+        font.weight: Font.DemiBold
+    }
+
+    Repeater {
+        model: root.kind === "get" && root.searching ? Desktop.githubResults : []
+
+        GithubRow {}
+    }
+
     // Not found in either: the app's own website.
     AppRow {
         Layout.fillWidth: true
         Layout.topMargin: Theme.space2
-        visible: root.kind === "get" && flathubQuery.text.trim().length > 0
+        visible: root.kind === "get" && flathubQuery.text.trim().length > 0 && !root.githubLink
         icon: Quickshell.iconPath("web-browser", "applications-internet")
         name: "Search the web for \"" + flathubQuery.text.trim() + "\""
         detail: "Download it from its website. You'll be asked to install it."
@@ -242,6 +262,33 @@ ColumnLayout {
         onPrimaryClicked: Desktop.install(modelData.id)
     }
 
+    // A project on GitHub: what it is, then what installing it would do (looked up when Check is
+    // pressed, at once for a pasted link), then Install; View opens its page.
+    component GithubRow: AppRow {
+        required property var modelData
+        readonly property string repo: modelData.repo
+        readonly property var found: Desktop.githubDetails[repo] || null
+        readonly property bool checking: Desktop.githubChecking[repo] === true
+        readonly property bool busy: Desktop.githubInstalling[repo] === true
+        readonly property bool done: Desktop.githubDone[repo] === true
+        readonly property string error: Desktop.githubErrors[repo] || ""
+        readonly property var info: found || modelData
+
+        Layout.fillWidth: true
+        icon: "https://github.com/" + info.owner + ".png?size=72"
+        name: info.name + "  ·  " + info.owner
+        detail: [info.description, "★ " + (info.stars >= 1000 ? (info.stars / 1000).toFixed(1) + "k" : info.stars),
+            found && found.release ? "Release " + found.release + (found.released ? ", " + Qt.formatDate(new Date(found.released), "d MMM yyyy") : "") : ""]
+            .filter(Boolean).join("  ·  ")
+        extra: error || (found ? Desktop.githubPlan(found) : "")
+        extraIsError: error !== "" || (found !== null && !found.choice)
+        primary: done ? "Installed" : busy ? "Installing..." : checking ? "Checking..." : !found ? "Check" : found.choice ? "Install" : "No download"
+        primaryEnabled: !done && !busy && !checking && (!found || !!found.choice)
+        onPrimaryClicked: found ? Desktop.githubInstall(repo) : Desktop.githubCheck(repo, false)
+        other: "View"
+        onOtherClicked: Qt.openUrlExternally(info.url)
+    }
+
     // One app: icon, name, a line about it, and its buttons.
     component AppRow: Rectangle {
         id: row
@@ -249,6 +296,8 @@ ColumnLayout {
         property string icon
         property string name
         property string detail
+        property string extra // a second line: what installing does, or what went wrong
+        property bool extraIsError: false
         property string primary
         property bool primaryEnabled: true
         property string secondary
@@ -258,7 +307,7 @@ ColumnLayout {
         signal secondaryClicked()
         signal otherClicked()
 
-        implicitHeight: 60
+        implicitHeight: row.extra ? 76 : 60
         radius: Theme.radiusMd
         color: rowHover.hovered ? Theme.surface200 : "transparent"
 
@@ -290,6 +339,14 @@ ColumnLayout {
                     visible: text.length > 0
                     text: row.detail
                     color: Theme.inkMuted
+                    font.pixelSize: Theme.hintSize
+                }
+
+                UiText {
+                    Layout.fillWidth: true
+                    visible: text.length > 0
+                    text: row.extra
+                    color: row.extraIsError ? Theme.danger : Theme.ink
                     font.pixelSize: Theme.hintSize
                 }
             }

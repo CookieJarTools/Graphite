@@ -1,5 +1,7 @@
 # Graphite Desk: a Size column in Files (Nautilus) that gives folders their size too, as the
-# space everything in them takes, where Files itself shows only how many items a folder holds.
+# space everything in them takes, where Files itself shows only how many items a folder holds;
+# a drive (one connected, or the links in the Drives place: drives.sh) shows the space left on
+# it, with a bar.
 # A folder is measured on a thread of its own (two at a time, so a hard drive isn't swamped),
 # showing "Calculating..." meanwhile, and Files is told to ask again once its size is known (it
 # would otherwise wait for each folder before the next); the answer is kept for a few minutes,
@@ -17,6 +19,20 @@ measuring = threading.Semaphore(2)
 answers = {}  # path: (seconds, folder's mtime, bytes)
 measured = set()  # paths being measured now
 lock = threading.Lock()
+
+
+# "■■■■■■□□□□  412.3 GB free of 1.0 TB": the bar is the part used.
+def drive_space(path):
+    try:
+        disk = os.statvfs(path)
+    except OSError:
+        return None
+    total = disk.f_blocks * disk.f_frsize
+    free = disk.f_bavail * disk.f_frsize
+    if total <= 0:
+        return None
+    used = round(10 * (total - free) / total)
+    return "■" * used + "□" * (10 - used) + f"  {readable(free)} free of {readable(total)}"
 
 
 def readable(size):
@@ -56,6 +72,12 @@ class FolderSizes(GObject.GObject, Nautilus.ColumnProvider, Nautilus.InfoProvide
         if file.get_uri_scheme() != "file":
             return Nautilus.OperationResult.COMPLETE
         path = file.get_location().get_path()
+        # A drive: the space left on it (measuring all of it would take too long).
+        if os.path.ismount(os.path.realpath(path)):
+            space = drive_space(path)
+            if space:
+                file.add_string_attribute("graphite_size", space)
+            return Nautilus.OperationResult.COMPLETE
         try:
             stat = os.stat(path, follow_symlinks=False)
         except OSError:

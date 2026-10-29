@@ -36,6 +36,7 @@ Singleton {
     // Shown, but not changed here.
     readonly property var fixed: [
         { label: "Search", keys: "SUPER" },
+        { label: "Volume up or down", keys: "Side scroll" },
         { label: "Switch windows", keys: "ALT + Tab" },
         { label: "Move a window", keys: "SUPER + drag" }
     ]

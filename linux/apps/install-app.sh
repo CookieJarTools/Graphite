@@ -9,6 +9,12 @@
 #   .AppImage         kept in ~/Applications, made runnable, given a launcher entry
 #   .flatpakref, .flatpak   installed with Flatpak (for this user)
 #   .pkg.tar.zst      an Arch package, with pacman (asks for the password)
+#   .tar.gz, .tar.xz, .zip of a ready-made Linux build (from GitHub: github.sh)
+#                     unpacked into ~/Applications/NAME, its program given a launcher entry
+#                     (and a command, in ~/.local/bin, when it's one for the terminal)
+#
+# github.sh passes GRAPHITE_APP_NAME and GRAPHITE_APP_ICON (the project's name and its
+# owner's picture), used when the app doesn't bring its own.
 #
 #   install-app.sh FILE              install
 #   install-app.sh --flathub APP_ID  install an app from Flathub (the Apps window's Install)
@@ -68,6 +74,11 @@ if [ "${1:-}" = "--remove" ]; then
                 ;;
             appimage)
                 rm -f "$path" "$applications/$id.desktop" "$icon"
+                ;;
+            archive)
+                rm -rf "$path"
+                rm -f "$applications/$id.desktop" ${command:+"$command"}
+                [[ "$icon" == /* ]] && rm -f "$icon"
                 ;;
             pacman)
                 admin package-remove "$package" || fail "It wasn't uninstalled. You may have cancelled, or other apps need it."
@@ -196,7 +207,7 @@ install_appimage() {
     target="$folder/$base"
     [ "$file" = "$target" ] || cp -f "$file" "$target"
     chmod +x "$target"
-    id="appimage-$(basename "$base" .AppImage | tr -c 'A-Za-z0-9._-\n' '-' | tr 'A-Z' 'a-z')"
+    id="appimage-$(printf '%s' "$base" | sed -E 's/\.appimage$//I' | tr -c 'A-Za-z0-9._-' '-' | tr 'A-Z' 'a-z')"
     notify "Installing $base..."
     work="$(mktemp -d)"
     ( cd "$work" && "$target" --appimage-extract '*.desktop' >/dev/null 2>&1 && "$target" --appimage-extract .DirIcon >/dev/null 2>&1 )
@@ -204,12 +215,14 @@ install_appimage() {
     icon_file="$(readlink -f "$work/squashfs-root/.DirIcon" 2>/dev/null || true)"
     icon="$HOME/.local/share/icons/$id.png"
     mkdir -p "$(dirname "$icon")"
-    if [ -f "$icon_file" ]; then cp -f "$icon_file" "$icon"; else icon="application-x-executable"; fi
+    if [ -f "$icon_file" ]; then cp -f "$icon_file" "$icon"
+    elif [ -f "${GRAPHITE_APP_ICON:-}" ]; then cp -f "$GRAPHITE_APP_ICON" "$icon"
+    else icon="application-x-executable"; fi
     if [ -n "$entry" ]; then
         name="$(grep -m1 '^Name=' "$entry" | cut -d= -f2-)"
         sed -e "s|^Exec=[^ ]*|Exec=\"$target\"|" -e "s|^Icon=.*|Icon=$icon|" -e '/^TryExec=/d' "$entry" > "$applications/$id.desktop"
     else
-        name="$(basename "$base" .AppImage)"
+        name="${GRAPHITE_APP_NAME:-$(printf '%s' "$base" | sed -E 's/\.appimage$//I')}"
         printf '[Desktop Entry]\nType=Application\nName=%s\nExec="%s"\nIcon=%s\n' "$name" "$target" "$icon" > "$applications/$id.desktop"
     fi
     rm -rf "$work"
@@ -244,10 +257,84 @@ install_pacman() {
     notify "$name is installed" "Open it from the launcher."
 }
 
+# A ready-made build in an archive: unpacked into ~/Applications, its program found (the one the
+# build's own launcher entry names, else the one named like the app, else its biggest program at
+# the top or in bin), and given a launcher entry; a terminal program also becomes a command.
+install_archive() {
+    local folder="$HOME/Applications" stem id target inner entry program icon command="" terminal=false
+    stem="$(basename "$base" | sed -E 's/\.(tar\.gz|tgz|tar\.xz|tar\.bz2|zip)$//I')"
+    name="${GRAPHITE_APP_NAME:-$stem}"
+    id="app-$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | tr 'A-Z' 'a-z')"
+    target="$folder/$name"
+    notify "Installing $name..."
+    rm -rf "$target"
+    mkdir -p "$target"
+    bsdtar -xf "$file" -C "$target" 2>/dev/null || { rm -rf "$target"; fail "$base couldn't be unpacked."; }
+    # One folder inside it: that folder is the app.
+    inner="$(find "$target" -mindepth 1 -maxdepth 1)"
+    if [ "$(printf '%s\n' "$inner" | grep -c .)" = 1 ] && [ -d "$inner" ]; then
+        find "$inner" -mindepth 1 -maxdepth 1 -exec mv -t "$target" {} +
+        rmdir "$inner"
+    fi
+
+    entry="$(find "$target" -maxdepth 4 -name '*.desktop' -path '*applications*' 2>/dev/null | head -1)"
+    [ -n "$entry" ] || entry="$(find "$target" -maxdepth 2 -name '*.desktop' 2>/dev/null | head -1)"
+    if [ -n "$entry" ]; then
+        local named
+        named="$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' "$entry" | head -1 | tr -d '"')"
+        program="$(find "$target" -maxdepth 3 -type f -name "$(basename "$named")" -perm -u+x 2>/dev/null | head -1)"
+        grep -q -i '^Terminal=true' "$entry" && terminal=true
+    fi
+    if [ -z "${program:-}" ]; then
+        # Programs, not libraries or helpers: runnable files at the top or in bin.
+        local candidates
+        candidates="$(find "$target" "$target/bin" -maxdepth 1 -type f -perm -u+x 2>/dev/null \
+            | grep -v -E '/(lib|.*\.so(\..*)?|chrome-sandbox|chrome_crashpad_handler|crashpad_handler|.*[-_]helper.*|uninstall.*|.*\.(sh|py|txt|md|json))$' || true)"
+        program="$(printf '%s\n' "$candidates" | grep -i -E "/$(printf '%s' "$name" | tr 'A-Z' 'a-z' | cut -c1-4)[^/]*$" | head -1)"
+        [ -n "$program" ] || program="$(printf '%s\n' "$candidates" | grep . | xargs -r -d '\n' ls -S 2>/dev/null | head -1)"
+    fi
+    [ -n "$program" ] || { rm -rf "$target"; fail "There's no program in $base to open."; }
+
+    # A window of its own, or the terminal: what it's built on says (with no launcher entry).
+    if [ -z "$entry" ] && ! ldd "$program" 2>/dev/null | grep -q -E 'lib(gtk|Qt|X11|xcb|wayland-client|EGL|GL|nss3|SDL)'; then
+        terminal=true
+    fi
+    if $terminal; then
+        mkdir -p "$HOME/.local/bin"
+        command="$HOME/.local/bin/$(basename "$program")"
+        ln -sfn "$program" "$command"
+    fi
+
+    icon="$HOME/.local/share/icons/$id.png"
+    mkdir -p "$(dirname "$icon")"
+    local own_icon="" icon_name=""
+    [ -n "$entry" ] && icon_name="$(sed -n 's/^Icon=//p' "$entry" | head -1)"
+    [ -n "$icon_name" ] && own_icon="$(find "$target" \( -name "$icon_name.png" -o -name "$icon_name.svg" -o -path "*/$icon_name" \) -type f 2>/dev/null | sort -r | head -1)"
+    if [ -n "$own_icon" ]; then
+        icon="$HOME/.local/share/icons/$id.${own_icon##*.}"
+        cp -f "$own_icon" "$icon"
+    elif [ -f "${GRAPHITE_APP_ICON:-}" ]; then cp -f "$GRAPHITE_APP_ICON" "$icon"
+    else icon="application-x-executable"; fi
+
+    if [ -n "$entry" ]; then
+        sed -e "s|^Exec=[^ ]*|Exec=\"$program\"|" -e "s|^Icon=.*|Icon=$icon|" -e '/^TryExec=/d' "$entry" > "$applications/$id.desktop"
+        name="$(grep -m1 '^Name=' "$entry" | cut -d= -f2-)"
+    else
+        printf '[Desktop Entry]\nType=Application\nName=%s\nExec="%s"\nIcon=%s\nTerminal=%s\n' "$name" "$program" "$icon" "$terminal" > "$applications/$id.desktop"
+    fi
+    manifest "$id" archive "path=\"$target\"" "icon=\"$icon\"" "command=\"$command\""
+    if [ -n "$command" ]; then
+        notify "$name is installed" "Open it from the launcher, or type $(basename "$command") in the terminal."
+    else
+        notify "$name is installed" "Open it from the launcher."
+    fi
+}
+
 case "${base,,}" in
     *.deb) install_deb ;;
     *.appimage) install_appimage ;;
     *.flatpakref | *.flatpak) install_flatpak ;;
     *.pkg.tar.zst | *.pkg.tar.xz) install_pacman ;;
+    *.tar.gz | *.tgz | *.tar.xz | *.tar.bz2 | *.zip) install_archive ;;
     *) notify "Can't install $base" "Only .deb, AppImage, Flatpak and Arch package files can be installed." ; exit 1 ;;
 esac

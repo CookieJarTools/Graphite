@@ -229,6 +229,22 @@ Singleton {
         }
     }
 
+    // Files' Drives place follows drives connecting and disconnecting (files/drives.sh), a
+    // moment after udisks says something changed.
+    Process {
+        running: true
+        command: ["udisksctl", "monitor"]
+        stdout: SplitParser {
+            onRead: placeSoon.restart()
+        }
+    }
+
+    Timer {
+        id: placeSoon
+        interval: 1500
+        onTriggered: Quickshell.execDetached(["bash", Quickshell.shellDir + "/../files/drives.sh"])
+    }
+
     // Plugged in or out: the list follows within a few seconds while the page is open.
     property bool watching: false
     Timer {

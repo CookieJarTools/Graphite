@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Makes install-app.sh the opener for app downloads (.deb, AppImage, Flatpak, Arch packages),
 # so the browser's "Open" or a double click in Files installs them; folders, pictures, PDFs and
-# videos open in the desktop's own apps; Files gets folder sizes and Delete Permanently; and adds
-# Flathub for the app store. The shell runs this at start; it is quick and safe to repeat.
+# videos open in the desktop's own apps; Files gets folder sizes, a Drives place and Delete
+# Permanently; and adds Flathub for the app store. The shell runs this at start; it is quick and safe to repeat.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 applications="$HOME/.local/share/applications"
 mkdir -p "$applications"
@@ -51,6 +51,8 @@ command -v update-desktop-database >/dev/null && update-desktop-database "$appli
 extensions="${XDG_DATA_HOME:-$HOME/.local/share}/nautilus-python/extensions"
 mkdir -p "$extensions"
 ln -sfn "$here/../files/folder-sizes.py" "$extensions/graphite-folder-sizes.py"
+# And the Drives place in its sidebar, with the space left on each drive.
+bash "$here/../files/drives.sh"
 if command -v gsettings >/dev/null; then
     gsettings set org.gnome.nautilus.preferences show-delete-permanently true
     if [ -f /usr/lib/nautilus/extensions-4/libnautilus-python.so ] &&

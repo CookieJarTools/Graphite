@@ -314,6 +314,9 @@ end
 
 -- The shell's surfaces: blur behind the see-through ones, nothing behind fully clear pixels.
 hl.layer_rule({ match = { namespace = "graphite-(panel|menu|toasts|launcher|switcher)" }, blur = true, ignore_alpha = 0.5 })
+-- The bar slides by itself; a reload of the shell (as an update to it brings) puts it back at
+-- once rather than fading it out and in.
+hl.layer_rule({ match = { namespace = "graphite-bar.*" }, no_anim = true })
 
 -- ---------- keys ----------
 
@@ -406,6 +409,14 @@ hl.bind("Print", hl.dsp.global("quickshell:capture"))
 hl.bind("SUPER + SHIFT + S", hl.dsp.global("quickshell:capture"))
 hl.bind("SUPER + SHIFT + R", hl.dsp.global("quickshell:capture-record"))
 hl.layer_rule({ match = { namespace = "graphite-capture.*" }, no_anim = true })
+
+-- The volume: the mouse's side scroll (tilting the wheel: right for up) and the keyboard's
+-- volume keys, with a moment's pop-up over the bar (the shell's VolumePopup.qml).
+hl.bind("mouse_right", hl.dsp.global("quickshell:volume-up"))
+hl.bind("mouse_left", hl.dsp.global("quickshell:volume-down"))
+hl.bind("XF86AudioRaiseVolume", hl.dsp.global("quickshell:volume-up"), { repeating = true, locked = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.global("quickshell:volume-down"), { repeating = true, locked = true })
+hl.bind("XF86AudioMute", hl.dsp.global("quickshell:volume-mute"), { locked = true })
 
 -- Super+Tab: task view, every window and desktop, as on Windows.
 hl.bind("SUPER + Tab", hl.dsp.global("quickshell:taskview"))

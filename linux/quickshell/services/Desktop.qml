@@ -1,7 +1,8 @@
 pragma Singleton
 // The desktop beyond the shell: the apps' look (linux/gtk/apply.sh) and the text setting, the
-// app installer's registration (linux/apps), the app store, the gaming setup, and which apps
-// can be uninstalled from the launcher (those the installer put there, and Flatpak apps).
+// app installer's registration (linux/apps), the app store (Arch, Flathub and GitHub), the
+// gaming setup, and which apps can be uninstalled from the launcher (those the installer put
+// there, and Flatpak apps).
 
 import QtQuick
 import Quickshell
@@ -24,7 +25,7 @@ Singleton {
     }
 
     function sourceLabel(id) {
-        return ({ flatpak: "Flathub", deb: "Ubuntu app", appimage: "AppImage", pacman: "Arch Linux", system: "System" })[sourceOf(id)];
+        return ({ flatpak: "Flathub", deb: "Ubuntu app", appimage: "AppImage", archive: "Downloaded app", pacman: "Arch Linux", system: "System" })[sourceOf(id)];
     }
 
     // Apps Arch Linux packages itself, by their Flathub id. These come from Arch: they use the
@@ -136,7 +137,9 @@ Singleton {
 
     function search(text) {
         const query = text.trim();
-        if (!query) {
+        searchGithub(query);
+        // A GitHub link is looked up on GitHub alone.
+        if (!query || githubRepo(query)) {
             results = [];
             packages = [];
             return;
@@ -206,6 +209,119 @@ Singleton {
             packageInstalled.command = ["sh", "-c", "pacman -Qq \"$@\" 2>/dev/null", "sh"].concat(Object.keys(root.installingPackages));
             packageInstalled.running = true;
         }
+    }
+
+    // ---------- GitHub (apps/github.sh) ----------
+
+    // A project's link or "owner/repo" in the search: that project, looked up at once; other
+    // words: GitHub's most starred matches. [{ repo, owner, name, description, stars, url }]
+    property var githubResults: []
+    property bool githubSearching: false
+    property string githubQuery: ""
+    // By "owner/repo": what installing it would do (github.sh find's answer), whether that's
+    // being looked up or installed, that it's in, or what went wrong, in plain words.
+    property var githubDetails: ({})
+    property var githubChecking: ({})
+    property var githubInstalling: ({})
+    property var githubDone: ({})
+    property var githubErrors: ({})
+
+    function githubRepo(text) {
+        const match = /^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?(?:[\/#?].*)?$/.exec(text.trim());
+        if (!match || (!/github\.com/.test(text) && /\s/.test(text.trim()))) return "";
+        return match[1] + "/" + match[2];
+    }
+
+    function searchGithub(query) {
+        githubQuery = query;
+        githubErrors = Object.assign({}, githubErrors, { "": "" });
+        const repo = githubRepo(query);
+        if (repo) {
+            githubResults = githubDetails[repo] ? [githubDetails[repo]] : [];
+            githubCheck(repo, true);
+            return;
+        }
+        githubResults = [];
+        if (query.length < 3) return;
+        githubSearching = true;
+        githubRun(["search"].concat(query.split(/\s+/)), (code, out, said) => {
+            if (query !== root.githubQuery) return;
+            root.githubSearching = false;
+            try {
+                root.githubResults = code === 0 ? JSON.parse(out) : [];
+            } catch (error) {
+                root.githubResults = [];
+            }
+            root.githubErrors = Object.assign({}, root.githubErrors, { "": code === 0 ? "" : said });
+        });
+    }
+
+    function githubCheck(repo, asResult) {
+        githubChecking = Object.assign({}, githubChecking, { [repo]: true });
+        githubRun(["find", repo], (code, out, said) => {
+            const checking = Object.assign({}, root.githubChecking);
+            delete checking[repo];
+            root.githubChecking = checking;
+            root.githubSearching = false;
+            if (code !== 0) {
+                root.githubErrors = Object.assign({}, root.githubErrors, { [repo]: said || "GitHub couldn't be reached." });
+                if (asResult) root.githubErrors = Object.assign({}, root.githubErrors, { "": said });
+                return;
+            }
+            try {
+                const found = JSON.parse(out);
+                root.githubDetails = Object.assign({}, root.githubDetails, { [repo]: found });
+                if (asResult && root.githubRepo(root.githubQuery) === repo) root.githubResults = [found];
+            } catch (error) {
+                // an answer cut short: Check can be pressed again
+            }
+        });
+        if (asResult) githubSearching = true;
+    }
+
+    function githubInstall(repo) {
+        githubInstalling = Object.assign({}, githubInstalling, { [repo]: true });
+        const errors = Object.assign({}, githubErrors);
+        delete errors[repo];
+        githubErrors = errors;
+        githubRun(["install", repo], (code, out, said) => {
+            const busy = Object.assign({}, root.githubInstalling);
+            delete busy[repo];
+            root.githubInstalling = busy;
+            if (code === 0) root.githubDone = Object.assign({}, root.githubDone, { [repo]: true });
+            else root.githubErrors = Object.assign({}, root.githubErrors, { [repo]: said || "It couldn't be installed." });
+            Quickshell.execDetached(["qs", "-c", "graphite", "ipc", "call", "taskbar", "rebuild"]);
+            root.refresh();
+        });
+    }
+
+    // What installing a project would do, for its row: where from, and which file.
+    function githubPlan(found) {
+        const choice = found.choice;
+        if (!choice) return found.reason;
+        if (choice.kind === "arch") return "Installs " + choice.package + " from Arch Linux, which keeps it up to date";
+        if (choice.kind === "flathub") return "Installs it from Flathub, which keeps it up to date";
+        return "Installs " + choice.file + " (" + Machine.size(choice.size) + ") from " + found.owner + " on GitHub";
+    }
+
+    Component {
+        id: githubJob
+
+        Process {
+            id: job
+            property var finished: null
+            stdout: StdioCollector { id: jobOut }
+            stderr: StdioCollector { id: jobSaid }
+            onExited: code => {
+                if (job.finished) job.finished(code, jobOut.text, jobSaid.text.trim().split("\n").pop());
+                job.destroy();
+            }
+        }
+    }
+
+    function githubRun(args, finished) {
+        const job = githubJob.createObject(root, { command: ["bash", linux + "/apps/github.sh"].concat(args), finished: finished });
+        job.running = true;
     }
 
     // Not in either: the web, for the app's own download (a .deb or an AppImage installs itself

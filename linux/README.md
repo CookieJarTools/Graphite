@@ -35,6 +35,7 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Title bars (minimise, maximise, close; drag to move, double-click to maximise) for apps that leave theirs to the desktop, such as Kitty, GTK 3 dialogs and Qt apps; X11 apps' own title bars drag their windows (Steam); a drag carries on when Shift goes down (window zones) | `hypr/titlebars/` (Hyprland's hyprbars plugin with Graphite's additions, built for the Hyprland installed) |
 | System sounds: signing in and out, a password asked for, notifications, devices plugged in or out, screenshots (KDE's Ocean set); sound devices turned off | `services/Sounds.qml`, `services/SoundDevices.qml`, `modules/CpSound.qml` |
 | Apps open quickly from a hard drive: what each app reads is noted, and the most used are read into memory after signing in | `system/warm.sh`, `system/launch.sh`, `services/Apps.qml` |
+| Files: a Size column that gives folders their size too, a Drives place with the space left on each drive (as This PC), Delete Permanently, folders opening in Files | `files/folder-sizes.py` (with nautilus-python), `files/drives.sh`, `apps/register.sh` |
 
 Windows float, as on Windows: they open centred, move by their title bar and resize from
 their edges. **Tile windows** (Control Panel, Personalisation; or the bar's right-click menu) switches to
@@ -69,6 +70,15 @@ the app then sits in the launcher (right-click it there to uninstall):
 | `.AppImage` | `~/Applications`, made runnable, with a launcher entry |
 | `.flatpakref`, `.flatpak` | Flatpak, for you |
 | `.pkg.tar.zst` | pacman (asks for the password) |
+
+**From GitHub:** paste a project's link (or `owner/repo`) into Get apps' search, or search
+words and Get apps lists GitHub's most starred matches too. Check shows what installing it
+would do, and from whom, before anything is installed: Arch Linux's or Flathub's copy when the
+project is there (they update with the system), else its newest release's download for 64-bit
+Linux (an AppImage, a Flatpak, an Arch package, a `.deb`, or a `.tar.gz`/`.zip` of a Linux
+build, unpacked into `~/Applications` with a launcher entry, and a command in `~/.local/bin`
+for terminal programs). A project that publishes only its code says so. `apps/github.sh` does
+the finding and installing, with GitHub's own tool's sign-in (`gh`) when there is one.
 
 The **App store** (launcher, or Settings) is GNOME Software on Flathub: one click to install.
 `apps/install-app.sh` does the installing and `apps/register.sh` makes it the opener for those
@@ -122,6 +132,7 @@ darkening for fuller strokes (`fonts/fonts.conf`, and `FREETYPE_PROPERTIES` in
 | Super+Tab | Task view |
 | Print, Super+Shift+S | Snipping Tool: a screenshot of an area, a window or the screen |
 | Super+Shift+R | Record the screen (again to stop) |
+| Side scroll (tilt the wheel), volume keys | Volume up or down (right is up), mute; a moment's pop-up over the bar |
 | Super+1..9, Super+Shift+1..9 | Go to, or move a window to, a workspace |
 | Super+drag, Super+right-drag | Move, resize |
 
