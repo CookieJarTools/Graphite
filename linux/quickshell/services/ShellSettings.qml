@@ -28,6 +28,7 @@ pragma Singleton
 //   systemSounds   sounds for events: signing in, a password asked for, notifications (Sounds.qml)
 //   titleBarOff   app ids whose windows go without Hyprland's title bar (Taskbar.setTitleBar)
 //   zones      { enabled, layout, custom }, the window zones' layout (Zones.qml)
+//   securitySweep   { every: "day" | "week" | "off", malware }, the security sweep (Security.qml)
 // Changes go through update(), which saves a moment later.
 
 import QtQuick
@@ -81,7 +82,8 @@ Singleton {
             soundOrder: { outputs: [], inputs: [] },
             systemSounds: true,
             titleBarOff: [],
-            zones: { enabled: true, layout: "priority", custom: [] }
+            zones: { enabled: true, layout: "priority", custom: [] },
+            securitySweep: { every: "day", malware: false }
         };
     }
 

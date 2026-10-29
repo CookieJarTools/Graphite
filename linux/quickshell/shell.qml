@@ -33,11 +33,13 @@ ShellRoot {
         Desktop.applyLook(dark);
         Desktop.register(); // downloaded apps open in the installer
         // Services that work in the background from the start (singletons only exist once
-        // used): idle and sleep (hypridle), night light and the screens, update checks, drives.
+        // used): idle and sleep (hypridle), night light and the screens, update checks, drives,
+        // the security sweep.
         Power.refresh();
         Displays.refresh();
         Updates.lastChecked;
         Drives.disks; // keeps Files' Drives place up to date
+        Security.every; // the security sweep, on its schedule
     }
 
     // Bluetooth pairing needs an agent to accept it on the computer's side: this one (BlueZ's
