@@ -30,7 +30,9 @@ ShellRoot {
     function launchSession() {
         if (launching) return;
         launching = true;
-        Greetd.launch(["start-hyprland"], ["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=Hyprland"], true);
+        // Through system/session.sh: Hyprland with its start-up messages kept off the screen's
+        // text console (greetd runs it after reading the system's profile).
+        Greetd.launch(["bash", Quickshell.shellDir + "/../system/session.sh"], ["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=Hyprland"], true);
     }
 
     FileView {

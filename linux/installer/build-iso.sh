@@ -40,7 +40,13 @@ grep -rl "Arch Linux install medium" "$profile" | xargs -r sed -i 's/Arch Linux 
 # here goes into the new system), and the text installer's dialog as a fallback.
 printf '%s\n' dialog terminus-font sudo hyprland quickshell qt6-wayland qt6-svg mesa \
     inter-font noto-fonts ttf-jetbrains-mono papirus-icon-theme capitaine-cursors \
-    networkmanager >> "$profile/packages.x86_64"
+    networkmanager nvidia-open nvidia-utils egl-wayland >> "$profile/packages.x86_64"
+
+# NVIDIA cards (RTX 20 series and newer) run the installer's screens on NVIDIA's own driver:
+# nouveau, the open-source one, can't drive recent cards and is kept out (elsewhere it's never
+# used, so this changes nothing on other machines).
+grep -rl 'archisobasedir=' "$profile/efiboot" "$profile/grub" "$profile/syslinux" 2>/dev/null | \
+    xargs -r sed -i 's/archisobasedir=%INSTALL_DIR%/& modprobe.blacklist=nouveau nvidia_drm.modeset=1 nvidia_drm.fbdev=1/'
 
 # NetworkManager instead of the stock image's iwd and systemd-networkd.
 wants="$profile/airootfs/etc/systemd/system"

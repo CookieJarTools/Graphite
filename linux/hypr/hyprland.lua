@@ -10,8 +10,11 @@ local shell = "qs -c graphite"
 -- ---------- start-up ----------
 
 hl.on("hyprland.start", function()
+    -- First, the session's environment for what systemd and D-Bus start (the portals apps open
+    -- files and links through): without them reaching the screen, apps wait half a minute.
+    -- Password prompts are the shell's own (PasswordPrompt.qml): hyprpolkitagent's window crashed.
+    hl.exec_cmd("dbus-update-activation-environment --systemd --all; systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE XDG_DATA_DIRS PATH; systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service; systemctl --user stop hyprpolkitagent")
     hl.exec_cmd(shell)
-    hl.exec_cmd("systemctl --user start hyprpolkitagent")
     -- Idle (lock, screen off, sleep: the Control Panel writes its settings) and startup apps.
     hl.exec_cmd("hypridle")
     hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/autostart.sh\"")
@@ -41,16 +44,20 @@ if textMode ~= "standard" then
     hl.env("FREETYPE_PROPERTIES", "cff:no-stem-darkening=0 autofitter:no-stem-darkening=0 type1:no-stem-darkening=0 t1cid:no-stem-darkening=0")
 end
 
--- NVIDIA on Wayland (linux/gaming.sh writes "nvidia" here when it finds one).
-local gpu = io.open((os.getenv("HOME") or "") .. "/.config/graphite/gpu")
-if gpu then
-    if gpu:read("l") == "nvidia" then
-        hl.env("LIBVA_DRIVER_NAME", "nvidia")
-        hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
-        hl.env("NVD_BACKEND", "direct")
-    end
-    gpu:close()
+-- NVIDIA on Wayland, whenever its driver is loaded.
+local nvidia = io.open("/sys/module/nvidia_drm/version")
+if nvidia then
+    nvidia:close()
+    hl.env("LIBVA_DRIVER_NAME", "nvidia")
+    hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+    hl.env("NVD_BACKEND", "direct")
 end
+
+-- Apps installed from Flathub (theirs and everyone's), alongside the system's: the launcher
+-- and the file manager find them by these folders.
+local home = os.getenv("HOME") or ""
+hl.env("XDG_DATA_DIRS", home .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share")
+hl.env("PATH", home .. "/.local/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin"))
 
 local inVirtualBox = false
 local vendor = io.open("/sys/class/dmi/id/sys_vendor")

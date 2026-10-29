@@ -230,7 +230,7 @@ install_steps() {
         kitty nautilus firefox libnotify grim
         loupe celluloid papers
         distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
-        power-profiles-daemon zram-generator pciutils git pacman-contrib ufw
+        power-profiles-daemon zram-generator pciutils git pacman-contrib ufw plymouth
         cups cups-pk-helper system-config-printer avahi nss-mdns
     )
     # Installed into a virtual machine: its tools (shared clipboard, resizing with the window).
@@ -300,13 +300,7 @@ useradd -m -G wheel,video,input -c "$FULL_NAME" -s /bin/bash "$USER_NAME"
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
 
-# An encrypted disk: unlocked at start-up (the initramfs asks for the password).
-if [ "$ENCRYPT" = yes ]; then
-    sed -i 's/^HOOKS=.*/HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)/' /etc/mkinitcpio.conf
-    mkinitcpio -P
-fi
-
-# Start-up: systemd-boot, straight into Graphite Desk.
+# Start-up: systemd-boot, straight into Graphite Desk (boot-setup.sh below makes it quiet).
 bootctl install --esp-path=/boot
 cat > /boot/loader/loader.conf <<LOADER
 default graphite.conf
@@ -336,6 +330,8 @@ systemctl enable NetworkManager.service bluetooth.service power-profiles-daemon.
 
 # The login screen, and the person's desktop from the copy in /opt.
 bash /opt/graphite-desk/linux/greetd/setup.sh /opt/graphite-desk/linux "$KEYBOARD"
+# A quiet start: the splash, NVIDIA's driver first, the login screen after (and the initramfs).
+bash /opt/graphite-desk/linux/system/boot-setup.sh
 home=/home/$USER_NAME
 mkdir -p "\$home/.config/quickshell" "\$home/.config/hypr" "\$home/.config/graphite"
 ln -sfn /opt/graphite-desk/linux/quickshell "\$home/.config/quickshell/graphite"
@@ -393,6 +389,8 @@ CONFIGURE
     stage finish
     step 97 "Final touches..."
     cp "$log" "$target/var/log/graphite-install.log"
+    # Why the installer's screens didn't open, when the text ones were used instead.
+    [ -f /tmp/graphite-gui.log ] && cp /tmp/graphite-gui.log "$target/var/log/graphite-install-screens.log"
     sync
     step 100 "Done."
     sleep 1

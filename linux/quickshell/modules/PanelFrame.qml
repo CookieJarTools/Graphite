@@ -28,12 +28,15 @@ PanelWindow {
         right: rightInset >= 0
         left: rightInset < 0
     }
+    // Just above the bar's strip (the bar and a gap on each side of it), placed directly rather
+    // than above the space the bar reserves: an auto-hiding bar reserves none, and the panel
+    // then covered the bar.
     margins {
-        bottom: Theme.space2
+        bottom: Theme.taskbarHeight + Theme.space2 * 3
         right: Math.max(0, rightInset)
         left: Math.max(Theme.space2, centreX - implicitWidth / 2)
     }
-    exclusiveZone: 0 // sits above the bar's reserved strip
+    exclusionMode: ExclusionMode.Ignore
     implicitWidth: panelWidth
     implicitHeight: card.implicitHeight
     color: "transparent"

@@ -35,7 +35,7 @@ Singleton {
                         description: [monitor.make, monitor.model].filter(part => part).join(" ") || monitor.description || monitor.name,
                         width: monitor.width,
                         height: monitor.height,
-                        refreshRate: Math.round(monitor.refreshRate),
+                        refreshRate: monitor.refreshRate,
                         scale: monitor.scale,
                         transform: monitor.transform,
                         disabled: monitor.disabled,
@@ -49,14 +49,19 @@ Singleton {
         }
     }
 
-    // "1920x1080@59.94Hz" etc. as "1920x1080@60", each once, biggest first.
+    // "1920x1080@59.94Hz" etc. as "1920x1080@59.94": the exact rate, as Hyprland needs it (a
+    // rounded one matches no mode, so nothing changed); one per size and rounded rate, the
+    // screen's own listing first; biggest first.
     function uniqueModes(modes) {
         const seen = [];
+        const rounded = [];
         for (const mode of modes) {
             const match = /^(\d+)x(\d+)@([\d.]+)/.exec(mode);
             if (!match) continue;
-            const short = match[1] + "x" + match[2] + "@" + Math.round(Number(match[3]));
-            if (!seen.includes(short)) seen.push(short);
+            const key = match[1] + "x" + match[2] + "@" + Math.round(Number(match[3]));
+            if (rounded.includes(key)) continue;
+            rounded.push(key);
+            seen.push(match[1] + "x" + match[2] + "@" + Number(match[3]).toFixed(2));
         }
         return seen.sort((first, second) => {
             const [a, b] = [first, second].map(mode => mode.split(/[x@]/).map(Number));
@@ -65,7 +70,7 @@ Singleton {
     }
 
     function currentMode(monitor) {
-        return monitor.width + "x" + monitor.height + "@" + monitor.refreshRate;
+        return monitor.width + "x" + monitor.height + "@" + Number(monitor.refreshRate).toFixed(2);
     }
 
     // ---------- changing a screen, with the chance to go back ----------

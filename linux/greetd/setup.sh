@@ -17,7 +17,7 @@ cat > /etc/greetd/config.toml <<CONFIG
 vt = 1
 
 [default_session]
-command = "start-hyprland -- --config $graphite/hypr/greeter.lua"
+command = "sh -c 'exec start-hyprland -- --config $graphite/hypr/greeter.lua > /dev/null 2>&1'"
 user = "greeter"
 CONFIG
 

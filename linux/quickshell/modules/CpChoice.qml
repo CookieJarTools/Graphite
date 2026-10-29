@@ -99,9 +99,12 @@ ColumnLayout {
                             id: optionMouse
                             anchors.fill: parent
                             hoverEnabled: true
+                            // The pick goes first: closing the list removes this option (and
+                            // everything it could still say) at once.
                             onClicked: {
-                                root.open = false;
-                                root.picked(parent.modelData.value);
+                                const value = parent.modelData.value;
+                                root.picked(value);
+                                Qt.callLater(() => { root.open = false; });
                             }
                         }
                     }

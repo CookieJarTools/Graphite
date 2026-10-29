@@ -70,7 +70,7 @@ ColumnLayout {
                     value: Displays.currentMode(screenSection.modelData)
                     options: screenSection.modelData.modes.map(mode => {
                         const parts = mode.split("@");
-                        return { value: mode, label: parts[0].replace("x", " × ") + "  ·  " + parts[1] + " Hz" };
+                        return { value: mode, label: parts[0].replace("x", " × ") + "  ·  " + Math.round(Number(parts[1])) + " Hz" };
                     })
                     onPicked: value => Displays.change(screenSection.modelData.name, "mode", value)
                 }

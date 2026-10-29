@@ -19,6 +19,15 @@ if vendor then
     vendor:close()
 end
 
+-- NVIDIA's driver loaded (the stick has it for RTX cards): its settings for Wayland.
+local nvidia = io.open("/sys/module/nvidia_drm/version")
+if nvidia then
+    nvidia:close()
+    hl.env("LIBVA_DRIVER_NAME", "nvidia")
+    hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+    hl.env("NVD_BACKEND", "direct")
+end
+
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 hl.config({

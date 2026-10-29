@@ -3,6 +3,7 @@
 // links this folder to ~/.config/quickshell/graphite). Edits load live while it runs.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.config
 import qs.modules
 import qs.services
@@ -36,6 +37,17 @@ ShellRoot {
         Power.refresh();
         Displays.refresh();
         Updates.lastChecked;
+    }
+
+    // Bluetooth pairing needs an agent to accept it on the computer's side: this one (BlueZ's
+    // own, kept running) pairs without codes, as Windows does for mice, headphones and most
+    // keyboards.
+    Process {
+        running: true
+        command: ["bluetoothctl"]
+        stdinEnabled: true
+        stdout: SplitParser {}
+        onStarted: write("agent NoInputNoOutput\ndefault-agent\n")
     }
 
     Variants {
@@ -77,6 +89,7 @@ ShellRoot {
     Toasts {}
 
     ControlPanel {}
+    PasswordPrompt {}
     TaskManager {}
 
     AppsWindow {}

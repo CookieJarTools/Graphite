@@ -97,9 +97,12 @@ if [ "${1:-}" = "--flathub" ]; then
     name="$app"
     command -v flatpak >/dev/null || fail "Flatpak is missing; run linux/setup.sh."
     flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1
-    notify "Installing $app..." "From Flathub; big apps take a few minutes."
+    # Its own name (Zen Browser, not app.zen_browser.zen), from Flathub, for what's said.
+    name="$(flatpak remote-info --user flathub "$app" 2>/dev/null | sed -n '2s/^\([^-]*\) - .*/\1/p' | sed 's/ *$//')"
+    name="${name:-$app}"
+    notify "Installing $name..." "From Flathub; big apps take a few minutes."
     flatpak install --user -y --noninteractive flathub "$app" >/dev/null 2>&1 || fail "Flathub couldn't install it (is the internet on?)."
-    notify "Installed" "Open it from the launcher."
+    notify "$name is installed" "Press the Windows key and type its name to open it."
     exit 0
 fi
 
