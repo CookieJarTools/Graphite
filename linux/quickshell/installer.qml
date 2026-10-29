@@ -252,28 +252,30 @@ ShellRoot {
     }
 
     property bool gaming: false
-    // Flathub apps by id; "claude-code" is installed with Anthropic's own installer instead.
+    // Apps by Flathub id. Those with a package come from Arch Linux itself (faster to open, and
+    // updated with the system); Steam comes with the gaming setup, and "claude-code" with
+    // Anthropic's own installer. The rest come from Flathub.
     readonly property var appChoices: [
         { id: "app.zen_browser.zen", name: "Zen Browser", tag: "Web" },
         { id: "com.google.Chrome", name: "Google Chrome", tag: "Web" },
-        { id: "com.discordapp.Discord", name: "Discord", tag: "Social" },
-        { id: "org.telegram.desktop", name: "Telegram", tag: "Social" },
-        { id: "com.spotify.Client", name: "Spotify", tag: "Media" },
-        { id: "org.videolan.VLC", name: "VLC", tag: "Media" },
-        { id: "io.bassi.Amberol", name: "Amberol (music)", tag: "Media" },
-        { id: "org.gnome.gThumb", name: "gThumb (photos)", tag: "Photos" },
-        { id: "org.gnome.Shotwell", name: "Shotwell (photo library)", tag: "Photos" },
-        { id: "com.obsproject.Studio", name: "OBS Studio", tag: "Media" },
+        { id: "com.discordapp.Discord", name: "Discord", package: "discord", tag: "Social" },
+        { id: "org.telegram.desktop", name: "Telegram", package: "telegram-desktop", tag: "Social" },
+        { id: "com.spotify.Client", name: "Spotify", package: "spotify-launcher", tag: "Media" },
+        { id: "org.videolan.VLC", name: "VLC", package: "vlc", tag: "Media" },
+        { id: "io.bassi.Amberol", name: "Amberol (music)", package: "amberol", tag: "Media" },
+        { id: "org.gnome.gThumb", name: "gThumb (photos)", package: "gthumb", tag: "Photos" },
+        { id: "org.gnome.Shotwell", name: "Shotwell (photo library)", package: "shotwell", tag: "Photos" },
+        { id: "com.obsproject.Studio", name: "OBS Studio", package: "obs-studio", tag: "Media" },
         { id: "claude-code", name: "Claude Code", tag: "Dev" },
         { id: "com.visualstudio.code", name: "Visual Studio Code", tag: "Dev" },
-        { id: "org.libreoffice.LibreOffice", name: "LibreOffice", tag: "Office" },
-        { id: "org.gimp.GIMP", name: "GIMP", tag: "Creative" },
-        { id: "org.blender.Blender", name: "Blender", tag: "Creative" },
+        { id: "org.libreoffice.LibreOffice", name: "LibreOffice", package: "libreoffice-fresh", tag: "Office" },
+        { id: "org.gimp.GIMP", name: "GIMP", package: "gimp", tag: "Creative" },
+        { id: "org.blender.Blender", name: "Blender", package: "blender", tag: "Creative" },
         { id: "com.valvesoftware.Steam", name: "Steam", tag: "Games" },
         { id: "com.heroicgameslauncher.hgl", name: "Heroic (Epic, GOG, Amazon)", tag: "Games" },
-        { id: "net.lutris.Lutris", name: "Lutris (Battle.net, EA, Ubisoft)", tag: "Games" },
+        { id: "net.lutris.Lutris", name: "Lutris (Battle.net, EA, Ubisoft)", package: "lutris", tag: "Games" },
         { id: "com.usebottles.bottles", name: "Bottles (Windows apps)", tag: "Games" },
-        { id: "com.modrinth.ModrinthApp", name: "Modrinth (Minecraft)", tag: "Games" },
+        { id: "com.modrinth.ModrinthApp", name: "Modrinth (Minecraft)", package: "modrinth-app", tag: "Games" },
         { id: "io.itch.itch", name: "itch.io", tag: "Games" },
         { id: "net.davidotek.pupgui2", name: "ProtonUp-Qt", tag: "Games" }
     ]
@@ -304,7 +306,7 @@ ShellRoot {
         { id: "system", name: "Installing Graphite Desk" },
         { id: "account", name: "Setting up your account" },
         { id: "security", name: "Securing this PC" },
-        { id: "games", name: "Setting up for games", only: () => root.gaming },
+        { id: "games", name: "Setting up for games", only: () => root.gaming || root.apps.includes("com.valvesoftware.Steam") },
         { id: "apps", name: "Installing " + apps.length + (apps.length === 1 ? " app" : " apps"), only: () => root.apps.length > 0 },
         { id: "finish", name: "Finishing" }
     ].filter(item => !item.only || item.only())
@@ -320,6 +322,7 @@ ShellRoot {
         stagesDone = [];
         stageNow = "";
         startedAt = Date.now();
+        const chosen = appChoices.filter(app => apps.includes(app.id));
         const answers = [
             "DISK=" + quote(diskChosen),
             "FULL_NAME=" + quote(fullName.text.trim()),
@@ -331,11 +334,12 @@ ShellRoot {
             "TIME_ZONE=" + quote(timeZone),
             "KEYBOARD=" + quote(keyboard),
             "LOCALE=" + quote(country.locale),
-            "GAMING=" + (gaming ? "yes" : "no"),
+            "GAMING=" + (gaming || apps.includes("com.valvesoftware.Steam") ? "yes" : "no"),
             "ENCRYPT=" + (encrypt ? "yes" : "no"),
             "AUTO_UPDATES=" + (autoUpdates ? "yes" : "no"),
             "THEME=" + quote(theme),
-            "APPS=" + quote(apps.filter(app => app !== "claude-code").join(" ")),
+            "APPS=" + quote(chosen.filter(app => !app.package && app.id !== "claude-code" && app.id !== "com.valvesoftware.Steam").map(app => app.id).join(" ")),
+            "PACKAGES=" + quote(chosen.filter(app => app.package).map(app => app.package).join(" ")),
             "CLAUDE_CODE=" + (apps.includes("claude-code") ? "yes" : "no")
         ].join("\n") + "\n";
         installer.answers = answers;

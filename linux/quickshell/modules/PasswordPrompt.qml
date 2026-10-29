@@ -1,11 +1,13 @@
-// The administrator's password, when something asks for it (a Control Panel change, an app
-// being installed, gaming's setup): Graphite's own prompt, as the shell is the polkit agent
-// (Quickshell.Services.Polkit) in place of hyprpolkitagent, whose window crashed on opening.
+// The administrator's password (or their PIN), when something asks for it (a Control Panel
+// change, an app being installed, gaming's setup): Graphite's own prompt, as the shell is the
+// polkit agent (Quickshell.Services.Polkit) in place of hyprpolkitagent, whose window crashed
+// on opening.
 // It dims the screen and takes the keyboard; Enter allows, Escape cancels, and a wrong password
 // shakes the card and says so.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Polkit
 import qs.config
@@ -33,6 +35,17 @@ Scope {
     onAskingChanged: if (asking) {
         field.text = "";
         field.forceActiveFocus();
+        pinCheck.running = true;
+    }
+
+    // With a sign-in PIN, the PIN works here too (system/install.sh puts pin-check in front of
+    // polkit's password check).
+    property bool hasPin: false
+
+    Process {
+        id: pinCheck
+        command: ["sh", "-c", "test -d \"/var/lib/graphite/pins/$USER\""]
+        onExited: code => root.hasPin = code === 0
     }
 
     function allow() {
@@ -152,7 +165,7 @@ Scope {
                         UiText {
                             anchors.fill: parent
                             visible: field.text.length === 0
-                            text: "Your password"
+                            text: root.hasPin ? "Your PIN or password" : "Your password"
                             color: Theme.inkMuted
                             font.pixelSize: 15
                         }
@@ -162,7 +175,7 @@ Scope {
                 UiText {
                     Layout.fillWidth: true
                     visible: text.length > 0
-                    text: root.flow && root.flow.supplementaryMessage ? (root.flow.supplementaryIsError ? "That password is incorrect. Try again." : root.flow.supplementaryMessage) : ""
+                    text: root.flow && root.flow.supplementaryMessage ? (root.flow.supplementaryIsError ? (root.hasPin ? "That isn't right. Try again." : "That password is incorrect. Try again.") : root.flow.supplementaryMessage) : ""
                     color: root.flow && root.flow.supplementaryIsError ? Theme.danger : Theme.inkMuted
                     font.pixelSize: Theme.hintSize
                 }

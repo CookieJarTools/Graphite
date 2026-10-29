@@ -54,7 +54,12 @@ FloatingWindow {
         .filter(entry => !filter.text.trim() || entry.name.toLowerCase().includes(filter.text.trim().toLowerCase()))
         .sort((first, second) => first.name.localeCompare(second.name))
 
-    readonly property var offers: flathubQuery.text.trim() ? Desktop.results : Desktop.featured
+    // A search on the Get apps page: Flathub's finds that Arch also has (installed from Arch),
+    // the rest of Arch's own, and what only Flathub has.
+    readonly property bool searching: flathubQuery.text.trim().length > 0
+    readonly property var archOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] !== undefined || offer.id === "com.valvesoftware.Steam")
+    readonly property var flathubOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] === undefined && offer.id !== "com.valvesoftware.Steam")
+    readonly property var archPackages: Desktop.packages.filter(item => !archOffers.some(offer => Desktop.archFor[offer.id] === item.name))
 
     Item {
         anchors.fill: parent
@@ -220,6 +225,9 @@ FloatingWindow {
                             }
                             secondary: !Desktop.canRemove(modelData.id) ? "" : root.confirming === modelData.id ? "Sure?" : "Uninstall"
                             note: Desktop.canRemove(modelData.id) ? "" : "Part of the desktop"
+                            // On Flathub and in Arch: Arch's opens faster and updates with the system.
+                            other: Desktop.installing[modelData.id.replace(/\.desktop$/, "")] !== undefined ? "Switching..." : Desktop.canSwitch(modelData.id.replace(/\.desktop$/, "")) ? "Use Arch's version" : ""
+                            onOtherClicked: if (Desktop.installing[modelData.id.replace(/\.desktop$/, "")] === undefined) Desktop.switchToArch(modelData.id.replace(/\.desktop$/, ""))
                             onSecondaryClicked: {
                                 if (root.confirming !== modelData.id) {
                                     root.confirming = modelData.id;
@@ -232,45 +240,25 @@ FloatingWindow {
                         }
                     }
 
-                    // Get apps.
+                    // Get apps: Arch Linux's own first (they use the system's libraries and
+                    // driver, so they open faster), then Flathub for what Arch doesn't have.
                     UiText {
                         Layout.topMargin: Theme.space2
-                        visible: ShellState.appsPage === "get"
-                        text: flathubQuery.text.trim() ? (Desktop.searching ? "Searching Flathub..." : Desktop.results.length + " found on Flathub") : "Popular"
+                        visible: ShellState.appsPage === "get" && (!root.searching || root.archOffers.length + root.archPackages.length > 0)
+                        text: root.searching ? "From Arch Linux" : "Popular"
                         color: Theme.inkMuted
                         font.pixelSize: Theme.hintSize
                         font.weight: Font.DemiBold
                     }
 
                     Repeater {
-                        model: ShellState.appsPage === "get" ? root.offers : []
+                        model: ShellState.appsPage === "get" ? (root.searching ? root.archOffers : Desktop.featured) : []
 
-                        AppRow {
-                            required property var modelData
-                            readonly property bool busy: Desktop.installing[modelData.id] === true
-                            readonly property bool done: Desktop.isInstalled(modelData.id)
-                            Layout.fillWidth: true
-                            icon: Quickshell.iconPath(modelData.id, "system-software-install")
-                            name: modelData.name
-                            detail: modelData.detail
-                            primary: done ? "Installed" : busy ? "Installing..." : "Install"
-                            primaryEnabled: !done && !busy
-                            onPrimaryClicked: Desktop.install(modelData.id)
-                        }
-                    }
-
-                    // The same search in Arch Linux's own packages.
-                    UiText {
-                        Layout.topMargin: Theme.space4
-                        visible: ShellState.appsPage === "get" && flathubQuery.text.trim().length > 0 && Desktop.packages.length > 0
-                        text: "From Arch Linux"
-                        color: Theme.inkMuted
-                        font.pixelSize: Theme.hintSize
-                        font.weight: Font.DemiBold
+                        OfferRow {}
                     }
 
                     Repeater {
-                        model: ShellState.appsPage === "get" && flathubQuery.text.trim() ? Desktop.packages : []
+                        model: ShellState.appsPage === "get" && root.searching ? root.archPackages : []
 
                         AppRow {
                             required property var modelData
@@ -283,6 +271,21 @@ FloatingWindow {
                             primaryEnabled: !modelData.installed && !busy
                             onPrimaryClicked: Desktop.installPackage(modelData.name)
                         }
+                    }
+
+                    UiText {
+                        Layout.topMargin: Theme.space4
+                        visible: ShellState.appsPage === "get" && root.searching
+                        text: Desktop.searching ? "Searching Flathub..." : root.flathubOffers.length ? "From Flathub" : "Nothing more on Flathub"
+                        color: Theme.inkMuted
+                        font.pixelSize: Theme.hintSize
+                        font.weight: Font.DemiBold
+                    }
+
+                    Repeater {
+                        model: ShellState.appsPage === "get" && root.searching ? root.flathubOffers : []
+
+                        OfferRow {}
                     }
 
                     // Not found in either: the app's own website.
@@ -311,6 +314,20 @@ FloatingWindow {
         }
     }
 
+    // An app from the Popular list or a search: from Arch when Arch has it, else from Flathub.
+    component OfferRow: AppRow {
+        required property var modelData
+        readonly property bool busy: Desktop.installing[modelData.id] !== undefined
+        readonly property bool done: Desktop.isInstalled(modelData.id)
+        Layout.fillWidth: true
+        icon: Quickshell.iconPath(modelData.id, true) || Quickshell.iconPath(Desktop.archFor[modelData.id] || "system-software-install", "system-software-install")
+        name: modelData.name
+        detail: (modelData.detail ? modelData.detail + " · " : "") + "From " + Desktop.originOf(modelData.id)
+        primary: done ? "Installed" : busy ? "Installing..." : "Install"
+        primaryEnabled: !done && !busy
+        onPrimaryClicked: Desktop.install(modelData.id)
+    }
+
     // One app: icon, name, a line about it, and its buttons.
     component AppRow: Rectangle {
         id: row
@@ -321,9 +338,11 @@ FloatingWindow {
         property string primary
         property bool primaryEnabled: true
         property string secondary
+        property string other // a plain button before the others (Switch to Arch's copy)
         property string note
         signal primaryClicked()
         signal secondaryClicked()
+        signal otherClicked()
 
         implicitHeight: 60
         radius: Theme.radiusMd
@@ -366,6 +385,30 @@ FloatingWindow {
                 text: row.note
                 color: Theme.inkMuted
                 font.pixelSize: Theme.hintSize
+            }
+
+            Rectangle {
+                visible: row.other.length > 0
+                implicitWidth: otherText.implicitWidth + Theme.space4 * 2
+                implicitHeight: 32
+                radius: Theme.radiusSm
+                color: otherMouse.containsMouse ? Theme.surface300 : "transparent"
+                border.color: Theme.line
+                border.width: 1
+
+                UiText {
+                    id: otherText
+                    anchors.centerIn: parent
+                    text: row.other
+                    font.weight: Font.Medium
+                }
+
+                MouseArea {
+                    id: otherMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: row.otherClicked()
+                }
             }
 
             Rectangle {

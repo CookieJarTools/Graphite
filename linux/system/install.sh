@@ -25,6 +25,14 @@ PAM
 if [ -f /etc/pam.d/greetd ] && ! grep -q pin-check /etc/pam.d/greetd; then
     sed -i "0,/^auth/s|^auth|$pin_line\n&|" /etc/pam.d/greetd
 fi
+# And when an administrator is asked for (installing apps, changing settings), as on Windows.
+# Newer polkit keeps its file in /usr/lib/pam.d; a copy in /etc takes its place.
+if [ ! -f /etc/pam.d/polkit-1 ] && [ -f /usr/lib/pam.d/polkit-1 ]; then
+    cp /usr/lib/pam.d/polkit-1 /etc/pam.d/polkit-1
+fi
+if [ -f /etc/pam.d/polkit-1 ] && ! grep -q pin-check /etc/pam.d/polkit-1; then
+    sed -i "0,/^auth/s|^auth|$pin_line\n&|" /etc/pam.d/polkit-1
+fi
 # Wrong passwords: the account rests for 2 minutes after 10 (as on Windows), not Arch's own
 # 10 minutes after 3, which would refuse the right password after the screens' short pause.
 if [ -f /etc/security/faillock.conf ]; then

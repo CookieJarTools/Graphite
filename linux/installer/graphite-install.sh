@@ -16,8 +16,8 @@
 #   GRAPHITE_ANSWERS=file graphite-install   answers instead of questions:
 #       DISK, FULL_NAME, USER_NAME, PASSWORD, TIME_ZONE, KEYBOARD, GAMING (yes|no), and
 #       optionally LOCALE (en_GB.UTF-8...), HOST_NAME, HINT, ENCRYPT (yes|no: the disk, with
-#       the password), APPS (Flathub ids), THEME (dark|light|auto), AUTO_UPDATES (yes|no),
-#       CLAUDE_CODE (yes|no), PIN (4 digits, for signing in quickly)
+#       the password), APPS (Flathub ids), PACKAGES (Arch packages, for the apps Arch has),
+#       THEME (dark|light|auto), AUTO_UPDATES (yes|no), CLAUDE_CODE (yes|no), PIN (4 digits, for signing in quickly)
 #   GRAPHITE_PROGRESS=lines                  progress as lines for the graphical front end
 #       ("PROGRESS <percent> <text>", "STAGE <disk|system|account|security|games|apps|finish>",
 #       "ERROR <text>", "DONE") instead of dialog's screens
@@ -159,6 +159,7 @@ grep -q "^#\?$locale UTF-8" /etc/locale.gen 2>/dev/null || locale="en_US.UTF-8"
 # The graphical front end's choices (the text screens don't ask these).
 ENCRYPT="${ENCRYPT:-no}"
 APPS="${APPS:-}"
+PACKAGES="${PACKAGES:-}"
 THEME="${THEME:-dark}"
 AUTO_UPDATES="${AUTO_UPDATES:-no}"
 HINT="${HINT:-}"
@@ -366,9 +367,21 @@ CONFIGURE
         arch-chroot "$target" env GRAPHITE_USER="$USER_NAME" bash /opt/graphite-desk/linux/gaming.sh --from-installer >>"$log" 2>&1 || echo "gaming" > /tmp/graphite-gaming-failed
     fi
 
-    # The apps picked in the installer, from Flathub, for everyone on the computer.
-    local apps=() app count=0
+    # The apps picked in the installer: Arch Linux's own where it has them, Flathub for the rest
+    # (for everyone on the computer).
+    local apps=() packages=() app count=0
     for app in $APPS; do [[ "$app" =~ ^[A-Za-z0-9._-]+$ ]] && apps+=("$app"); done
+    for app in $PACKAGES; do [[ "$app" =~ ^[a-z0-9@._+-]+$ ]] && packages+=("$app"); done
+    if [ ${#packages[@]} -gt 0 ]; then
+        stage apps
+        step 87 "Installing your apps..."
+        # All at once; when one can't be had, the rest still go in, one by one.
+        if ! arch-chroot "$target" pacman -S --needed --noconfirm "${packages[@]}" >>"$log" 2>&1; then
+            for app in "${packages[@]}"; do
+                arch-chroot "$target" pacman -S --needed --noconfirm "$app" >>"$log" 2>&1 || echo "$app" >> /tmp/graphite-apps-failed
+            done
+        fi
+    fi
     if [ ${#apps[@]} -gt 0 ]; then
         stage apps
         arch-chroot "$target" flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >>"$log" 2>&1

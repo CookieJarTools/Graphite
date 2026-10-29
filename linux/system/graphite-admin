@@ -17,6 +17,9 @@
 #   format PARTITION FS LABEL            a new, empty file system on one partition
 #   erase DISK FS LABEL                  a whole drive emptied, with one partition (never the
 #                                        drive the system runs from)
+#   package-install NAME...              apps from Arch Linux's own repositories
+#   package-remove NAME                  one of them uninstalled (never the system's own parts)
+#   flatpak-remove APP_ID                an app from Flathub installed for everyone
 #   clean                                old package downloads and logs
 #   install                              Graphite's system parts again, from /opt/graphite-desk
 set -euo pipefail
@@ -156,6 +159,32 @@ case "$verb" in
             fat32) mkfs.fat -F 32 -n "${label:-DRIVE}" "$device" >/dev/null ;;
             ext4) mkfs.ext4 -q -F -L "${label:-Drive}" -E "root_owner=$owner:$(id -g "$owner" 2>/dev/null || echo 0)" "$device" ;;
         esac
+        ;;
+    package-install)
+        # Apps from Arch Linux's own repositories only (never a file from somewhere else).
+        [ $# -ge 1 ] || exit 2
+        for package in "$@"; do
+            [[ "$package" =~ ^[a-z0-9@._+-]{1,80}$ ]] || { echo "Not a package name." >&2; exit 2; }
+            pacman -Si "$package" >/dev/null 2>&1 || { echo "$package isn't in Arch Linux's repositories." >&2; exit 2; }
+        done
+        # When the package list is old the download fails; then everything is brought up to date
+        # with it (Arch never mixes a fresh package into an old system).
+        pacman -S --needed --noconfirm "$@" >/dev/null 2>&1 || pacman -Syu --needed --noconfirm "$@" >/dev/null
+        ;;
+    package-remove)
+        package="${1:-}"
+        [[ "$package" =~ ^[a-z0-9@._+-]{1,80}$ ]] || { echo "Not a package name." >&2; exit 2; }
+        case "$package" in
+            base | linux* | systemd* | pacman | sudo | polkit | greetd* | hyprland | quickshell* | kitty | nautilus | \
+            xdg-desktop-portal* | networkmanager | bluez* | pipewire* | wireplumber | mesa | nvidia* | flatpak | ufw | plymouth)
+                echo "$package is part of the system and can't be removed." >&2; exit 2 ;;
+        esac
+        pacman -Q "$package" >/dev/null 2>&1 || exit 0
+        pacman -Rns --noconfirm "$package" >/dev/null
+        ;;
+    flatpak-remove)
+        [[ "${1:-}" =~ ^[A-Za-z0-9_.-]{3,120}$ ]] || { echo "Not an app id." >&2; exit 2; }
+        flatpak uninstall --system -y --noninteractive "$1" >/dev/null
         ;;
     clean)
         paccache -rk1 >/dev/null 2>&1 || true

@@ -62,6 +62,8 @@ if nvidia then
     hl.env("LIBVA_DRIVER_NAME", "nvidia")
     hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
     hl.env("NVD_BACKEND", "direct")
+    -- Apps drawn with WebKit (the Modrinth App, some installers) show a blank window otherwise.
+    hl.env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
     hl.env("GSK_RENDERER", "ngl")
 end
 

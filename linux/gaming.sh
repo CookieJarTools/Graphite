@@ -39,7 +39,7 @@ if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
 fi
 sudo pacman -Sy --noconfirm
 
-packages=(steam gamemode lib32-gamemode mangohud lib32-mangohud gamescope power-profiles-daemon
+packages=(steam modrinth-app gamemode lib32-gamemode mangohud lib32-mangohud gamescope power-profiles-daemon
           flatpak pciutils linux-headers)
 
 # The GPU's drivers (installer/gpu-packages.sh: the same list the installer uses).
@@ -68,11 +68,6 @@ if $nvidia; then
     echo nvidia > "$HOME/.config/graphite/gpu"
     echo "Restart the computer when this finishes to load the NVIDIA driver."
 fi
-
-# Minecraft: the Modrinth App (from Flathub; it fetches the right Java for each version).
-say "Installing the Modrinth App for Minecraft..."
-sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-sudo flatpak install --system -y --noninteractive flathub com.modrinth.ModrinthApp || echo "The Modrinth App didn't install. Check your internet connection."
 
 # Run as root (the installer, or the Control Panel in the background): what was written in the
 # home is the person's.

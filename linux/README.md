@@ -50,8 +50,11 @@ Ctrl (its keyboard event: a bind going off mid-drag would end the drag).
 ## Installing apps
 
 **Apps** (launcher, Settings, or the app store command) lists everything installed, to open
-or uninstall (the desktop's own parts are kept), and gets more from Flathub with one click:
-popular picks, or a search.
+or uninstall (the desktop's own parts are kept), and gets more with one click: popular
+picks, or a search. Apps come from Arch Linux's own packages when Arch has them (they use the
+system's libraries and graphics driver, so they open faster and update with the system) and
+from Flathub otherwise. A Flathub app that Arch also has shows "Use Arch's version". Installing
+asks for an administrator's PIN or password, as Windows does.
 
 Opening a download installs it in the right place, with a notification while it does, and
 the app then sits in the launcher (right-click it there to uninstall):

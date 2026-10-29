@@ -26,8 +26,8 @@ first.
 3. The installer opens by itself. Pick your country and keyboard, join your Wi-Fi (it is
    remembered in the new system, so it is online from the first start), choose the disk and
    switch on "Erase ... and install", then your name and password (and an optional hint),
-   disk encryption and automatic updates, the look, and any apps to install from Flathub
-   (and gaming). It takes 10 to 30 minutes.
+   disk encryption and automatic updates, the look, and any apps to install (from Arch
+   Linux's own packages where it has them, else Flathub) and gaming. It takes 10 to 30 minutes.
 4. Press Restart at the end; once the screen goes dark, take out the stick. The computer starts
    at Graphite's login screen.
 

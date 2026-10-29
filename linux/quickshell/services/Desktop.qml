@@ -24,10 +24,50 @@ Singleton {
     }
 
     function sourceLabel(id) {
-        return ({ flatpak: "Flatpak", deb: "Ubuntu app", appimage: "AppImage", pacman: "Package", system: "System" })[sourceOf(id)];
+        return ({ flatpak: "Flathub", deb: "Ubuntu app", appimage: "AppImage", pacman: "Arch Linux", system: "System" })[sourceOf(id)];
     }
 
-    // Apps a newcomer is likely to want, one click each from Flathub.
+    // Apps Arch Linux packages itself, by their Flathub id. These come from Arch: they use the
+    // system's own libraries and graphics driver, so they open faster and update with everything
+    // else. Steam comes through the gaming setup (it needs 32-bit drivers too).
+    readonly property var archFor: ({
+        "com.discordapp.Discord": "discord",
+        "org.telegram.desktop": "telegram-desktop",
+        "org.videolan.VLC": "vlc",
+        "org.libreoffice.LibreOffice": "libreoffice-fresh",
+        "com.obsproject.Studio": "obs-studio",
+        "org.gimp.GIMP": "gimp",
+        "org.blender.Blender": "blender",
+        "net.lutris.Lutris": "lutris",
+        "org.gnome.gThumb": "gthumb",
+        "org.gnome.Shotwell": "shotwell",
+        "io.bassi.Amberol": "amberol",
+        "com.modrinth.ModrinthApp": "modrinth-app",
+        "com.spotify.Client": "spotify-launcher",
+        "org.mozilla.firefox": "firefox",
+        "org.mozilla.Thunderbird": "thunderbird",
+        "org.chromium.Chromium": "chromium",
+        "org.kde.krita": "krita",
+        "org.inkscape.Inkscape": "inkscape",
+        "org.audacityteam.Audacity": "audacity",
+        "org.kde.kdenlive": "kdenlive",
+        "io.mpv.Mpv": "mpv",
+        "io.github.celluloid_player.Celluloid": "celluloid",
+        "fr.handbrake.ghb": "handbrake",
+        "org.qbittorrent.qBittorrent": "qbittorrent",
+        "org.signal.Signal": "signal-desktop",
+        "im.riot.Riot": "element-desktop",
+        "org.keepassxc.KeePassXC": "keepassxc",
+        "org.remmina.Remmina": "remmina",
+        "org.gnome.Rhythmbox3": "rhythmbox",
+        "org.prismlauncher.PrismLauncher": "prismlauncher",
+        "com.transmissionbt.Transmission": "transmission-gtk"
+    })
+
+    // Arch's packages from archFor that are installed (pacman -Qq), and whether Steam is.
+    property var archInstalled: ({})
+
+    // Apps a newcomer is likely to want, one click each: from Arch when it has them, else Flathub.
     readonly property var featured: [
         { id: "app.zen_browser.zen", name: "Zen Browser", detail: "Private web browser" },
         { id: "com.valvesoftware.Steam", name: "Steam", detail: "Games, including many Windows games" },
@@ -54,14 +94,40 @@ Singleton {
     property var flatpaks: ({})
 
     function isInstalled(appId) {
-        return flatpaks[appId] === true;
+        if (appId === "com.valvesoftware.Steam") return archInstalled["steam"] === true || flatpaks[appId] === true;
+        return flatpaks[appId] === true || (archFor[appId] !== undefined && archInstalled[archFor[appId]] === true);
+    }
+
+    // Where an app comes from, for its row: "Arch Linux" or "Flathub".
+    function originOf(appId) {
+        return archFor[appId] !== undefined || appId === "com.valvesoftware.Steam" ? "Arch Linux" : "Flathub";
     }
 
     function install(appId) {
         const busy = Object.assign({}, installing);
-        busy[appId] = true;
+        busy[appId] = Date.now();
         installing = busy;
-        Quickshell.execDetached(["bash", linux + "/apps/install-app.sh", "--flathub", appId]);
+        if (appId === "com.valvesoftware.Steam") {
+            setUpGaming();
+        } else if (archFor[appId] !== undefined) {
+            Quickshell.execDetached(["sh", "-c", `bash "$1" --package "$2"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", archFor[appId]]);
+            refreshSoon.restart();
+        } else {
+            Quickshell.execDetached(["bash", linux + "/apps/install-app.sh", "--flathub", appId]);
+        }
+    }
+
+    // A Flathub app that Arch also has: Arch's copy goes in, then the Flathub one comes out.
+    function canSwitch(appId) {
+        return archFor[appId] !== undefined && flatpaks[appId] === true && archInstalled[archFor[appId]] !== true;
+    }
+
+    function switchToArch(appId) {
+        const busy = Object.assign({}, installing);
+        busy[appId] = Date.now();
+        installing = busy;
+        Quickshell.execDetached(["sh", "-c", `bash "$1" --package "$2" --replaces "$3"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", archFor[appId], appId]);
+        refreshSoon.restart();
     }
 
     // Flathub's answers for a search: [{ id, name, detail }].
@@ -248,22 +314,32 @@ Singleton {
     // "kind id" per line: the installer's records, then the Flatpak apps.
     Process {
         id: listing
-        command: ["sh", "-c", "for f in \"$HOME/.local/share/graphite/apps\"/*; do [ -f \"$f\" ] && echo \"$(sed -n 's/^kind=//p' \"$f\") $(basename \"$f\")\"; done; flatpak list --app --columns=application 2>/dev/null | sed 's/^/flatpak /'"]
+        command: ["sh", "-c", "for f in \"$HOME/.local/share/graphite/apps\"/*; do [ -f \"$f\" ] && echo \"$(sed -n 's/^kind=//p' \"$f\") $(basename \"$f\")\"; done; flatpak list --app --columns=application 2>/dev/null | sed 's/^/flatpak /'; pacman -Qq \"$@\" 2>/dev/null | sed 's/^/arch /'", "sh", "steam"].concat(Object.values(root.archFor))
         stdout: StdioCollector {
             onStreamFinished: {
                 const sources = {};
                 const flatpaks = {};
+                const arch = {};
                 for (const line of this.text.split("\n")) {
                     const [kind, id] = line.trim().split(" ");
                     if (!kind || !id) continue;
+                    if (kind === "arch") {
+                        arch[id] = true;
+                        continue;
+                    }
                     sources[id] = kind;
                     if (kind === "flatpak") flatpaks[id] = true;
                 }
                 root.sources = sources;
                 root.flatpaks = flatpaks;
+                root.archInstalled = arch;
                 // Installs that have finished leave the busy list.
                 const busy = {};
-                for (const id of Object.keys(root.installing)) if (!flatpaks[id]) busy[id] = true;
+                for (const id of Object.keys(root.installing)) {
+                    const done = root.isInstalled(id) && (root.archFor[id] === undefined || arch[root.archFor[id]]);
+                    // Ten minutes on, it didn't work (install-app.sh said why).
+                    if (!done && Date.now() - root.installing[id] < 600000) busy[id] = root.installing[id];
+                }
                 root.installing = busy;
             }
         }
@@ -272,6 +348,8 @@ Singleton {
     Timer {
         id: refreshSoon
         interval: 4000
+        // Again until what is being installed is in (an app from Arch can take a minute or two).
+        repeat: Object.keys(root.installing).length > 0
         onTriggered: root.refresh()
     }
 

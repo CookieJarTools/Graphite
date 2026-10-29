@@ -12,7 +12,9 @@
 #
 #   install-app.sh FILE              install
 #   install-app.sh --flathub APP_ID  install an app from Flathub (the Apps window's Install)
-#   install-app.sh --package NAME    install one of Arch Linux's own packages (asks for the password)
+#   install-app.sh --package NAME [--replaces APP_ID]
+#                                    install one of Arch Linux's own packages (asks for the
+#                                    PIN or password), and remove the Flathub copy it replaces
 #   install-app.sh --remove ID       uninstall the app with desktop entry id ID: one this script
 #                                    put there, a Flatpak app, or a system package (asks for
 #                                    the password; the desktop's own parts are kept)
@@ -25,6 +27,7 @@ applications="$HOME/.local/share/applications"
 mkdir -p "$manifests" "$applications"
 
 note=""
+failing="Couldn't install"
 notify() {
     local args=(-a "Graphite Desk" -i system-software-install -p)
     [ -n "$note" ] && args+=(-r "$note")
@@ -32,9 +35,13 @@ notify() {
 }
 
 fail() {
-    notify "Couldn't install ${name:-the app}" "$1"
+    notify "$failing ${name:-the app}" "$1"
     exit 1
 }
+
+# The administrator's helper (system/graphite-admin): asks for the password or PIN once, then
+# not again for a few minutes.
+admin() { pkexec /usr/local/lib/graphite/graphite-admin "$@"; }
 
 in_box() { distrobox enter --name "$box" -- "$@"; }
 
@@ -46,6 +53,7 @@ manifest() { # id kind key=value...
 # ---------- removing ----------
 
 if [ "${1:-}" = "--remove" ]; then
+    failing="Couldn't uninstall"
     id="${2%.desktop}"
     name="$id"
     if [ -f "$manifests/$id" ]; then
@@ -62,7 +70,7 @@ if [ "${1:-}" = "--remove" ]; then
                 rm -f "$path" "$applications/$id.desktop" "$icon"
                 ;;
             pacman)
-                pkexec pacman -R --noconfirm "$package" || fail "Your password is needed to uninstall it."
+                admin package-remove "$package" || fail "It wasn't uninstalled. You may have cancelled, or other apps need it."
                 ;;
         esac
         rm -f "$manifests/$id"
@@ -71,7 +79,11 @@ if [ "${1:-}" = "--remove" ]; then
     fi
     if flatpak info "$id" >/dev/null 2>&1; then
         notify "Uninstalling $id..."
-        flatpak uninstall -y --noninteractive "$id" >/dev/null 2>&1 || fail "Flatpak couldn't remove it."
+        if flatpak info --user "$id" >/dev/null 2>&1; then
+            flatpak uninstall --user -y --noninteractive "$id" >/dev/null 2>&1 || fail "Flatpak couldn't remove it."
+        else
+            admin flatpak-remove "$id" >/dev/null 2>&1 || fail "It wasn't uninstalled. You may have cancelled."
+        fi
         notify "Uninstalled" "$id was removed."
         exit 0
     fi
@@ -83,8 +95,8 @@ if [ "${1:-}" = "--remove" ]; then
                 fail "$package is part of the desktop and can't be removed." ;;
         esac
         name="$(grep -m1 '^Name=' "$entry" | cut -d= -f2-)"
-        notify "Uninstalling ${name:-$package}..." "Enter your password when asked."
-        pkexec pacman -Rns --noconfirm "$package" >/dev/null 2>&1 || fail "No password was entered, or other apps need it."
+        notify "Uninstalling ${name:-$package}..." "Enter your PIN or password when asked."
+        admin package-remove "$package" >/dev/null 2>&1 || fail "It wasn't uninstalled. You may have cancelled, or other apps need it."
         notify "Uninstalled" "${name:-$package} was removed."
         exit 0
     fi
@@ -111,13 +123,27 @@ fi
 
 if [ "${1:-}" = "--package" ]; then
     package="${2:-}"
+    replaces="${4:-}"
+    [ "${3:-}" = "--replaces" ] || replaces=""
     [[ "$package" =~ ^[a-z0-9@._+-]+$ ]] || fail "That isn't a package name."
     name="$package"
-    notify "Installing $name..." "From Arch Linux. Enter your password when asked."
-    pkexec pacman -S --needed --noconfirm "$package" >/dev/null 2>&1 || fail "No password was entered, or you're offline."
-    for desktop in $(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$'); do
+    notify "Installing $name..." "From Arch Linux. Enter your PIN or password if asked."
+    admin package-install "$package" >/dev/null 2>&1 || fail "It wasn't installed. You may have cancelled, or you're offline."
+    desktops="$(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$')"
+    for desktop in $desktops; do
         manifest "$(basename "$desktop" .desktop)" pacman "package=$package"
     done
+    shown="$(grep -m1 '^Name=' $desktops /dev/null 2>/dev/null | head -1 | cut -d= -f2-)"
+    name="${shown:-$name}"
+    # Switching from the Flathub copy: that one goes once this one is in. Settings stay in the
+    # home folder (~/.var/app), so nothing is lost if the person goes back.
+    if [ -n "$replaces" ] && flatpak info "$replaces" >/dev/null 2>&1; then
+        if flatpak info --user "$replaces" >/dev/null 2>&1; then
+            flatpak uninstall --user -y --noninteractive "$replaces" >/dev/null 2>&1
+        else
+            admin flatpak-remove "$replaces" >/dev/null 2>&1
+        fi
+    fi
     notify "$name is installed" "Press the Windows key and type its name to open it."
     exit 0
 fi
@@ -209,7 +235,7 @@ install_pacman() {
     local package
     package="$(bsdtar -xOf "$file" .PKGINFO 2>/dev/null | awk -F' = ' '$1=="pkgname"{print $2}')"
     name="${package:-$base}"
-    notify "Installing $name..." "Enter your password when asked."
+    notify "Installing $name..." "Enter your PIN or password when asked."
     pkexec pacman -U --noconfirm "$file" >/dev/null 2>&1 || fail "It couldn't be installed, or no password was entered."
     local desktop
     for desktop in $(pacman -Qlq "$package" 2>/dev/null | grep -E '^/usr/share/applications/[^/]+\.desktop$'); do
