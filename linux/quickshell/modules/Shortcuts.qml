@@ -136,6 +136,8 @@ Scope {
         function toggle(): void { ShellState.toggleLauncher(); }
         function open(): void { ShellState.closePanels(); ShellState.launcherOpen = true; }
         function close(): void { ShellState.launcherOpen = false; }
+        // An app (its desktop entry id) among the launcher's Pinned or not.
+        function pin(appId: string, on: bool): void { Search.setPinned(appId, on); }
     }
 
     IpcHandler {
@@ -201,6 +203,11 @@ Scope {
         function activate(index: int): void { Taskbar.activate(Taskbar.items[index]); }
         // An app's windows with or without the desktop's title bar (by app id, as Hyprland's class).
         function titlebar(appId: string, on: bool): void { Taskbar.setTitleBar(appId, on); }
+        // An app (its desktop entry id) pinned to the bar or not.
+        function pin(appId: string, on: bool): void {
+            const entry = DesktopEntries.byId(appId);
+            Taskbar.setPinned({ key: entry ? entry.id : appId, name: entry ? entry.name : appId, icon: entry ? entry.icon : appId }, on);
+        }
         function merge(source: int, target: int): string {
             const result = Taskbar.merge(Taskbar.items[source].ref, Taskbar.items[target].ref);
             return JSON.stringify(result);
