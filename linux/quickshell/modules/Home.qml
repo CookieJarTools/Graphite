@@ -52,7 +52,7 @@ PanelWindow {
         }
         const windows = workspace ? Array.from(workspace.toplevels.values) : [];
         const newest = windows[windows.length - 1];
-        if (newest && focusedHere) Hyprland.dispatch(`hl.dsp.focus({ window = "address:${Taskbar.addressOf(newest)}" })`);
+        if (newest && focusedHere) Taskbar.focusWindow(Taskbar.addressOf(newest));
     }
     Component.onCompleted: if (shown) start()
     onTakesKeysChanged: if (takesKeys) view.focusSearch()

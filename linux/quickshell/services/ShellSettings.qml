@@ -8,6 +8,7 @@ pragma Singleton
 //   aliases   { entryId: "XX" }, the user's own launcher aliases
 //   recent    [{ kind: "app" | "path", id, time }], newest first
 //   launchCounts, lastUsed   { entryId: number }
+//   launches     { entryId: [time, ...] }, each launch of the last 30 days (Apps.qml)
 //   quickLinks   folders listed as Places in the launcher (~ for home)
 //   showHome     Home on an empty screen
 //   dark         the dark colours (the light ones otherwise)
@@ -22,6 +23,11 @@ pragma Singleton
 //   idle       { lock, screenOff, sleep } in minutes, 0 for never (Devices.qml: hypridle)
 //   autoUpdates   updates install by themselves (Updates.qml)
 //   shortcuts, appShortcuts   keyboard shortcuts changed or added (Hotkeys.qml)
+//   soundOff   [{ name, description, input }], sound devices turned off (SoundDevices.qml)
+//   soundOrder { outputs, inputs: [{ name, description }] }, the order to use them in (the same)
+//   systemSounds   sounds for events: signing in, a password asked for, notifications (Sounds.qml)
+//   titleBarOff   app ids whose windows go without Hyprland's title bar (Taskbar.setTitleBar)
+//   zones      { enabled, layout, custom }, the window zones' layout (Zones.qml)
 // Changes go through update(), which saves a moment later.
 
 import QtQuick
@@ -54,6 +60,7 @@ Singleton {
             recent: [],
             launchCounts: {},
             lastUsed: {},
+            launches: {},
             quickLinks: ["~", "~/Downloads", "~/Documents", "~/Pictures", "~/.config"],
             showHome: true,
             dark: true,
@@ -69,7 +76,12 @@ Singleton {
             autoUpdates: false,
             themeMode: "", // "auto" follows the time of day; otherwise `dark` decides
             shortcuts: {},
-            appShortcuts: []
+            appShortcuts: [],
+            soundOff: [],
+            soundOrder: { outputs: [], inputs: [] },
+            systemSounds: true,
+            titleBarOff: [],
+            zones: { enabled: true, layout: "priority", custom: [] }
         };
     }
 
@@ -126,7 +138,8 @@ Singleton {
             saved = null; // first run, or an unreadable file
         }
         if (saved && typeof saved === "object") {
-            for (const key of Object.keys(settings)) {
+            // Everything saved is kept, also what isn't among the defaults above.
+            for (const key of Object.keys(saved)) {
                 if (saved[key] === undefined) continue;
                 settings[key] = key === "taskbar" ? Object.assign(settings.taskbar, saved.taskbar) : saved[key];
             }

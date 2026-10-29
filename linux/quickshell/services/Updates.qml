@@ -38,6 +38,12 @@ Singleton {
 
     readonly property bool autoUpdates: ShellSettings.values ? !!ShellSettings.values.autoUpdates : false
 
+    // Graphite's system parts in this copy, as install.sh records the ones it put in place.
+    readonly property string partsHash: `cd -P "${linux}/system" && cat graphite-admin system-update pin-check boot-setup.sh *.service *.timer *.policy *.rules 2>/dev/null | sha256sum | cut -d' ' -f1`
+    // A shell line for whatever needs the newest graphite-admin: the system parts put in place
+    // first when this copy has moved on (one password covers both: polkit keeps it a while).
+    readonly property string partsFirst: `[ "$(${partsHash})" = "$(cat /var/lib/graphite/system-parts 2>/dev/null)" ] || pkexec /usr/local/lib/graphite/graphite-admin install >/dev/null || exit 1`
+
     function check() {
         if (checking) return;
         checking = true;
@@ -49,8 +55,9 @@ Singleton {
         command: ["bash", "-c", [
             "echo '== packages'; command -v checkupdates >/dev/null && checkupdates 2>/dev/null",
             "echo '== apps'; flatpak remote-ls --updates --user --columns=application 2>/dev/null; flatpak remote-ls --updates --system --columns=application 2>/dev/null",
-            `echo '== desk'; repo="${Quickshell.shellDir}/../.."; git -C "$repo" fetch -q 2>/dev/null && git -C "$repo" rev-list --count HEAD..@{u} 2>/dev/null`,
-            `echo '== parts'; cat "${Quickshell.shellDir}/../system"/graphite-admin "${Quickshell.shellDir}/../system"/system-update "${Quickshell.shellDir}/../system"/pin-check "${Quickshell.shellDir}/../system"/boot-setup.sh "${Quickshell.shellDir}/../system"/*.service "${Quickshell.shellDir}/../system"/*.timer "${Quickshell.shellDir}/../system"/*.policy "${Quickshell.shellDir}/../system"/*.rules 2>/dev/null | sha256sum | cut -d' ' -f1; cat /var/lib/graphite/system-parts 2>/dev/null`,
+            // Never asking for a sign-in: the shell started on tty1, where git would wait for one forever.
+            `echo '== desk'; repo="${Quickshell.shellDir}/../.."; GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" timeout 60 git -C "$repo" fetch -q </dev/null 2>/dev/null && git -C "$repo" rev-list --count HEAD..@{u} 2>/dev/null`,
+            `echo '== parts'; ${root.partsHash}; cat /var/lib/graphite/system-parts 2>/dev/null`,
             "echo '== news'; curl -s --max-time 8 https://archlinux.org/feeds/news/ | tr -d '\\n' | grep -o '<item>.*</item>' | sed 's/<item>/\\n/g' | sed -n 's|.*<title>\\(.*\\)</title>.*<link>\\(.*\\)</link>.*<pubDate>\\(.*\\)</pubDate>.*|\\1\\t\\2\\t\\3|p' | head -5",
             "echo '== last'; stat -c %Y /var/lib/graphite/update.json 2>/dev/null || date -d \"$(grep -a 'starting full system upgrade' /var/log/pacman.log | tail -1 | cut -c2-26)\" +%s 2>/dev/null"
         ].join("; ")]

@@ -188,13 +188,21 @@ Singleton {
 
     // ---------- apps ----------
 
-    // Startup apps: ~/.config/autostart entries (started by system/autostart.sh at sign-in).
+    // Startup apps: ~/.config/autostart entries (started by system/autostart.sh at sign-in);
+    // startupOff, the ones switched off (Hidden=true, which autostart.sh skips), as Windows'.
     property var startup: []
+    property var startupOff: []
 
     Process {
         id: startupReader
-        command: ["sh", "-c", "for f in \"$HOME/.config/autostart\"/*.desktop; do [ -f \"$f\" ] || continue; grep -qi '^Hidden=true' \"$f\" && continue; basename \"$f\" .desktop; done"]
-        stdout: StdioCollector { onStreamFinished: root.startup = this.text.split("\n").filter(line => line) }
+        command: ["sh", "-c", "for f in \"$HOME/.config/autostart\"/*.desktop; do [ -f \"$f\" ] || continue; if grep -qi '^Hidden=true' \"$f\"; then printf 'off '; else printf 'on '; fi; basename \"$f\" .desktop; done"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = this.text.split("\n").filter(line => line);
+                root.startup = lines.filter(line => line.startsWith("on ")).map(line => line.slice(3));
+                root.startupOff = lines.filter(line => line.startsWith("off ")).map(line => line.slice(4));
+            }
+        }
     }
 
     function addStartup(entryId) {
@@ -204,6 +212,11 @@ Singleton {
 
     function removeStartup(entryId) {
         run(["rm", "-f", Quickshell.env("HOME") + "/.config/autostart/" + entryId + ".desktop"]);
+    }
+
+    // On or off without taking it off the list: its Hidden line.
+    function setStartupOn(entryId, on) {
+        run(["sh", "-c", `f="$HOME/.config/autostart/$1.desktop"; sed -i '/^Hidden=/Id' "$f" && ${on ? "true" : "sed -i '/^\\[Desktop Entry\\]/a Hidden=true' \"$f\""}`, "sh", entryId]);
     }
 
     function setBrowser(entryId) {

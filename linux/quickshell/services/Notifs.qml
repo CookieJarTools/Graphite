@@ -37,6 +37,12 @@ Singleton {
             root.history = [entry].concat(root.history).slice(0, root.mostKept);
             root.popups = [entry].concat(root.popups).slice(0, root.mostPopups);
             notification.closed.connect(() => root.forget(notification));
+            // Its sound: the one it names (the freedesktop sound-name hint), none if it asks for
+            // quiet, else by how urgent it is.
+            const hints = notification.hints || {};
+            const icon = notification.appIcon || "";
+            if (!hints["suppress-sound"]) Sounds.play(hints["sound-name"] ? String(hints["sound-name"])
+                : notification.urgency === NotificationUrgency.Critical || /error/.test(icon) ? "error" : /warning/.test(icon) ? "warning" : "notification");
         }
     }
 

@@ -7,6 +7,14 @@
 
 local shell = "qs -c graphite"
 
+-- Title bars (below): Hyprland's hyprbars plugin, built for this version of Hyprland.
+local titlebars = (os.getenv("HOME") or "") .. "/.local/share/graphite/hyprbars-" .. hl.version() .. ".so"
+local function exists(path)
+    local file = io.open(path)
+    if file then file:close() end
+    return file ~= nil
+end
+
 -- ---------- start-up ----------
 
 hl.on("hyprland.start", function()
@@ -20,6 +28,10 @@ hl.on("hyprland.start", function()
     -- Files, started in the background so its window opens at once when asked for.
     hl.exec_cmd("nautilus --gapplication-service")
     hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/autostart.sh\"")
+    -- Title bars (below): built the first time this version of Hyprland starts, as after an update.
+    if not exists(titlebars) then
+        hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../hypr/titlebars/build.sh\" >/dev/null 2>&1 && hyprctl reload")
+    end
     -- The VM's guest tools: shared clipboard and resizing with the window (VirtualBox or VMware).
     hl.exec_cmd("command -v VBoxClient-all >/dev/null && VBoxClient-all; command -v vmware-user >/dev/null && vmware-user")
 end)
@@ -144,7 +156,10 @@ hl.config({
 
     input = {
         kb_layout = keyboardLayout,
-        follow_mouse = 1,
+        -- As on Windows: a window takes the keyboard when it is clicked, not when the pointer
+        -- passes over it (the wheel still scrolls the one under the pointer). Otherwise the bar
+        -- takes the last window crossed on the way down for the one in front.
+        follow_mouse = 2,
         sensitivity = -0.4, -- calmer than libinput's own; the Control Panel changes it
     },
 
@@ -186,6 +201,8 @@ hl.config({
     misc = {
         allow_session_lock_restore = true, -- a restarted shell takes the lock screen back over
         vrr = 2, -- variable refresh rate for fullscreen windows (games), where the screen has it
+        -- An app asking to come forward (a link opened in the browser, a second start) does.
+        focus_on_activate = true,
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         background_color = "0x141516", -- backdrop, should the shell not be running
@@ -194,8 +211,58 @@ hl.config({
     -- VMware's cursor plane is unreliable; the cursor is drawn by Hyprland instead.
     cursor = {
         no_hardware_cursors = 1,
+        -- The pointer stays where it is when a window is brought forward (from the bar, Alt+Tab).
+        no_warps = true,
     },
 })
+
+-- ---------- title bars ----------
+
+-- Apps that leave their title bar to the desktop (Kitty, GTK 3 dialogs, Qt apps) get one, as on
+-- Windows: the title on the left, minimise, maximise and close on the right; drag it to move the
+-- window, double-click it to maximise. It's Hyprland's hyprbars plugin, built for this version of
+-- Hyprland by titlebars/build.sh (at start-up, above, when it isn't yet); apps that draw their own
+-- title bar keep it, without a second one.
+if exists(titlebars) then pcall(hl.plugin.load, titlebars) end
+if hl.plugin.hyprbars then
+    local maximise = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']]
+    hl.config({
+        plugin = {
+            hyprbars = {
+                bar_height = 32,
+                bar_color = surface,
+                col = { text = ink },
+                bar_text_font = "Inter",
+                bar_text_size = 11,
+                bar_text_weight = "medium",
+                bar_text_align = "left",
+                bar_padding = 12,
+                bar_button_padding = 12,
+                bar_part_of_window = true,
+                bar_precedence_over_border = true,
+                on_double_click = maximise,
+            },
+        },
+    })
+    -- Right to left. Minimised windows wait on the shell's "minimized" workspace (services/Taskbar.qml).
+    local clear = "0x00000000"
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "✕", action = "hyprctl dispatch 'hl.dsp.window.close()'" })
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "□", action = maximise })
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "—", action = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:minimized", follow = false })']] })
+    -- Steam draws its own and doesn't say so.
+    hl.window_rule({ match = { class = "^steam$" }, ["hyprbars:no_bar"] = true })
+    -- Nor do the apps whose bar was hidden from the taskbar's menu (Taskbar.setTitleBar).
+    local hidden = io.open((os.getenv("HOME") or "") .. "/.config/graphite/no-titlebar")
+    if hidden then
+        for app in hidden:lines() do
+            if app ~= "" then
+                local exact = "^" .. app:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?{}|\\]", "\\%0") .. "$"
+                hl.window_rule({ match = { class = exact }, ["hyprbars:no_bar"] = true })
+            end
+        end
+        hidden:close()
+    end
+end
 
 -- Windows behave as on Windows: every one floats, opening centred at the size it asks for,
 -- moved by its title bar (or Super + drag) and resized from its edges. Super + arrows snap it
@@ -211,12 +278,30 @@ local function windowMode()
 end
 
 if windowMode() == "floating" then
-    hl.window_rule({ match = { class = ".*" }, float = true, center = true })
+    hl.window_rule({ match = { class = ".*" }, float = true })
+    -- Centred, but not X11 menus (Steam's: windows without a title), which open where the app puts them.
+    hl.window_rule({ match = { xwayland = false }, center = true })
+    hl.window_rule({ match = { xwayland = true, title = ".+" }, center = true })
 end
 
 -- Games (Steam and Proton, Minecraft): frames go out as soon as they are drawn (tearing
 -- allowed), for the least input lag.
 hl.window_rule({ match = { class = "^(steam_app_.*|Minecraft.*|minecraft.*|gamescope)$" }, immediate = true })
+
+-- Animations as quick as Windows' (speed is in tenths of a second; Hyprland's own fallback is
+-- most of a second), on the design's curves: ease-enter for what arrives, ease-exit for what goes.
+hl.curve("enter", { type = "bezier", points = { {0.16, 1}, {0.3, 1} } })
+hl.curve("exit", { type = "bezier", points = { {0.4, 0}, {1, 1} } })
+hl.animation({ leaf = "global", enabled = true, speed = 2.2, bezier = "enter" })
+hl.animation({ leaf = "windowsIn", enabled = true, speed = 2.2, bezier = "enter", style = "popin 92%" })
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.4, bezier = "exit", style = "popin 92%" })
+hl.animation({ leaf = "windowsMove", enabled = true, speed = 2, bezier = "enter" })
+hl.animation({ leaf = "fadeIn", enabled = true, speed = 1.8, bezier = "enter" })
+hl.animation({ leaf = "fadeOut", enabled = true, speed = 1.2, bezier = "exit" })
+hl.animation({ leaf = "layersIn", enabled = true, speed = 1.6, bezier = "enter", style = "fade" })
+hl.animation({ leaf = "layersOut", enabled = true, speed = 1.2, bezier = "exit", style = "fade" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 2.4, bezier = "enter", style = "slide" })
+hl.animation({ leaf = "border", enabled = true, speed = 1.6, bezier = "enter" })
 
 -- In VirtualBox everything is drawn by the CPU (see LIBGL_ALWAYS_SOFTWARE above), so the
 -- costly effects go: blur, shadows and Hyprland's own window animations. Real hardware keeps them.
@@ -313,10 +398,14 @@ end
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Screenshots, as on Windows: Print takes the screen, Super+Shift+S an area.
-local screenshot = "bash \"$HOME/.config/quickshell/graphite/../system/screenshot.sh\""
-hl.bind("Print", hl.dsp.exec_cmd(screenshot .. " screen"))
-hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd(screenshot .. " area"))
+-- Screenshots and recordings, as on Windows: Print and Super+Shift+S open the Snipping Tool
+-- (modules/CaptureTool.qml), Super+Shift+R opens it to record, or stops the recording. Its
+-- surfaces come and go without fading: the still of the screen it opens over appears at once,
+-- and nothing of it is left on the screen when the picture is taken.
+hl.bind("Print", hl.dsp.global("quickshell:capture"))
+hl.bind("SUPER + SHIFT + S", hl.dsp.global("quickshell:capture"))
+hl.bind("SUPER + SHIFT + R", hl.dsp.global("quickshell:capture-record"))
+hl.layer_rule({ match = { namespace = "graphite-capture.*" }, no_anim = true })
 
 -- Super+Tab: task view, every window and desktop, as on Windows.
 hl.bind("SUPER + Tab", hl.dsp.global("quickshell:taskview"))

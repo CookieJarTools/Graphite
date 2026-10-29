@@ -92,8 +92,7 @@ ShellRoot {
     PasswordPrompt {}
     TaskManager {}
     TaskView {}
-
-    AppsWindow {}
+    CaptureTool {}
 
     LockScreen {}
 

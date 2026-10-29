@@ -233,6 +233,7 @@ install_steps() {
         distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
         power-profiles-daemon zram-generator pciutils git pacman-contrib ufw plymouth
         cups cups-pk-helper system-config-printer avahi nss-mdns
+        ocean-sound-theme libldm gptfdisk ntfsprogs nautilus-python gcc make pkgconf
     )
     # Installed into a virtual machine: its tools (shared clipboard, resizing with the window).
     local guest_services=""

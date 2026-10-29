@@ -37,7 +37,7 @@ Singleton {
         { name: "App store", alias: "store", glyph: "system-software-install-symbolic", keys: [], run: () => Desktop.openAppStore() },
         { name: "Update everything", alias: "up", glyph: "software-update-available-symbolic", keys: [], run: () => Desktop.updateEverything() },
         { name: "Set up gaming", alias: "game", glyph: "input-gaming-symbolic", keys: [], run: () => Desktop.setUpGaming() },
-        { name: "Task Manager", alias: "tm", glyph: "utilities-system-monitor-symbolic", keys: ["Ctrl", "Shift", "Esc"], run: () => { ShellState.taskManagerOpen = true; } },
+        { name: "Task Manager", alias: "tm", glyph: "utilities-system-monitor-symbolic", keys: ["Ctrl", "Shift", "Esc"], run: () => { ShellState.openTaskManager(); } },
         { name: "Lock", alias: "lock", glyph: "system-lock-screen-symbolic", keys: ["Super", "L"], run: () => root.power("lock") },
         { name: "Sleep", alias: "sleep", glyph: "system-suspend-symbolic", keys: [], run: () => root.power("sleep") },
         { name: "Sign out", alias: "out", glyph: "system-log-out-symbolic", keys: [], run: () => root.power("signout") },
@@ -56,7 +56,9 @@ Singleton {
             restart: ["systemctl", "reboot"],
             shutdown: ["systemctl", "poweroff"]
         };
-        if (commands[action]) Quickshell.execDetached(commands[action]);
+        if (!commands[action]) return;
+        if (action === "sleep") Quickshell.execDetached(commands[action]);
+        else Quickshell.execDetached(["sh", "-c", Sounds.command("logout") + '; exec "$@"', "sh"].concat(commands[action]));
     }
 
     // ---------- recent files and folders ----------
@@ -212,6 +214,14 @@ Singleton {
         for (const entry of apps) byId[entry.id] = entry;
         const recentApps = (settings.recent || []).filter(item => item.kind === "app" && byId[item.id]).map(item => appItem(byId[item.id]));
         return recentApps.concat(recentOfKind("file")).sort((first, second) => (second.time || 0) - (first.time || 0)).slice(0, count);
+    }
+
+    // Every installed app, the most used this month first (Apps.usesThisMonth), then by name:
+    // the launcher's list while nothing is typed.
+    function appsByUse() {
+        return apps.map(entry => ({ entry: entry, uses: Apps.usesThisMonth(entry.id) }))
+            .sort((first, second) => second.uses - first.uses || first.entry.name.localeCompare(second.entry.name))
+            .map(pair => appItem(pair.entry));
     }
 
     function pinnedApps() {

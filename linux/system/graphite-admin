@@ -21,6 +21,11 @@
 #   package-remove NAME                  one of them uninstalled (never the system's own parts)
 #   flatpak-remove APP_ID                an app from Flathub installed for everyone
 #   clean                                old package downloads and logs
+#   dynamic-disks                        Windows dynamic disks readable: their volumes opened,
+#                                        now and at every start
+#   dynamic-to-basic DISK                a Windows dynamic disk with one volume made a basic disk,
+#                                        its files kept
+#   ntfs-repair PARTITION                a Windows partition Windows left marked in use, cleared
 #   install                              Graphite's system parts again, from /opt/graphite-desk
 set -euo pipefail
 
@@ -32,6 +37,24 @@ person_ok() {
     [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || { echo "That account belongs to the system." >&2; exit 2; }
 }
 read_secret() { IFS= read -r secret || true; [ -n "$secret" ] || { echo "Nothing was given." >&2; exit 2; }; }
+# Never the drive the system runs from (/, /boot or /home on it, through encryption too).
+not_system_drive() {
+    local mount source source_disk
+    for mount in / /boot /home; do
+        source="$(findmnt -no SOURCE "$mount" 2>/dev/null)" || continue
+        source_disk="/dev/$(lsblk -no PKNAME "$(readlink -f "$source")" 2>/dev/null | tail -1)"
+        while [ "$(lsblk -dno TYPE "$source_disk" 2>/dev/null)" != disk ] && [ "$source_disk" != /dev/ ]; do
+            source_disk="/dev/$(lsblk -no PKNAME "$source_disk" 2>/dev/null | tail -1)"
+        done
+        [ "$source_disk" = "$1" ] && { echo "That's the drive Graphite Desk runs from." >&2; exit 2; }
+    done
+    return 0
+}
+# Tools from Arch's own packages, installed the first time they're needed.
+needs() {
+    local tool="$1" package="$2"
+    command -v "$tool" >/dev/null || pacman -S --needed --noconfirm "$package" >/dev/null 2>&1 || pacman -Syu --needed --noconfirm "$package" >/dev/null
+}
 
 verb="${1:-}"
 shift || true
@@ -130,15 +153,9 @@ case "$verb" in
         disk="$device"
         [ "$verb" = format ] && disk="/dev/$(lsblk -no PKNAME "$device" | head -1)"
         [ "$(lsblk -dno TYPE "$disk" 2>/dev/null)" = disk ] || { echo "Not a drive." >&2; exit 2; }
-        for mount in / /boot /home; do
-            source="$(findmnt -no SOURCE "$mount" 2>/dev/null)" || continue
-            source_disk="/dev/$(lsblk -no PKNAME "$(readlink -f "$source")" 2>/dev/null | tail -1)"
-            # Through encryption: the drive under the mapped device.
-            while [ "$(lsblk -dno TYPE "$source_disk" 2>/dev/null)" != disk ] && [ "$source_disk" != /dev/ ]; do
-                source_disk="/dev/$(lsblk -no PKNAME "$source_disk" 2>/dev/null | tail -1)"
-            done
-            [ "$source_disk" = "$disk" ] && { echo "That's the drive Graphite Desk runs from." >&2; exit 2; }
-        done
+        not_system_drive "$disk"
+        [ "$verb" = erase ] && needs sgdisk gptfdisk
+        [ "$fs" = ntfs ] && needs mkfs.ntfs ntfsprogs
         # Nothing on it in use.
         for part in $(lsblk -lnpo NAME "$disk"); do
             umount -q "$part" 2>/dev/null || true
@@ -191,6 +208,90 @@ case "$verb" in
         paccache -ruk0 >/dev/null 2>&1 || true
         journalctl --vacuum-size=200M >/dev/null 2>&1 || true
         flatpak uninstall --system --unused -y --noninteractive >/dev/null 2>&1 || true
+        ;;
+    dynamic-disks)
+        # Windows' own layout for some drives, which Linux reads with Arch's ldmtool (libldm):
+        # each volume becomes a device of its own, then connects like any partition.
+        needs ldmtool libldm
+        systemctl enable graphite-dynamic-disks.service >/dev/null 2>&1 || true
+        ldmtool create all >/dev/null
+        ;;
+    dynamic-to-basic)
+        # A Windows dynamic disk made a basic one, every file kept: when it holds one volume in
+        # one piece, only the partition table changes. Windows' two dynamic-disk partitions go,
+        # and one basic data partition takes their place exactly where the volume lies. The
+        # table as it was is kept in /var/lib/graphite/partition-tables, and put back when the
+        # new partition doesn't read as the NTFS volume it should.
+        disk="${1:-}"
+        [[ "$disk" =~ ^/dev/[a-z0-9]+$ ]] && [ "$(lsblk -dno TYPE "$disk" 2>/dev/null)" = disk ] || { echo "Not a drive." >&2; exit 2; }
+        not_system_drive "$disk"
+        ldm_data=af9b60a0-1431-4f62-bc68-3311714a69ad
+        ldm_metadata=5808c8aa-7e8f-42e0-85d2-e1e90434cfb3
+        lsblk -nro PARTTYPE "$disk" | grep -qix "$ldm_data" || { echo "That isn't a Windows dynamic disk." >&2; exit 2; }
+        # Places below are counted in 512-byte sectors, as the drive's own are.
+        [ "$(cat "/sys/class/block/$(basename "$disk")/queue/logical_block_size")" = 512 ] || { echo "This drive's sectors aren't the usual size; nothing was changed." >&2; exit 2; }
+        needs ldmtool libldm
+        needs sgdisk gptfdisk
+        ldmtool create all >/dev/null 2>&1 || true
+        udevadm settle
+
+        # Its one volume, in one piece, on this drive.
+        mapfile -t volumes < <(lsblk -nro NAME,TYPE "$disk" | awk '$2 == "ldm" || $2 == "dm" { print $1 }' | sort -u)
+        [ "${#volumes[@]}" = 1 ] || { echo "This drive holds ${#volumes[@]} volumes; only a drive with one can be converted here." >&2; exit 2; }
+        volume="${volumes[0]}"
+        findmnt -rn -S "/dev/mapper/$volume" >/dev/null && { echo "Disconnect the drive first." >&2; exit 2; }
+        table="$(dmsetup table "$volume")"
+        [ "$(wc -l <<<"$table")" = 1 ] && [ "$(awk '{ print $3 }' <<<"$table")" = linear ] ||
+            { echo "The volume is in pieces (spanned, striped or mirrored), which can't be converted here." >&2; exit 2; }
+        read -r _ length _ under offset <<<"$table"
+        # Where it starts on the drive: it lies on the drive itself or on one of its partitions.
+        under_name="$(lsblk -nro NAME,MAJ:MIN "$disk" | awk -v device="$under" '$2 == device { print $1; exit }')"
+        [ -n "$under_name" ] || { echo "The volume isn't on this drive alone." >&2; exit 2; }
+        start="$offset"
+        [ "/dev/$under_name" != "$disk" ] && start=$(( offset + $(cat "/sys/class/block/$under_name/start") ))
+        end=$(( start + length - 1 ))
+        # Inside Windows' dynamic data partition, where volumes live.
+        data_name="$(lsblk -nro NAME,PARTTYPE "$disk" | awk -v type="$ldm_data" 'tolower($2) == type { print $1; exit }')"
+        data_start="$(cat "/sys/class/block/$data_name/start")"
+        data_end=$(( data_start + $(cat "/sys/class/block/$data_name/size") - 1 ))
+        [ "$start" -ge "$data_start" ] && [ "$end" -le "$data_end" ] ||
+            { echo "The volume isn't where Windows keeps them on this drive; nothing was changed." >&2; exit 2; }
+        [ "$(dd if="$disk" bs=512 skip="$start" count=1 status=none | dd bs=1 skip=3 count=4 status=none)" = NTFS ] ||
+            { echo "The volume doesn't start with Windows' NTFS where it should; nothing was changed." >&2; exit 2; }
+
+        install -d -m 700 /var/lib/graphite/partition-tables
+        backup="/var/lib/graphite/partition-tables/$(basename "$disk")-$(date +%Y%m%d-%H%M%S).gpt"
+        sgdisk --backup="$backup" "$disk" >/dev/null
+        dmsetup remove "$volume"
+        number="$(lsblk -nro PARTN,PARTTYPE "$disk" | awk -v type="$ldm_data" 'tolower($2) == type { print $1; exit }')"
+        changes=(--set-alignment=1)
+        while read -r partition type; do
+            [ "${type,,}" = "$ldm_data" ] || [ "${type,,}" = "$ldm_metadata" ] && changes+=(--delete="$partition")
+        done < <(lsblk -nro PARTN,PARTTYPE "$disk" | awk 'NF == 2')
+        changes+=(--new="$number:$start:$end" --typecode="$number:0700" --change-name="$number:Basic data partition")
+        sgdisk "${changes[@]}" "$disk" >/dev/null
+        partprobe "$disk" 2>/dev/null || true
+        udevadm settle
+        converted="$(lsblk -nrpo NAME,PARTN "$disk" | awk -v number="$number" '$2 == number { print $1; exit }')"
+        if [ -z "$converted" ] || [ "$(blkid -p -o value -s TYPE "$converted" 2>/dev/null)" != ntfs ]; then
+            sgdisk --load-backup="$backup" "$disk" >/dev/null
+            partprobe "$disk" 2>/dev/null || true
+            ldmtool create all >/dev/null 2>&1 || true
+            echo "The new partition didn't read as expected, so the drive was put back as it was." >&2
+            exit 1
+        fi
+        ;;
+    ntfs-repair)
+        # A Windows (NTFS) partition that Windows left marked in use (Fast Startup, or a shutdown
+        # that didn't finish), which Linux won't change: the mark cleared by ntfs-3g's ntfsfix,
+        # which also empties the journal and has Windows check the drive when it next starts.
+        part="${1:-}"
+        [[ "$part" =~ ^/dev/[a-z0-9]+$ ]] && [ "$(lsblk -dno TYPE "$part" 2>/dev/null)" = part ] || { echo "Not a partition." >&2; exit 2; }
+        [ "$(lsblk -dno FSTYPE "$part")" = ntfs ] || { echo "That isn't a Windows (NTFS) partition." >&2; exit 2; }
+        not_system_drive "/dev/$(lsblk -no PKNAME "$part" | head -1)"
+        findmnt -rn -S "$part" >/dev/null && { echo "Disconnect it first." >&2; exit 2; }
+        needs ntfsfix ntfsprogs
+        ntfsfix -d "$part" >/dev/null
         ;;
     install)
         bash /opt/graphite-desk/linux/system/install.sh

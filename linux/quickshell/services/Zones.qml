@@ -8,7 +8,8 @@ pragma Singleton
 // Hyprland reports no drags, so hyprland.lua passes on the left button (a global shortcut that
 // does not take the click from apps) and Shift and Ctrl (over IPC, from its keyboard event);
 // while the button is down with Shift held, the pointer and the focused window are polled,
-// and only a window that actually moved counts as dragged.
+// and only a window that actually moved counts as dragged. Graphite's Hyprland plugin keeps the
+// drag going when Shift goes down (hypr/titlebars/graphite-drags.cpp).
 
 import QtQuick
 import Quickshell
@@ -221,9 +222,10 @@ Singleton {
                     root.grab = null;
                     return;
                 }
-                // Hyprland lets go of a window being dragged when Shift goes down, so from then
-                // on it follows the pointer from here, keeping the spot it was held by.
-                const place = read.places[root.dragged];
+                // Without Graphite's Hyprland plugin, Hyprland lets go of a window being dragged
+                // when Shift goes down, so from then on it follows the pointer from here, keeping
+                // the spot it was held by. With it, Hyprland carries on dragging.
+                const place = ShellState.deskPlugin ? null : read.places[root.dragged];
                 if (place) {
                     if (!root.grab) root.grab = { x: read.cursor.x - place[0], y: read.cursor.y - place[1] };
                     const x = Math.round(read.cursor.x - root.grab.x);

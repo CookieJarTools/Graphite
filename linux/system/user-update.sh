@@ -21,7 +21,9 @@ if [ -d "$repo/.git" ]; then
     if [ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]; then
         echo "NOTE Graphite Desk wasn't updated because it has uncommitted changes."
     else
-        git -C "$repo" pull --ff-only -q >/dev/null 2>&1 || echo "NOTE Graphite Desk couldn't update. You may be offline or signed out of GitHub."
+        GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" timeout 120 git -C "$repo" pull --ff-only -q </dev/null >/dev/null 2>&1 || echo "NOTE Graphite Desk couldn't update. You may be offline or signed out of GitHub."
     fi
 fi
+# Title bars for the Hyprland just installed, ready for the next sign-in (hypr/titlebars).
+bash "$repo/linux/hypr/titlebars/build.sh" >/dev/null 2>&1 || true
 echo "DONE"

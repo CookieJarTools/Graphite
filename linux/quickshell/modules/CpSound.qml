@@ -1,9 +1,10 @@
 // Control Panel: Sound. Where the sound goes and its volume, the microphone and its level,
-// and each app's own volume while it plays.
+// devices turned off (and on again), and each app's own volume while it plays.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Services.Pipewire
 import qs.config
+import qs.services
 
 ColumnLayout {
     id: page
@@ -43,9 +44,13 @@ ColumnLayout {
 
         CpRow {
             label: "Play sound through"
+            hint: "In this order: sound goes to the first one connected, so headphones put first take over when they connect"
 
             below: [
-                SoundDeviceList { Layout.fillWidth: true }
+                SoundDeviceList {
+                    Layout.fillWidth: true
+                    manage: true
+                }
             ]
         }
     }
@@ -77,13 +82,95 @@ ColumnLayout {
 
         CpRow {
             label: "Record sound from"
+            hint: "In this order: the first one connected is used"
 
             below: [
                 SoundDeviceList {
                     Layout.fillWidth: true
                     inputs: true
+                    manage: true
                 }
             ]
+        }
+    }
+
+    // Turned off (SoundDevices.qml): no app can use them until they're turned on again.
+    CpSection {
+        visible: SoundDevices.off.length > 0
+        title: "Turned off"
+
+        Repeater {
+            model: SoundDevices.off
+
+            CpRow {
+                id: offRow
+                required property var modelData
+                glyph: modelData.input ? "audio-input-microphone-symbolic" : "audio-speakers-symbolic"
+                label: modelData.description
+                hint: modelData.input ? "Microphone · apps can't use it" : "Speakers · apps can't use it"
+
+                PillButton {
+                    text: "Turn on"
+                    onClicked: SoundDevices.turnOn(offRow.modelData.name)
+                }
+            }
+        }
+    }
+
+    // Sounds for what happens (Sounds.qml): signing in and out, a password asked for,
+    // notifications, devices plugged in and out, screenshots.
+    CpSection {
+        title: "System sounds"
+
+        CpRow {
+            glyph: "preferences-desktop-notification-bell-symbolic"
+            label: "Play sounds for events"
+            hint: "Signing in and out, password requests, notifications, plugging devices in and out, screenshots"
+
+            PillButton {
+                visible: Sounds.on
+                text: "Test"
+                onClicked: Sounds.play("notification")
+            }
+
+            ToggleSwitch {
+                on: Sounds.on
+                onToggled: ShellSettings.set("systemSounds", !Sounds.on)
+            }
+        }
+
+        CpRow {
+            visible: Sounds.on && !Sounds.oceanInstalled
+            glyph: "audio-x-generic-symbolic"
+            label: "Get softer, fuller sounds"
+            hint: "The Ocean sounds, from Arch Linux. Until then, the plain ones play."
+
+            PillButton {
+                text: page.gettingSounds ? "Installing..." : "Get"
+                enabled: !page.gettingSounds
+                onClicked: {
+                    page.gettingSounds = true;
+                    Desktop.installPackage("ocean-sound-theme");
+                    oceanWait.restart();
+                }
+            }
+        }
+    }
+
+    property bool gettingSounds: false
+
+    // Looks for the sounds again while they're being installed.
+    Timer {
+        id: oceanWait
+        interval: 3000
+        repeat: true
+        onTriggered: {
+            Sounds.checkOcean();
+            if (Sounds.oceanInstalled) {
+                stop();
+                page.gettingSounds = false;
+                Sounds.play("notification");
+            }
         }
     }
 

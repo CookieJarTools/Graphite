@@ -1,7 +1,8 @@
 // One pill on the bar (an item of Taskbar.items): an app with its icon, or a folder with a
 // stack of its apps' icons; the label (the tag's name, a lone window's title, or the name);
 // the number of windows or tabs; a dot while a window wants attention; the tag's colour; a
-// mark under it while running. The bar handles the pointer for all its pills (Bar.qml).
+// mark under it while running; the icon pulsing while the app is starting. The bar handles the
+// pointer for all its pills (Bar.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
@@ -35,8 +36,31 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
     Behavior on scale { NumberAnimation { duration: Theme.durationFast } }
 
+    // Started from the shell and no window yet: the icon pulses until one opens, for up to 30
+    // seconds (Windows shows a busy pointer).
+    property bool starting: false
+    readonly property real startedAt: isFolder ? 0 : Apps.startedAt[item.key] || 0
+    readonly property bool running: !!item.running
+    function checkStarting() {
+        const since = Date.now() - startedAt;
+        starting = !isFolder && !running && since < 30000;
+        if (starting) {
+            stopStarting.interval = 30000 - since;
+            stopStarting.restart();
+        }
+    }
+    onStartedAtChanged: checkStarting()
+    onRunningChanged: checkStarting()
+    Timer {
+        id: stopStarting
+        onTriggered: root.starting = false
+    }
+
     opacity: fresh ? 0 : 1
-    Component.onCompleted: if (fresh) appear.start()
+    Component.onCompleted: {
+        if (fresh) appear.start();
+        checkStarting();
+    }
     NumberAnimation {
         id: appear
         target: root
@@ -57,6 +81,14 @@ Rectangle {
         Item {
             implicitWidth: 24
             implicitHeight: 24
+
+            SequentialAnimation on scale {
+                running: root.starting
+                loops: Animation.Infinite
+                alwaysRunToEnd: true
+                NumberAnimation { to: 0.8; duration: 450; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1; duration: 450; easing.type: Easing.InOutSine }
+            }
 
             IconImage {
                 visible: !root.isFolder

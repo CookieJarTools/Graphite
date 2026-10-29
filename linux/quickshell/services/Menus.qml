@@ -60,6 +60,12 @@ Singleton {
                 }))
             });
         }
+        // Apps that draw their own title bar don't need the desktop's (Graphite's Hyprland plugin).
+        const appId = windows.length > 0 ? (Taskbar.windowFor(windows[0].hwnd) || {}).icon : "";
+        if (appId && ShellState.deskPlugin) {
+            const off = Taskbar.titleBarOff.includes(appId);
+            rows.push({ text: off ? "Show title bar" : "Hide title bar", action: () => Taskbar.setTitleBar(appId, off) });
+        }
         if (windows.length === 1) rows.push({ text: "Minimise", action: () => Taskbar.minimize(windows[0].hwnd) });
         if (windows.length > 0) {
             rows.push({
@@ -118,7 +124,7 @@ Singleton {
             });
         }
         rows.push(separator);
-        rows.push({ text: "Task Manager", action: () => { ShellState.taskManagerOpen = true; } });
+        rows.push({ text: "Task Manager", action: () => { ShellState.openTaskManager(); } });
         rows.push({ text: "Taskbar settings", action: () => ShellState.openSettings("personalise") });
         return rows;
     }

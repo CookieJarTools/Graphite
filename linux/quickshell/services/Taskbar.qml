@@ -126,6 +126,12 @@ Singleton {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
+            // An app's own minimise button: Hyprland only passes the request on.
+            if (event.name === "minimized") {
+                const [address, minimized] = event.data.split(",");
+                if (minimized === "1") root.minimize(address.startsWith("0x") ? address : "0x" + address);
+                return;
+            }
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "windowtitle", "windowtitlev2", "activewindowv2", "fullscreen", "changefloatingmode", "togglegroup", "moveintogroup", "moveoutofgroup", "urgent", "workspace", "focusedmon"].includes(event.name)) root.refresh();
         }
         function onActiveToplevelChanged() { root.refresh(); }
@@ -154,10 +160,13 @@ Singleton {
 
     // ---------- windows ----------
 
+    // Brought forward and given the keyboard: back from minimised if it was, and raised as well
+    // as focused, as focusing alone leaves it under an X11 window (Steam) in front of it.
     function focusWindow(hwnd) {
         const window = windows.find(candidate => candidate.hwnd === hwnd);
         if (window && window.minimized) restore(hwnd);
         Hyprland.dispatch(`hl.dsp.focus({ window = "address:${hwnd}" })`);
+        Hyprland.dispatch(`hl.dsp.window.alter_zorder({ mode = "top", window = "address:${hwnd}" })`);
     }
 
     function minimize(hwnd) {
@@ -214,6 +223,17 @@ Singleton {
         Hyprland.dispatch(`hl.dsp.window.resize({ x = ${width}, y = ${height}, exact = true, ${window} })`);
         Hyprland.dispatch(`hl.dsp.window.move({ x = ${x}, y = ${area.y + gap}, exact = true, ${window} })`);
         refresh();
+    }
+
+    // Apps that draw their own title bar but ask for the desktop's too (Zen, Discord): their
+    // windows go without the one Hyprland draws (hypr/titlebars). hyprland.lua makes a rule of
+    // each app id in ~/.config/graphite/no-titlebar, which this keeps, and reloads.
+    readonly property var titleBarOff: (ShellSettings.values && ShellSettings.values.titleBarOff) || []
+
+    function setTitleBar(appId, on) {
+        const off = titleBarOff.filter(candidate => candidate !== appId).concat(on ? [] : [appId]);
+        ShellSettings.set("titleBarOff", off);
+        Quickshell.execDetached(["sh", "-c", 'mkdir -p "$HOME/.config/graphite" && printf "%s\\n" "$@" > "$HOME/.config/graphite/no-titlebar" && hyprctl reload >/dev/null', "sh"].concat(off));
     }
 
     // Floating windows (as on Windows) or tiling: hyprland.lua reads the choice from

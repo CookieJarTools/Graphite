@@ -16,8 +16,12 @@ log="$logs/${id//\//_}.log"
 echo "== $(date '+%F %T') $*" >> "$log"
 
 started=$(date +%s)
+unit="app-graphite-${id//[^a-zA-Z0-9]/_}-$$"
+# What it reads from the disk, noted once it is up, so that next time it's in memory before it's
+# asked for (warm.sh).
+setsid bash "$(dirname "$0")/warm.sh" learn "$id" "$unit" >/dev/null 2>&1 < /dev/null &
 # In its own place in the system (a scope), so it carries on if the desktop restarts.
-systemd-run --user --scope --quiet --slice=app.slice --unit="app-graphite-${id//[^a-zA-Z0-9]/_}-$$" -- "$@" >> "$log" 2>&1 < /dev/null
+systemd-run --user --scope --quiet --slice=app.slice --unit="$unit" -- "$@" >> "$log" 2>&1 < /dev/null
 code=$?
 lasted=$(( $(date +%s) - started ))
 [ "$code" -eq 0 ] || [ "$lasted" -ge 20 ] && exit 0

@@ -2,8 +2,8 @@
 // mode "palette") and Home (mode "home"). Typing searches apps, files, folders and commands
 // (Search.qml): the scope chips appear (Tab moves between them), arrows move, Enter opens,
 // Ctrl+Enter opens as administrator, Escape clears the search first. With nothing typed the
-// launcher shows Places (Alt+1..9), the Pinned apps and Recent; Home and the palette only
-// Recent, with nothing picked until an arrow is pressed.
+// launcher shows Places (Alt+1..9), the Pinned apps and every app, the most used this month
+// first; Home and the palette Recent, with nothing picked until an arrow is pressed.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -35,7 +35,7 @@ FocusScope {
         return counts;
     }
     readonly property int recentCount: mode === "home" ? 6 : 4
-    readonly property var idleRows: Search.recentRows(recentCount)
+    readonly property var idleRows: mode === "launcher" ? Search.appsByUse() : Search.recentRows(recentCount)
     // Every selectable row, in order.
     readonly property var rows: searching ? groups.reduce((list, group) => list.concat(group.items), []) : idleRows
 
@@ -421,10 +421,10 @@ FocusScope {
 
                 Section {
                     visible: !root.searching && root.idleRows.length > 0
-                    title: "Recent"
+                    title: root.mode === "launcher" ? "Apps, most used this month first" : "Recent"
                 }
 
-                // The rows: grouped by kind while searching, Recent while idle.
+                // The rows: grouped by kind while searching, the apps (or Recent) while idle.
                 Repeater {
                     model: root.searching ? root.groups.filter(group => group.items.length > 0) : [{ kind: "", items: root.idleRows }]
 
@@ -548,7 +548,7 @@ FocusScope {
                 glyph: "utilities-system-monitor-symbolic"
                 onClicked: {
                     root.done();
-                    ShellState.taskManagerOpen = true;
+                    ShellState.openTaskManager();
                 }
             }
 

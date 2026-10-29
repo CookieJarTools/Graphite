@@ -2,7 +2,8 @@
 # Puts Graphite Desk's system parts in place (as root): the Control Panel's administrator
 # helper and the system update, root-owned in /usr/local/lib/graphite (so the copy in
 # /opt/graphite-desk, which its owner can edit, never runs as root by itself), their systemd
-# units, the polkit rules, the folder for password hints, and the firewall, on.
+# units (and the one opening Windows dynamic disks), the polkit rules, the hard drives'
+# scheduler, the folder for password hints, and the firewall, on.
 # The installer runs it; afterwards the Control Panel's Updates page offers it when these
 # files change (graphite-admin install).
 set -euo pipefail
@@ -38,10 +39,12 @@ fi
 if [ -f /etc/security/faillock.conf ]; then
     sed -i -e 's/^#\? *deny *=.*/deny = 10/' -e 's/^#\? *unlock_time *=.*/unlock_time = 120/' /etc/security/faillock.conf
 fi
-install -m 644 "$here/graphite-update.service" "$here/graphite-update-auto.service" "$here/graphite-update-auto.timer" /etc/systemd/system/
+install -m 644 "$here/graphite-update.service" "$here/graphite-update-auto.service" "$here/graphite-update-auto.timer" "$here/graphite-dynamic-disks.service" /etc/systemd/system/
 install -m 644 "$here/org.graphite.admin.policy" /usr/share/polkit-1/actions/
 install -d -m 750 /etc/polkit-1/rules.d
 install -m 644 "$here/50-graphite.rules" /etc/polkit-1/rules.d/
+install -m 644 "$here/60-graphite-disks.rules" /etc/udev/rules.d/
+udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=block --action=change 2>/dev/null || true
 # What was installed, so the Updates page can tell when the repository's copy has moved on.
 cat "$here"/graphite-admin "$here"/system-update "$here"/pin-check "$here"/boot-setup.sh "$here"/*.service "$here"/*.timer "$here"/*.policy "$here"/*.rules | sha256sum | cut -d' ' -f1 > /var/lib/graphite/system-parts
 chmod 644 /var/lib/graphite/system-parts

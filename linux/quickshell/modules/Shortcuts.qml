@@ -52,14 +52,14 @@ Scope {
         description: "Open Task Manager (Ctrl+Shift+Esc)"
         onPressed: {
             ShellState.closeLaunchers();
-            ShellState.taskManagerOpen = true;
+            ShellState.openTaskManager();
         }
     }
 
     IpcHandler {
         target: "taskmanager"
 
-        function open(): void { ShellState.taskManagerOpen = true; }
+        function open(): void { ShellState.openTaskManager(); }
         function close(): void { ShellState.taskManagerOpen = false; }
     }
 
@@ -163,7 +163,7 @@ Scope {
         function autohide(on: bool): void { ShellSettings.setTaskbar("alwaysAutoHide", on); }
         function reload(): void { Quickshell.reload(true); }
         function zones(): void { ShellState.zoneEditorOpen = true; }
-        function apps(page: string): void { ShellState.appsPage = page || "installed"; ShellState.appsOpen = true; }
+        function apps(page: string): void { ShellState.openSettings(page === "get" ? "apps-get" : "apps-installed"); }
         function zoneState(): string { return JSON.stringify({ pointerDown: Zones.pointerDown, shift: Zones.shift, ctrl: Zones.ctrl }); }
     }
 
@@ -196,14 +196,20 @@ Scope {
         function items(): string { return JSON.stringify(Taskbar.items); }
         function windows(): string { return JSON.stringify(Taskbar.windows); }
         function settings(): string { return JSON.stringify(ShellSettings.values); }
-        function rebuild(): void { Taskbar.refresh(); }        function merge(source: int, target: int): string {
+        function rebuild(): void { Taskbar.refresh(); }
+        // A click on the pill at this place on the bar.
+        function activate(index: int): void { Taskbar.activate(Taskbar.items[index]); }
+        // An app's windows with or without the desktop's title bar (by app id, as Hyprland's class).
+        function titlebar(appId: string, on: bool): void { Taskbar.setTitleBar(appId, on); }
+        function merge(source: int, target: int): string {
             const result = Taskbar.merge(Taskbar.items[source].ref, Taskbar.items[target].ref);
             return JSON.stringify(result);
         }
         function tag(index: int, name: string): void {
             const item = Taskbar.items[index];
             if (item && item.windows.length) Taskbar.createTag(item.windows[0].hwnd, name, "");
-        }    }
+        }
+    }
 
     IpcHandler {
         target: "panel"

@@ -28,6 +28,10 @@ packages=(
     # Installing apps by opening the download (apps/install-app.sh): Ubuntu apps in a
     # container, AppImages, Flatpak and the app store
     distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
+    # System sounds (quickshell/services/Sounds.qml), Windows dynamic disks and partitions (Drives)
+    ocean-sound-theme libldm gptfdisk ntfsprogs nautilus-python
+    # Building the title bars for the Hyprland installed (hypr/titlebars/build.sh)
+    gcc make pkgconf
 )
 services=(NetworkManager.service bluetooth.service cups.socket avahi-daemon.service)
 

@@ -1,8 +1,11 @@
 // One row of a Control Panel page: a name, a line of explanation, and its control on the
 // right (a switch, a button, a choice; whatever is put inside). With `opens`, the whole row
-// is a button (clicked()); `below` holds anything that hangs under it (a list, a form).
+// is a button (clicked()); `below` holds anything that hangs under it (a list, a form). It
+// leads with a symbolic `glyph`, or an app's `icon` in its own colours.
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
 import qs.config
 
 Rectangle {
@@ -11,6 +14,7 @@ Rectangle {
     property string label
     property string hint
     property string glyph
+    property string icon
     property bool opens: false
     default property alias control: controls.data
     property alias below: belowArea.data
@@ -46,8 +50,14 @@ Rectangle {
             spacing: Theme.space4
 
             Glyph {
-                visible: root.glyph.length > 0
+                visible: root.glyph.length > 0 && root.icon.length === 0
                 name: root.glyph
+            }
+
+            IconImage {
+                visible: root.icon.length > 0
+                implicitSize: 28
+                source: root.icon ? Quickshell.iconPath(root.icon, "application-x-executable") : ""
             }
 
             ColumnLayout {

@@ -17,8 +17,9 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Control Panel: network, Bluetooth and devices, display (resolution, scale, HDR, night light), sound, power, personalisation, apps, accounts, time, updates, privacy and security, system | `modules/ControlPanel.qml`, `Cp*.qml`; `services/Displays.qml`, `Power.qml`, `Machine.qml`, `Updates.qml`; kept in `settings.json` (`services/ShellSettings.qml`) |
 | Task Manager (Ctrl+Shift+Esc): apps and background processes, end task, performance graphs | `modules/TaskManager.qml`, `services/Tasks.qml`, `system/task-sample.sh` |
 | Task view (Super+Tab): every window as a live preview, and the desktops | `modules/TaskView.qml` |
-| Shortcuts page: change any shortcut, add ones that open apps; Print and Super+Shift+S screenshots | `modules/CpShortcuts.qml`, `services/Hotkeys.qml`, `system/screenshot.sh` |
-| Drives page: every drive, connect, eject, format or erase (never the system's) | `modules/CpDrives.qml`, `services/Drives.qml` |
+| Shortcuts page: change any shortcut, add ones that open apps | `modules/CpShortcuts.qml`, `services/Hotkeys.qml` |
+| Snipping Tool (Print, Super+Shift+S; Super+Shift+R records): a rectangle, a window or the screen, after a delay if wanted; screenshots copied and saved, recordings with wf-recorder | `modules/CaptureTool.qml`, `services/Capture.qml`, `system/screenshot.sh` |
+| Drives page: every drive, connect, eject, format or erase (never the system's); a Windows dynamic disk opened (ldmtool) or made a basic disk with its files kept | `modules/CpDrives.qml`, `services/Drives.qml`, `system/graphite-admin` (`dynamic-disks`, `dynamic-to-basic`) |
 | Troubleshoot page, and a notice with the reason when an app doesn't open | `modules/CpTroubleshoot.qml`, `services/Diagnose.qml`, `system/diagnose.sh`, `system/launch.sh` |
 | Administrator changes and updates without a terminal: a root-owned helper, an update service, polkit rules | `system/` (`install.sh` puts them in place) |
 | Installer on the USB stick: friendly screens over `installer/graphite-install.sh` | `quickshell/installer.qml`, `installer/gui.lua`, `installer/build-iso.sh` |
@@ -30,7 +31,10 @@ from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
 | Alt+Tab with live previews | `modules/Switcher.qml` |
 | Notification server and pop-ups | `services/Notifs.qml`, `modules/Toasts.qml` |
 | Window tabs: drag a window onto another, drag a tab off to split, middle-click closes | Hyprland's groups, styled in `hypr/hyprland.lua` |
-| Keys, look, start-up, floating or tiling windows | `hypr/hyprland.lua` |
+| Keys, look, start-up, floating or tiling windows, animations as quick as Windows' | `hypr/hyprland.lua` |
+| Title bars (minimise, maximise, close; drag to move, double-click to maximise) for apps that leave theirs to the desktop, such as Kitty, GTK 3 dialogs and Qt apps; X11 apps' own title bars drag their windows (Steam); a drag carries on when Shift goes down (window zones) | `hypr/titlebars/` (Hyprland's hyprbars plugin with Graphite's additions, built for the Hyprland installed) |
+| System sounds: signing in and out, a password asked for, notifications, devices plugged in or out, screenshots (KDE's Ocean set); sound devices turned off | `services/Sounds.qml`, `services/SoundDevices.qml`, `modules/CpSound.qml` |
+| Apps open quickly from a hard drive: what each app reads is noted, and the most used are read into memory after signing in | `system/warm.sh`, `system/launch.sh`, `services/Apps.qml` |
 
 Windows float, as on Windows: they open centred, move by their title bar and resize from
 their edges. **Tile windows** (Control Panel, Personalisation; or the bar's right-click menu) switches to
@@ -116,7 +120,8 @@ darkening for fuller strokes (`fonts/fonts.conf`, and `FREETYPE_PROPERTIES` in
 | Super+G | Make or break up a tab group; Super+` moves through its tabs |
 | Super+Ctrl+O | Pull a window out of its group |
 | Super+Tab | Task view |
-| Print, Super+Shift+S | Screenshot of the screen, or of an area |
+| Print, Super+Shift+S | Snipping Tool: a screenshot of an area, a window or the screen |
+| Super+Shift+R | Record the screen (again to stop) |
 | Super+1..9, Super+Shift+1..9 | Go to, or move a window to, a workspace |
 | Super+drag, Super+right-drag | Move, resize |
 

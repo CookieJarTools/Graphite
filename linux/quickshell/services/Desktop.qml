@@ -269,15 +269,13 @@ Singleton {
         Quickshell.execDetached(["sh", "-c", `mkdir -p "$HOME/.config/graphite" && printf ${on ? "smooth" : "standard"} > "$HOME/.config/graphite/text" && hyprctl reload`]);
     }
 
-    // The Apps window (AppsWindow.qml), on its "Get apps" page.
+    // The Control Panel's Apps › Get apps and Apps › Installed apps (CpAppsList.qml).
     function openAppStore() {
-        ShellState.appsPage = "get";
-        ShellState.appsOpen = true;
+        ShellState.openSettings("apps-get");
     }
 
     function openApps() {
-        ShellState.appsPage = "installed";
-        ShellState.appsOpen = true;
+        ShellState.openSettings("apps-installed");
     }
 
     // The system, the apps and Graphite Desk itself, on the Control Panel's Updates page.

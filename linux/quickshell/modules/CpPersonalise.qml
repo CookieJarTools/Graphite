@@ -109,6 +109,35 @@ ColumnLayout {
             }
         }
 
+        // Apps whose extra title bar was hidden (the taskbar's right-click menu: Hide title bar).
+        CpRow {
+            visible: Taskbar.titleBarOff.length > 0
+            label: "Apps without the desktop's title bar"
+            hint: "They draw their own. Right-click an app on the taskbar to hide another's."
+
+            below: [
+                Repeater {
+                    model: Taskbar.titleBarOff
+
+                    RowLayout {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        spacing: Theme.space2
+
+                        UiText {
+                            Layout.fillWidth: true
+                            text: Apps.nameFor(Apps.keyFor(parent.modelData))
+                        }
+
+                        PillButton {
+                            text: "Show title bar"
+                            onClicked: Taskbar.setTitleBar(parent.parent.modelData, true)
+                        }
+                    }
+                }
+            ]
+        }
+
         CpRow {
             label: "Quick search (Alt+Space)"
             hint: "Open a small search box from any app"

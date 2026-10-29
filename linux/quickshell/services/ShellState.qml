@@ -5,6 +5,8 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Wayland
 
 Singleton {
@@ -18,9 +20,7 @@ Singleton {
     property bool paletteOpen: false // Alt+Space: the launcher, compact
     property bool settingsOpen: false
     property bool zoneEditorOpen: false
-    property bool appsOpen: false
     property bool locked: false // the lock screen (LockScreen.qml)
-    property string appsPage: "installed" // or "get"
 
     // A menu: { screen, x, y, above, items } in the screen's coordinates; items are
     // { text, action, checked, enabled, danger, separator, submenu: [items] }.
@@ -102,10 +102,44 @@ Singleton {
         closePanels();
         closeLaunchers();
         if (page) settingsPage = page;
+        if (settingsOpen) raise("Control Panel");
         settingsOpen = true;
     }
 
+    // One of the shell's own windows (by its title), already open, comes to the front.
+    function raise(title) {
+        const toplevel = Array.from(Hyprland.toplevels.values).find(candidate => candidate.wayland && candidate.wayland.appId === "org.quickshell" && candidate.title === title);
+        if (toplevel) Taskbar.focusWindow(Taskbar.addressOf(toplevel));
+    }
+
+    // Graphite's Hyprland plugin is loaded (hypr/titlebars: hyprbars with Graphite's additions):
+    // Hyprland draws title bars, so the shell's windows leave closing to theirs, and a drag
+    // carries on through Shift, so window zones leave the dragging to Hyprland. Asked again
+    // whenever Hyprland reloads, as the plugin may have just been built.
+    property bool deskPlugin: false
+
+    Process {
+        id: pluginCheck
+        running: true
+        command: ["hyprctl", "plugin", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: root.deskPlugin = this.text.includes("hyprbars")
+        }
+    }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (event.name === "configreloaded") pluginCheck.running = true;
+        }
+    }
+
     property bool taskManagerOpen: false
+
+    function openTaskManager() {
+        if (taskManagerOpen) raise("Task Manager");
+        taskManagerOpen = true;
+    }
     property bool taskViewOpen: false // Super+Tab (TaskView.qml)
 
     // The launcher's key hints, shown after a fast wiggle of the mouse (LauncherView).

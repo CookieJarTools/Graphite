@@ -37,6 +37,8 @@ FloatingWindow {
         { id: "power", name: "Power & battery", glyph: "battery-good-symbolic", words: "battery power mode performance sleep lock screen off idle", source: "CpPower.qml" },
         { id: "personalise", name: "Personalisation", glyph: "preferences-desktop-appearance-symbolic", words: "dark light theme colours text font taskbar auto-hide home windows tiling zones snap", source: "CpPersonalise.qml" },
         { id: "apps", name: "Apps", glyph: "view-app-grid-symbolic", words: "apps install uninstall store flathub default browser startup games steam", source: "CpApps.qml" },
+        { id: "apps-installed", parent: "apps", kind: "installed", name: "Installed apps", glyph: "view-app-grid-symbolic", words: "installed apps open uninstall remove arch flathub", source: "CpAppsList.qml" },
+        { id: "apps-get", parent: "apps", kind: "get", name: "Get apps", glyph: "system-software-install-symbolic", words: "get apps install store flathub download", source: "CpAppsList.qml" },
         { id: "shortcuts", name: "Shortcuts", glyph: "input-keyboard-symbolic", words: "keyboard shortcut keys hotkey change screenshot print", source: "CpShortcuts.qml" },
         { id: "accounts", name: "Accounts", glyph: "avatar-default-symbolic", words: "account name password hint people users add remove administrator", source: "CpAccounts.qml" },
         { id: "time", name: "Time & language", glyph: "preferences-system-time-symbolic", words: "time date clock time zone region computer name hostname", source: "CpTime.qml" },
@@ -47,12 +49,14 @@ FloatingWindow {
         { id: "troubleshoot", name: "Troubleshoot", glyph: "dialog-information-symbolic", words: "problem fix broken help app won't open not opening slow crash driver nvidia firefox", source: "CpTroubleshoot.qml" }
     ]
 
+    // A page's own pages (Apps' Installed apps and Get apps) show in the sidebar only when found.
     readonly property var shownPages: {
         const query = search.text.trim().toLowerCase();
-        if (!query) return pages;
+        if (!query) return pages.filter(page => !page.parent);
         return pages.filter(page => (page.name + " " + page.words).toLowerCase().includes(query));
     }
     readonly property var current: pages.find(page => page.id === ShellState.settingsPage) || pages[0]
+    readonly property var currentParent: current.parent ? pages.find(page => page.id === current.parent) : null
     readonly property var me: Machine.people.find(person => person.me) || null
 
     Item {
@@ -197,7 +201,7 @@ FloatingWindow {
                             Rectangle {
                                 id: pageButton
                                 required property var modelData
-                                readonly property bool on: root.current.id === modelData.id
+                                readonly property bool on: root.current.id === modelData.id || root.current.parent === modelData.id
                                 Layout.fillWidth: true
                                 implicitHeight: 38
                                 radius: Theme.radiusSm
@@ -263,17 +267,26 @@ FloatingWindow {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: Theme.space6
+                        anchors.leftMargin: root.currentParent ? Theme.space3 : Theme.space6
                         anchors.rightMargin: Theme.space3
+                        spacing: Theme.space2
+
+                        // A page's own page: back to it, and its name before this one's.
+                        BarButton {
+                            visible: root.currentParent !== null
+                            glyph: "go-previous-symbolic"
+                            onClicked: ShellState.settingsPage = root.current.parent
+                        }
 
                         UiText {
                             Layout.fillWidth: true
-                            text: root.current.name
+                            text: root.currentParent ? root.currentParent.name + "  ›  " + root.current.name : root.current.name
                             font.pixelSize: 20
                             font.weight: Font.DemiBold
                         }
 
                         BarButton {
+                            visible: !ShellState.deskPlugin
                             glyph: "window-close-symbolic"
                             onClicked: ShellState.settingsOpen = false
                         }
@@ -304,6 +317,7 @@ FloatingWindow {
                         onLoaded: {
                             flick.contentY = 0;
                             if (item.shown !== undefined) item.shown = Qt.binding(() => root.visible);
+                            if (item.kind !== undefined) item.kind = Qt.binding(() => root.current.kind || "");
                         }
                     }
                 }

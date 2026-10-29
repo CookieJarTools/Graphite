@@ -99,6 +99,8 @@ if [ -n "${GRAPHITE_FROM_WORKTREE:-}" ]; then
     clone="$profile/airootfs/usr/share/graphite-desk"
     git -C "$repo" ls-files -d -z | (cd "$clone" && xargs -0 -r rm -f)
     git -C "$repo" ls-files -co --exclude-standard -z | tar -C "$repo" --null --ignore-failed-read -T - -cf - 2>/dev/null | tar -C "$clone" -xf -
+    # A folder shared from Windows has no "runnable" marks, so the scripts git keeps runnable get theirs back.
+    git -C "$clone" ls-files -s -z | awk -v RS='\0' '$1 == "100755" { sub(/^[^\t]*\t/, ""); printf "%s\0", $0 }' | (cd "$clone" && xargs -0 -r chmod +x)
     echo "  with the working folder's changes"
 fi
 

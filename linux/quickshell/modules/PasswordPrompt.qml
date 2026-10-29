@@ -2,8 +2,11 @@
 // change, an app being installed, gaming's setup): Graphite's own prompt, as the shell is the
 // polkit agent (Quickshell.Services.Polkit) in place of hyprpolkitagent, whose window crashed
 // on opening.
-// It dims the screen and takes the keyboard; Enter allows, Escape cancels, and a wrong password
-// shakes the card and says so.
+// It dims the screen, plays the system sound for it, and takes the keyboard; Enter allows,
+// Escape cancels, and a wrong password shakes the card and says so. What is being allowed is
+// said in plain words: polkit's own message names a program and its arguments, so the prompt
+// reads the command that asked (the newest pkexec) or goes by the kind of request, and keeps
+// the original under Details.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -11,6 +14,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Polkit
 import qs.config
+import qs.services
 
 Scope {
     id: root
@@ -36,6 +40,77 @@ Scope {
         field.text = "";
         field.forceActiveFocus();
         pinCheck.running = true;
+        root.command = "";
+        root.showDetails = false;
+        asker.running = true;
+        Sounds.play("password");
+    }
+
+    // ---------- what is being allowed ----------
+
+    property string command: "" // the pkexec command that asked, if one did
+    property bool showDetails: false
+
+    Process {
+        id: asker
+        command: ["sh", "-c", "pid=$(pgrep -n -x pkexec) && tr '\\0' ' ' < /proc/$pid/cmdline"]
+        stdout: StdioCollector { onStreamFinished: root.command = this.text.trim() }
+    }
+
+    readonly property string what: describe(flow ? flow.actionId : "", command)
+
+    // Graphite's administrator helper (system/graphite-admin) by its verbs, other programs by
+    // name, and requests from the system's services by their kind.
+    function describe(action, command) {
+        const words = command.split(/\s+/).filter(Boolean);
+        const at = words.findIndex(word => word.endsWith("/graphite-admin"));
+        if (at >= 0) {
+            const [verb, first, second] = words.slice(at + 1);
+            const app = id => { const entry = DesktopEntries.byId(id); return entry ? entry.name : id; };
+            return ({
+                "firewall": first === "off" ? "Turn the firewall off" : "Turn the firewall on",
+                "user-add": "Add " + (first || "a person") + " to this computer",
+                "user-remove": "Remove " + first + " and their files",
+                "user-password": "Change " + first + "'s password",
+                "user-fullname": "Change " + first + "'s name",
+                "user-admin": second === "yes" ? "Make " + first + " an administrator" : "Make " + first + " a standard user",
+                "pin": "Set " + first + "'s sign-in PIN",
+                "hint": "Set " + first + "'s password hint",
+                "fix-home": "Repair " + first + "'s home folder",
+                "flatpak-update": "Update apps for everyone",
+                "format": "Format a partition (" + first + ")",
+                "erase": "Erase a drive (" + first + ")",
+                "package-install": "Install " + words.slice(at + 2).join(", "),
+                "package-remove": "Uninstall " + first,
+                "flatpak-remove": "Uninstall " + app(first),
+                "clean": "Free up space",
+                "install": "Update Graphite Desk's system parts",
+                "dynamic-disks": "Open a Windows dynamic disk"
+            })[verb] || "Change a system setting";
+        }
+        if (/gaming\.sh/.test(command)) return "Set up gaming";
+        if (words[0] === "pkexec") {
+            const program = words.slice(1).find(word => !word.includes("=") && word !== "env") || "";
+            const entry = DesktopEntries.applications.values.find(candidate => candidate.command && candidate.command[0] && candidate.command[0].split("/").pop() === program.split("/").pop());
+            return "Run " + (entry ? entry.name : program.split("/").pop()) + " as administrator";
+        }
+        const kinds = [
+            [/^org\.freedesktop\.udisks2\..*(unlock|encrypted)/, "Unlock an encrypted drive"],
+            [/^org\.freedesktop\.udisks2\..*(power-off|eject)/, "Eject a drive"],
+            [/^org\.freedesktop\.udisks2\..*mount/, "Connect a drive"],
+            [/^org\.freedesktop\.udisks2\./, "Change a drive"],
+            [/^org\.freedesktop\.NetworkManager\./, "Change network settings"],
+            [/^org\.freedesktop\.timedate1\./, "Change the date and time"],
+            [/^org\.freedesktop\.hostname1\./, "Rename this computer"],
+            [/^org\.freedesktop\.locale1\./, "Change the language or keyboard"],
+            [/^org\.freedesktop\.login1\./, "Restart, shut down or sleep"],
+            [/^org\.freedesktop\.systemd1\./, "Start or stop a system service"],
+            [/^org\.freedesktop\.(packagekit|Flatpak)\./, "Install or update apps"],
+            [/^org\.bluez/, "Change Bluetooth"],
+            [/^org\.graphite\./, "Change a system setting"]
+        ];
+        const kind = kinds.find(pair => pair[0].test(action));
+        return kind ? kind[1] : "Make a change that needs an administrator";
     }
 
     // With a sign-in PIN, the PIN works here too (system/install.sh puts pin-check in front of
@@ -130,9 +205,45 @@ Scope {
 
                 UiText {
                     Layout.fillWidth: true
-                    text: root.flow ? root.flow.message : ""
-                    color: Theme.inkMuted
+                    text: root.what
+                    font.weight: Font.Medium
                     wrapMode: Text.WordWrap
+                    elide: Text.ElideNone
+                }
+
+                UiText {
+                    Layout.fillWidth: true
+                    text: root.hasPin ? "An administrator's PIN or password is needed." : "An administrator's password is needed."
+                    color: Theme.inkMuted
+                    font.pixelSize: Theme.hintSize
+                    wrapMode: Text.WordWrap
+                    elide: Text.ElideNone
+                }
+
+                // Polkit's own words, and the command that asked.
+                UiText {
+                    text: root.showDetails ? "Hide details" : "Show details"
+                    color: detailsMouse.containsMouse ? Theme.ink : Theme.inkMuted
+                    font.pixelSize: Theme.hintSize
+                    font.underline: detailsMouse.containsMouse
+
+                    MouseArea {
+                        id: detailsMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.showDetails = !root.showDetails
+                    }
+                }
+
+                UiText {
+                    Layout.fillWidth: true
+                    visible: root.showDetails
+                    text: [root.flow ? root.flow.message : "", root.command, root.flow ? root.flow.actionId : ""].filter(Boolean).join("\n")
+                    color: Theme.inkMuted
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.identifierSize
+                    wrapMode: Text.WrapAnywhere
                     elide: Text.ElideNone
                 }
 

@@ -40,8 +40,12 @@ Singleton {
         if (entry) launch(entry);
     }
 
+    // When each app was last started from the shell: its pill pulses until a window opens.
+    property var startedAt: ({})
+
     function launch(entry) {
         if (!entry) return;
+        startedAt = Object.assign({}, startedAt, { [entry.id]: Date.now() });
         if (entry.runInTerminal) Quickshell.execDetached(["kitty", "-e"].concat(Array.from(entry.command)));
         // Through system/launch.sh: if the app can't start, it says why.
         else if (entry.command.length) Quickshell.execDetached({
@@ -71,14 +75,55 @@ Singleton {
         noteUsed(entry.id);
     }
 
-    // What the launcher ranks by: how often, and when last; the newest eight are Recent.
+    // What the launcher ranks by: how often, and when last; the newest eight are Recent. Each
+    // launch of the last 30 days is kept too (launches), what the launcher lists apps by.
     function noteUsed(id) {
         ShellSettings.update(settings => {
+            const now = Date.now();
             settings.launchCounts[id] = (settings.launchCounts[id] || 0) + 1;
-            settings.lastUsed[id] = Date.now();
-            settings.recent = [{ kind: "app", id: id, time: Date.now() }]
+            settings.lastUsed[id] = now;
+            settings.recent = [{ kind: "app", id: id, time: now }]
                 .concat(settings.recent.filter(item => !(item.kind === "app" && item.id === id)))
                 .slice(0, 8);
+            const launches = {};
+            for (const key of Object.keys(settings.launches || {})) {
+                const times = settings.launches[key].filter(time => now - time < month);
+                if (times.length) launches[key] = times;
+            }
+            launches[id] = (launches[id] || []).concat([now]);
+            settings.launches = launches;
         });
+    }
+
+    readonly property double month: 30 * 24 * 3600 * 1000
+
+    // How many times an app was opened in the last 30 days. Apps last opened before launches
+    // were kept count their old total while that was within the month.
+    function usesThisMonth(id) {
+        const settings = ShellSettings.values;
+        if (!settings) return 0;
+        const now = Date.now();
+        const times = (settings.launches || {})[id];
+        if (times) return times.filter(time => now - time < month).length;
+        return now - ((settings.lastUsed || {})[id] || 0) < month ? (settings.launchCounts || {})[id] || 0 : 0;
+    }
+
+    // A little after signing in, the apps used most are read into memory, so the first open is
+    // as quick as the second from a hard drive (system/warm.sh): the eight used most this month,
+    // then the bar's pins and the launcher's.
+    function warmUp() {
+        const settings = ShellSettings.values;
+        const pinned = (settings.taskbar.items || []).filter(item => item.type === "app" && item.pinned).map(item => item.key)
+            .concat(settings.pinned || []);
+        const used = list.map(app => app.id).filter(id => usesThisMonth(id) > 0)
+            .sort((first, second) => usesThisMonth(second) - usesThisMonth(first));
+        const ids = used.slice(0, 8).concat(pinned).filter((id, index, all) => all.indexOf(id) === index);
+        Quickshell.execDetached(["bash", Quickshell.shellDir + "/../system/warm.sh", "warm"].concat(ids));
+    }
+
+    Timer {
+        running: ShellSettings.loaded
+        interval: 15000
+        onTriggered: root.warmUp()
     }
 }

@@ -57,7 +57,7 @@ PanelWindow {
 
     function goTo(toplevel) {
         ShellState.taskViewOpen = false;
-        Hyprland.dispatch(`hl.dsp.focus({ window = "address:${Taskbar.addressOf(toplevel)}" })`);
+        Taskbar.focusWindow(Taskbar.addressOf(toplevel));
     }
 
     function showDesktop(id) {
