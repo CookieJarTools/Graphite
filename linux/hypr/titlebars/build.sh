@@ -5,7 +5,8 @@
 # Graphite's additions (graphite-decorations.cpp: no bar on windows that draw their own;
 # graphite-drags.cpp: X11 apps that draw their own title bar, as Steam does, are dragged by it,
 # and a drag keeps going when Shift or Ctrl goes down, for window zones; graphite-minimize.cpp:
-# apps' own minimise buttons work).
+# apps' own minimise buttons work; and a fix for the bar's background vanishing while a
+# notification is up).
 # hyprland.lua loads it when it was built for the running Hyprland; hyprland.lua's start-up and
 # the person's updates (system/user-update.sh) run this when it wasn't, as after an update.
 #
@@ -44,10 +45,14 @@ cp "$here"/graphite-* .
 # No bar where the window draws its own: hidden as by the no_bar rule.
 sed -i 's/^void CHyprBar::updateRules() {/bool graphiteWantsServerTitleBar(PHLWINDOW window);\n\n&/' barDeco.cpp
 sed -i '/m_hidden = truthy(PWINDOW->m_ruleApplicator->m_otherProps.props.at(g_pGlobalState->nobarRuleIdx)->effect);/a\    if (!graphiteWantsServerTitleBar(PWINDOW))\n        m_hidden = true;' barDeco.cpp
+# The rounded corners' stencil, cleared with its writes allowed: Hyprland's blur (behind a
+# notification) can leave them off, and the stale stencil then hid the bar's background.
+sed -i 's/^\( *\)glClearStencil(0);/\1glStencilMask(-1);\n\1glClearStencil(0);/' barDeco.cpp
 # Drags, from the plugin's start.
 sed -i 's/^APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {/void graphiteHookDrags(HANDLE handle);\nvoid graphiteHookMinimize(HANDLE handle);\n\n&/' main.cpp
 sed -i 's/^    return {"hyprbars",/    graphiteHookDrags(PHANDLE);\n    graphiteHookMinimize(PHANDLE);\n\n&/' main.cpp
-grep -q 'graphiteWantsServerTitleBar(PWINDOW)' barDeco.cpp && grep -q 'graphiteHookMinimize(PHANDLE)' main.cpp ||
+grep -q 'graphiteWantsServerTitleBar(PWINDOW)' barDeco.cpp && grep -q 'graphiteHookMinimize(PHANDLE)' main.cpp &&
+    [ "$(grep -c 'glStencilMask(-1);' barDeco.cpp)" -ge 3 ] ||
     { echo "hyprbars has changed: Graphite's additions no longer fit." >&2; exit 1; }
 make -s SRC="main.cpp barDeco.cpp BarPassElement.cpp graphite-decorations.cpp graphite-drags.cpp graphite-minimize.cpp" >&2
 mkdir -p "$(dirname "$out")"
