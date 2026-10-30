@@ -4,6 +4,9 @@ pragma Singleton
 // ejecting go through udisks, as Files does; formatting and erasing through graphite-admin.
 // A Windows dynamic disk (Windows' own layout, which Linux doesn't read by itself) shows its
 // volumes once they're opened (graphite-admin dynamic-disks, with Arch's ldmtool).
+// Drives stay connected, as on Windows: one connected (here or in Files) is remembered and
+// connected again after a restart or when it's plugged back in, until it's disconnected here
+// (settings.json's drivesConnected, the drives' file system ids).
 
 import QtQuick
 import Quickshell
@@ -24,7 +27,7 @@ Singleton {
 
     Process {
         id: reader
-        command: ["lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINTS,MODEL,RM,HOTPLUG,TRAN,FSUSED,PARTTYPE"]
+        command: ["lsblk", "-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINTS,MODEL,RM,HOTPLUG,TRAN,FSUSED,PARTTYPE,UUID"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -32,11 +35,67 @@ Singleton {
                     // Only a real change reaches the page, which rebuilds its rows from this.
                     const disks = devices.filter(device => device.type === "disk" && !/^(zram|loop)/.test(device.name)).map(root.disk);
                     if (JSON.stringify(disks) !== JSON.stringify(root.disks)) root.disks = disks;
+                    root.keepConnected(devices);
                 } catch (error) {
                     root.disks = [];
                 }
             }
         }
+    }
+
+    // ---------- staying connected ----------
+
+    readonly property var remembered: (ShellSettings.values && ShellSettings.values.drivesConnected) || []
+    property var idOf: ({})   // a partition's path: its file system id
+    property var tried: ({})  // ids tried this session that wouldn't connect (asked once only)
+
+    // Every file system on a drive (partitions, and what's inside them), the system's left out.
+    function fileSystems(device) {
+        const own = device.uuid && device.fstype && !/^(swap|crypto_LUKS|LVM2_member)$/.test(device.fstype) ? [device] : [];
+        return own.concat(...(device.children || []).map(fileSystems));
+    }
+
+    function keepConnected(devices) {
+        if (!ShellSettings.loaded) return;
+        const ids = {};
+        const connected = [];
+        for (const device of devices) {
+            const system = allMounts(device).some(point => point === "/" || point === "/boot" || point === "/home");
+            for (const found of fileSystems(device)) {
+                ids[found.path] = found.uuid;
+                if (system) continue;
+                const points = mounts(found);
+                // Connected as a drive (under /run/media), not mounted by hand elsewhere.
+                if (points.some(point => point.startsWith("/run/media/"))) connected.push(found.uuid);
+                else if (!points.length && remembered.includes(found.uuid) && !tried[found.uuid]) {
+                    tried = Object.assign({}, tried, { [found.uuid]: true });
+                    Quickshell.execDetached(["udisksctl", "mount", "-b", found.path, "--no-user-interaction"]);
+                }
+            }
+        }
+        idOf = ids;
+        const added = connected.filter(id => !remembered.includes(id));
+        if (added.length) ShellSettings.set("drivesConnected", remembered.concat(added));
+        // Connected now: if it's disconnected and plugged in again later, it's tried again.
+        const cleared = Object.keys(tried).filter(id => connected.includes(id));
+        if (cleared.length) {
+            const left = Object.assign({}, tried);
+            for (const id of cleared) delete left[id];
+            tried = left;
+        }
+    }
+
+    // Disconnected here on purpose: not connected again by itself.
+    function forget(paths) {
+        const gone = paths.map(path => idOf[path]).filter(Boolean);
+        if (gone.length) ShellSettings.set("drivesConnected", remembered.filter(id => !gone.includes(id)));
+    }
+
+    // The drives as they are a moment after signing in, so remembered ones connect.
+    Timer {
+        running: ShellSettings.loaded
+        interval: 1000
+        onTriggered: root.refresh()
     }
 
     function mounts(device) {
@@ -152,10 +211,12 @@ Singleton {
     }
 
     function unmount(path) {
+        forget([path]);
         run(["udisksctl", "unmount", "-b", path], "Safe to remove");
     }
 
     function eject(disk) {
+        forget(disk.parts.map(part => part.path));
         const parts = disk.parts.filter(part => part.mount).map(part => `udisksctl unmount -b ${part.path} >/dev/null &&`).join(" ");
         run(["sh", "-c", `${parts} udisksctl power-off -b ${disk.path}`], "You can take it out now");
     }
@@ -229,8 +290,8 @@ Singleton {
         }
     }
 
-    // Files' Drives place follows drives connecting and disconnecting (files/drives.sh), a
-    // moment after udisks says something changed.
+    // Files' Drives place follows drives connecting and disconnecting (files/drives.sh), and
+    // remembered drives connect when plugged in, a moment after udisks says something changed.
     Process {
         running: true
         command: ["udisksctl", "monitor"]
@@ -242,7 +303,10 @@ Singleton {
     Timer {
         id: placeSoon
         interval: 1500
-        onTriggered: Quickshell.execDetached(["bash", Quickshell.shellDir + "/../files/drives.sh"])
+        onTriggered: {
+            Quickshell.execDetached(["bash", Quickshell.shellDir + "/../files/drives.sh"]);
+            root.refresh();
+        }
     }
 
     // Plugged in or out: the list follows within a few seconds while the page is open.
@@ -253,5 +317,13 @@ Singleton {
         running: root.watching
         triggeredOnStart: true
         onTriggered: if (!reader.running) reader.running = true
+    }
+
+    // For scripts: `qs -c graphite ipc call drives disconnect /dev/sdb1`, as the page's
+    // Disconnect (not connected again by itself).
+    IpcHandler {
+        target: "drives"
+
+        function disconnect(path: string): void { root.unmount(path); }
     }
 }
