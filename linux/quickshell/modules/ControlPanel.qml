@@ -1,8 +1,8 @@
 // The Control Panel: every setting in one window, as on Windows. A sidebar with who is signed
 // in, "Find a setting" (Ctrl+F; it filters the pages by what they hold, Enter opens the first)
 // and the pages; the chosen page fills the rest under its title. Opened from the launcher's
-// gear, quick settings, the bar's menu, or `qs -c graphite ipc call settings open [page]`;
-// Escape closes it.
+// gear, quick settings, the bar's menu, or `qs -c graphite ipc call settings open [page]`.
+// It closes only when it's closed.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -63,7 +63,6 @@ FloatingWindow {
         id: keys
         anchors.fill: parent
         focus: true
-        Keys.onEscapePressed: ShellState.settingsOpen = false
         Keys.onPressed: event => {
             if (event.key === Qt.Key_F && (event.modifiers & Qt.ControlModifier)) {
                 search.focusField();
@@ -170,10 +169,7 @@ FloatingWindow {
                                 clip: true
                                 function focusField() { forceActiveFocus(); selectAll(); }
                                 Keys.onReturnPressed: if (root.shownPages.length) ShellState.settingsPage = root.shownPages[0].id
-                                Keys.onEscapePressed: {
-                                    if (text) text = "";
-                                    else ShellState.settingsOpen = false;
-                                }
+                                Keys.onEscapePressed: text = ""
 
                                 UiText {
                                     anchors.fill: parent

@@ -103,10 +103,7 @@ ColumnLayout {
             label: "Window zones"
             hint: "Choose a layout or make your own"
             opens: true
-            onClicked: {
-                ShellState.settingsOpen = false;
-                ShellState.zoneEditorOpen = true;
-            }
+            onClicked: ShellState.zoneEditorOpen = true
         }
 
         // Apps whose extra title bar was hidden (the taskbar's right-click menu: Hide title bar).

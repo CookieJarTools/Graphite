@@ -106,9 +106,10 @@ Updates need no terminal. Every few hours the desktop checks what's waiting (Arc
 with `checkupdates`, Flatpak apps, Graphite Desk's own commits) and says so once. Control
 Panel → **Updates** installs everything with one button: the system half runs as root in
 `graphite-update.service` (an administrator may start it without a password), the person's
-half (their apps, the Ubuntu space, a `git pull` of Graphite Desk) alongside it, with its
-progress on the page. Arch's news since the last update is listed first, a new kernel asks
-for a restart, and **Install updates automatically** runs it once a day.
+half (their apps, the Ubuntu space, a `git pull` of Graphite Desk) alongside it, apart from
+the shell (a pull reloads the shell), with both halves' progress on the page. Arch's news
+since the last update is listed first, a new kernel asks for a restart, and **Install
+updates automatically** runs it once a day.
 
 ## Text
 

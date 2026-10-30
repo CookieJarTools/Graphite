@@ -28,7 +28,8 @@ ColumnLayout {
                 : "You're up to date"
             hint: Updates.running ? [page.system.state === "running" ? page.system.step : "", Updates.userStep].filter(part => part).join(" · ")
                 : page.failed ? page.system.step
-                : Updates.lastChecked ? "Last checked " + Qt.formatTime(new Date(Updates.lastChecked), "HH:mm") : ""
+                : [Date.now() / 1000 - Updates.lastUpdated < 12 * 3600 ? "Updated at " + Qt.formatTime(new Date(Updates.lastUpdated * 1000), "HH:mm") : "",
+                   Updates.lastChecked ? "Last checked " + Qt.formatTime(new Date(Updates.lastChecked), "HH:mm") : ""].filter(part => part).join(" · ")
 
             PillButton {
                 visible: !Updates.running

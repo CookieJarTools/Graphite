@@ -6,7 +6,9 @@ pragma Singleton
 //
 // install(): the system half runs as root in graphite-update.service (an administrator may
 // start it without a password; its progress is /var/lib/graphite/update.json), the person's
-// half (system/user-update.sh: their apps and Graphite Desk) alongside it. A new kernel asks
+// half (system/user-update.sh: their apps and Graphite Desk) alongside it, apart from the shell
+// (its progress is ~/.local/state/graphite/user-update), as an update of Graphite Desk reloads
+// the shell part way through; both are followed again after a reload. A new kernel asks
 // for a restart. When Graphite's system parts (linux/system) have changed in an update,
 // finishSystemParts() puts them in place, after the administrator's password.
 
@@ -35,6 +37,8 @@ Singleton {
     property string userNote: ""
     readonly property bool running: system.state === "running" || userRunning
     property bool started: false   // install() was pressed in this session
+    property double userSince: 0   // when install() started the person's half (s)
+    property double lastUpdated: 0 // when an update last finished (s)
 
     readonly property bool autoUpdates: ShellSettings.values ? !!ShellSettings.values.autoUpdates : false
 
@@ -107,22 +111,58 @@ Singleton {
         userStep = "";
         userNote = "";
         userRunning = true;
-        userPart.running = true;
+        userSince = Date.now() / 1000;
+        Quickshell.execDetached(["bash", root.linux + "/system/user-update.sh"]);
+    }
+
+    FileView {
+        id: userProgress
+        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/graphite/user-update"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root.readUserProgress(text())
+    }
+
+    // "START pid time", "STEP ..." and "NOTE ..." lines, "DONE time" at the end.
+    function readUserProgress(text) {
+        const lines = text.split("\n").filter(line => line);
+        const start = (lines[0] || "").split(" ");
+        const since = Number(start[2]) || 0;
+        // Before this update's half has started, the last one's file doesn't count.
+        if (start[0] !== "START" || since < userSince - 5) return;
+        const last = prefix => {
+            const found = lines.filter(line => line.startsWith(prefix));
+            return found.length ? found[found.length - 1].slice(prefix.length) : "";
+        };
+        const done = last("DONE ");
+        if (done) {
+            lastUpdated = Math.max(lastUpdated, Number(done) || 0);
+            // A note from an update over an hour ago is no longer news.
+            userNote = Date.now() / 1000 - since < 3600 ? last("NOTE ") : "";
+            userStep = "";
+            if (userRunning) {
+                userRunning = false;
+                if (!running) finished();
+            }
+            return;
+        }
+        userNote = last("NOTE ");
+        userStep = last("STEP ");
+        // Still going, as after a reload: if it really is.
+        if (!userRunning && !aliveCheck.running) {
+            aliveCheck.command = ["kill", "-0", start[1]];
+            aliveCheck.since = since;
+            aliveCheck.running = true;
+        }
     }
 
     Process {
-        id: userPart
-        command: ["bash", root.linux + "/system/user-update.sh"]
-        stdout: SplitParser {
-            onRead: line => {
-                if (line.startsWith("STEP ")) root.userStep = line.slice(5);
-                else if (line.startsWith("NOTE ")) root.userNote = line.slice(5);
-            }
-        }
-        onExited: {
-            root.userRunning = false;
-            root.userStep = "";
-            if (!root.running) root.finished();
+        id: aliveCheck
+        property double since: 0
+        onExited: code => {
+            root.userRunning = code === 0 && Date.now() / 1000 - since < 3600;
+            if (!root.userRunning) root.userStep = "";
         }
     }
 
@@ -137,8 +177,9 @@ Singleton {
                 const read = JSON.parse(text());
                 // Before this session's update has written anything, an old "done" doesn't count.
                 if (root.started && root.system.state === "running" && read.state !== "running" && read.time < root.system.time) return;
+                const was = root.system.state === "running";
                 root.system = read;
-                if (root.started && read.state !== "running" && !root.userRunning) root.finished();
+                if (was && read.state !== "running" && !root.userRunning) root.finished();
             } catch (error) {
                 // being written
             }
@@ -149,13 +190,17 @@ Singleton {
     Timer {
         interval: 1000
         repeat: true
-        running: root.started && root.running
-        onTriggered: progress.reload()
+        running: root.running
+        onTriggered: {
+            progress.reload();
+            userProgress.reload();
+        }
     }
 
+    // Graphite Desk's own new files reload the shell by themselves.
     function finished() {
+        lastUpdated = Math.max(lastUpdated, Date.now() / 1000);
         check();
-        Quickshell.execDetached(["sh", "-c", "sleep 1; qs -c graphite ipc call settings reload"]);
     }
 
     function restart() {
