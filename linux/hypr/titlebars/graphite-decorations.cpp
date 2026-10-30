@@ -24,6 +24,12 @@ struct SKdeDecorations {
 };
 template struct SExpose<SKdeDecorations, &CServerDecorationKDEProtocol::m_decos>;
 
+struct SToplevelResource {
+    using type = SP<CXdgToplevel> CXDGToplevelResource::*;
+    friend type member(SToplevelResource);
+};
+template struct SExpose<SToplevelResource, &CXDGToplevelResource::m_resource>;
+
 bool graphiteWantsServerTitleBar(PHLWINDOW window) {
     const auto& backend = window->backend();
     // X11 apps say so through their hints (Steam draws its own).
@@ -37,11 +43,14 @@ bool graphiteWantsServerTitleBar(PHLWINDOW window) {
     const auto* role     = surface->m_role ? dynamic_cast<CXDGSurfaceRole*>(surface->m_role.get()) : nullptr;
     const auto  xdg      = role ? role->m_xdgSurface.lock() : nullptr;
     const auto  toplevel = xdg ? xdg->m_toplevel.lock() : nullptr;
-    if (toplevel && PROTO::xdgDecoration) {
-        for (const auto& [resource, decoration] : (*PROTO::xdgDecoration).*member(SXdgDecorations{})) {
-            if (decoration && CXDGToplevelResource::fromResource(resource) == toplevel)
-                return decoration->mostRecentlySent == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
-        }
+    // Looked up by this window's own handle: the list can still hold the handles of windows
+    // whose app has just closed or crashed, which mustn't be read.
+    const auto&  own    = toplevel ? (*toplevel).*member(SToplevelResource{}) : nullptr;
+    wl_resource* handle = own ? own->resource() : nullptr;
+    if (handle && PROTO::xdgDecoration) {
+        const auto& decorations = (*PROTO::xdgDecoration).*member(SXdgDecorations{});
+        if (const auto found = decorations.find(handle); found != decorations.end() && found->second)
+            return found->second->mostRecentlySent == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
     }
 
     // GTK 3 asks through KDE's older protocol.
