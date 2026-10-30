@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # The person's half of "Update everything" (the system half is graphite-update.service): their
-# Flatpak apps, the Ubuntu space's apps (.deb installs, linux/apps), and Graphite Desk itself (a
-# git pull of /opt/graphite-desk; changes of their own are kept, and a pull that would clash
-# with them waits). One line per step, for the Control Panel, printed and written to
-# ~/.local/state/graphite/user-update: the Control Panel starts it apart from the shell and
-# follows that file, as the shell reloads part way through when Graphite Desk itself changes.
+# Flatpak apps, the Ubuntu space's apps (.deb installs, linux/apps), apps from their makers (Unity
+# Hub), and Graphite Desk itself (a git pull of /opt/graphite-desk; changes of their own are
+# kept, and a pull that would clash with them waits). One line per step, for the Control Panel,
+# printed and written to ~/.local/state/graphite/user-update: the Control Panel starts it apart
+# from the shell and follows that file, as the shell reloads part way through when Graphite
+# Desk itself changes.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 progress="${XDG_STATE_HOME:-$HOME/.local/state}/graphite/user-update"
@@ -21,6 +22,13 @@ fi
 if command -v distrobox >/dev/null && podman container exists apps 2>/dev/null; then
     say "STEP Updating Ubuntu apps"
     distrobox upgrade apps >/dev/null 2>&1 || true
+fi
+
+# Apps from their makers (install-app.sh --vendor): only when there's a newer one, and not
+# while it's open.
+if grep -qsx 'kind=vendor' "$HOME/.local/share/graphite/apps/unityhub"; then
+    say "STEP Updating Unity Hub"
+    bash "$repo/linux/apps/install-app.sh" --vendor unityhub --update >/dev/null 2>&1 || true
 fi
 
 if [ -d "$repo/.git" ]; then

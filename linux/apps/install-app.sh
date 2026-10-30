@@ -21,11 +21,17 @@
 #   install-app.sh --package NAME [--replaces APP_ID]
 #                                    install one of Arch Linux's own packages (asks for the
 #                                    PIN or password), and remove the Flathub copy it replaces
+#   install-app.sh --vendor unityhub [--replaces APP_ID | --update]
+#                                    install an app from its maker (Unity Hub, from Unity),
+#                                    for this person only, and remove the Flathub copy it
+#                                    replaces; --update brings it up to date, quietly, when
+#                                    there's a newer one (user-update.sh)
 #   install-app.sh --remove ID       uninstall the app with desktop entry id ID: one this script
 #                                    put there, a Flatpak app, or a system package (asks for
 #                                    the password; the desktop's own parts are kept)
 set -uo pipefail
 
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 box=apps
 image=docker.io/library/ubuntu:24.04
 manifests="$HOME/.local/share/graphite/apps"
@@ -75,7 +81,7 @@ if [ "${1:-}" = "--remove" ]; then
             appimage)
                 rm -f "$path" "$applications/$id.desktop" "$icon"
                 ;;
-            archive)
+            archive | vendor)
                 rm -rf "$path"
                 rm -f "$applications/$id.desktop" ${command:+"$command"}
                 [[ "$icon" == /* ]] && rm -f "$icon"
@@ -129,6 +135,139 @@ if [ "${1:-}" = "--flathub" ]; then
     name="${name:-$app}"
     notify "Installing $name..." "From Flathub. Large apps can take a few minutes."
     flatpak install --user -y --noninteractive flathub "$app" >/dev/null 2>&1 || fail "Flathub couldn't install it. Check your internet connection."
+    notify "$name is installed" "Press the Windows key and type its name to open it."
+    exit 0
+fi
+
+# ---------- from the app's maker ----------
+
+# Apps their makers publish for Linux themselves, where Flathub's copy doesn't do the job
+# (Desktop.qml's vendorFor). Installed for the person, in ~/Applications, from the maker's own
+# signed packages; user-update.sh keeps them up to date.
+#
+# Unity Hub: from Flathub, Unity runs inside a sandbox where a game that uses Steam can't reach
+# Steam, and closes when Play is pressed. Unity's apt repository is checked the way apt checks
+# it: its index signed with Unity's key (apps/unity.asc, the key Unity's own package installs),
+# the list of packages matching the index, the package matching the list.
+unity_repo=https://hub.unity3d.com/linux/repos/deb
+# What Unity's package needs from the system (its Depends, by Arch's names): zip and unzip
+# unpack the editors it installs. Asked for, with the PIN or password, only when one is missing.
+unity_hub_needs=(gtk3 libnotify nss xdg-utils at-spi2-core libdrm mesa libxcb libsecret ca-certificates gnupg libxss libxtst util-linux-libs tar zip unzip)
+
+install_unity_hub() {
+    local update="$1" target="$HOME/Applications/Unity Hub" version filename sum icon own
+    name="Unity Hub"
+    [ "$update" = true ] && notify() { :; }
+    mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}"
+    # Not local: the clean-up on leaving needs it after this function has returned.
+    work="$(mktemp -d "${XDG_CACHE_HOME:-$HOME/.cache}/graphite-unityhub.XXXXXX")"
+    trap 'rm -rf "$work"' EXIT
+    gpg --dearmor < "$here/unity.asc" > "$work/unity.gpg" 2>/dev/null || fail "Unity's key couldn't be read."
+    curl -fsSL -o "$work/InRelease" "$unity_repo/dists/stable/InRelease" &&
+        curl -fsSL -o "$work/Packages" "$unity_repo/dists/stable/main/binary-amd64/Packages" ||
+        fail "Unity's download site couldn't be reached. Check your internet connection."
+    gpgv --keyring "$work/unity.gpg" --output "$work/Release" "$work/InRelease" >/dev/null 2>&1 ||
+        fail "Unity's download site didn't prove it was Unity's."
+    sum="$(awk '/^SHA256:/ { p = 1; next } /^[^ ]/ { p = 0 } p && $3 == "main/binary-amd64/Packages" { print $1 }' "$work/Release")"
+    [ -n "$sum" ] && [ "$(sha256sum < "$work/Packages" | cut -d' ' -f1)" = "$sum" ] ||
+        fail "Unity's list of downloads didn't match what Unity signed."
+    # The newest unityhub: "version filename sha256".
+    read -r version filename sum < <(awk '
+        function done() { if (p && v != "") print v, f, s; p = 0; v = "" }
+        /^Package: / { done(); p = ($2 == "unityhub") }
+        p && /^Version: / { v = $2 } p && /^Filename: / { f = $2 } p && /^SHA256: / { s = $2 }
+        END { done() }' "$work/Packages" | sort -V | tail -1)
+    [[ "${version:-}" =~ ^[0-9][0-9A-Za-z.+~-]*$ && "${filename:-}" =~ ^pool/[A-Za-z0-9._+/-]+\.deb$ && "$filename" != *..* ]] ||
+        fail "Unity's list of downloads has no Unity Hub."
+    if [ "$update" = true ]; then
+        [ "$(sed -n 's/^version=//p' "$manifests/unityhub" 2>/dev/null)" = "$version" ] && exit 0
+        # Not while it's open: it would close part way. The next update tries again.
+        pgrep -x unityhub-bin >/dev/null && exit 0
+    fi
+
+    local missing
+    missing="$(pacman -T "${unity_hub_needs[@]}" 2>/dev/null)"
+    if [ -n "$missing" ] && [ "$update" != true ]; then
+        notify "Installing $name..." "It needs a few parts from Arch Linux first. Enter your PIN or password when asked."
+        # shellcheck disable=SC2086
+        admin package-install $missing >/dev/null 2>&1 || fail "What it needs wasn't installed. You may have cancelled, or you're offline."
+    fi
+
+    notify "Installing $name..." "From Unity. It's about 170 MB."
+    curl -fsSL -o "$work/hub.deb" "$unity_repo/$filename" ||
+        fail "Unity Hub couldn't be downloaded. Check your internet connection."
+    [ "$(sha256sum < "$work/hub.deb" | cut -d' ' -f1)" = "$sum" ] || fail "The download didn't match what Unity signed."
+    mkdir "$work/deb" "$work/root"
+    bsdtar -xf "$work/hub.deb" -C "$work/deb" 2>/dev/null &&
+        bsdtar -xf "$(find "$work/deb" -maxdepth 1 -name 'data.tar.*' | head -1)" -C "$work/root" 2>/dev/null ||
+        fail "Unity Hub couldn't be unpacked."
+    [ -x "$work/root/usr/lib/unityhub/unityhub" ] && [ -f "$work/root/usr/share/applications/unityhub.desktop" ] ||
+        fail "Unity's package has changed: Unity Hub isn't where it was."
+
+    mkdir -p "$HOME/Applications"
+    rm -rf "$target.old"
+    [ -d "$target" ] && mv "$target" "$target.old"
+    if ! mv "$work/root/usr/lib/unityhub" "$target"; then
+        [ -d "$target.old" ] && mv "$target.old" "$target"
+        fail "Unity Hub couldn't be put in ~/Applications."
+    fi
+    rm -rf "$target.old"
+    icon="$HOME/.local/share/icons/unityhub.png"
+    own="$work/root/usr/share/icons/hicolor/256x256/apps/unityhub.png"
+    mkdir -p "$(dirname "$icon")"
+    if [ -f "$own" ]; then cp -f "$own" "$icon"; else icon=unityhub; fi
+    sed -e "s|^Exec=[^ ]*|Exec=\"$target/unityhub\"|" -e "s|^Icon=.*|Icon=$icon|" -e '/^TryExec=/d' \
+        "$work/root/usr/share/applications/unityhub.desktop" > "$applications/unityhub.desktop"
+    manifest unityhub vendor "path=\"$target\"" "icon=\"$icon\"" "version=$version"
+    # Signing in comes back to the Hub through a unityhub:// link.
+    xdg-mime default unityhub.desktop x-scheme-handler/unityhub 2>/dev/null || true
+}
+
+# What the Flathub copy kept (projects, the account, Unity's settings and licence), where
+# Unity's own copy looks, unless it has its own already. The Flathub copy is closed first, so
+# what it was writing is finished.
+carry_over_unity_hub() {
+    local old="$HOME/.var/app/$1"
+    flatpak kill "$1" >/dev/null 2>&1 || true
+    if [ -d "$old/config/unityhub" ] && [ ! -e "$HOME/.config/unityhub" ]; then
+        mkdir -p "$HOME/.config"
+        cp -a "$old/config/unityhub" "$HOME/.config/unityhub"
+        # What belonged to that run alone: its lock, crash reports, logs and caches.
+        (cd "$HOME/.config/unityhub" && rm -rf Singleton* Crashpad logs sentry Cache "Code Cache" GPUCache GPUPersistentCache DawnGraphiteCache DawnWebGPUCache)
+    fi
+    if [ -f "$old/data/unity3d/prefs" ] && [ ! -e "$HOME/.local/share/unity3d/prefs" ]; then
+        mkdir -p "$HOME/.local/share/unity3d"
+        cp -a "$old/data/unity3d/prefs" "$HOME/.local/share/unity3d/prefs"
+    fi
+    if [ -d "$old/config/unity3d" ]; then
+        mkdir -p "$HOME/.config/unity3d"
+        cp -a --update=none "$old/config/unity3d/." "$HOME/.config/unity3d/"
+    fi
+}
+
+if [ "${1:-}" = "--vendor" ]; then
+    case "${2:-}" in
+        unityhub) ;;
+        *) notify "Can't install ${2:-that}" "It isn't one of the apps installed from their makers."; exit 1 ;;
+    esac
+    replaces=""
+    [ "${3:-}" = "--replaces" ] && replaces="${4:-}"
+    if [ "${3:-}" = "--update" ]; then
+        [ -f "$manifests/unityhub" ] && grep -qx 'kind=vendor' "$manifests/unityhub" || exit 0
+        install_unity_hub true
+        exit 0
+    fi
+    install_unity_hub false
+    # Switching from the Flathub copy: that one goes once this one is in, its settings kept in
+    # ~/.var/app, so nothing is lost if the person goes back.
+    if [ -n "$replaces" ] && flatpak info "$replaces" >/dev/null 2>&1; then
+        carry_over_unity_hub "$replaces"
+        if flatpak info --user "$replaces" >/dev/null 2>&1; then
+            flatpak uninstall --user -y --noninteractive "$replaces" >/dev/null 2>&1
+        else
+            admin flatpak-remove "$replaces" >/dev/null 2>&1
+        fi
+    fi
     notify "$name is installed" "Press the Windows key and type its name to open it."
     exit 0
 fi

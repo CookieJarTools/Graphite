@@ -65,6 +65,14 @@ system's libraries and graphics driver, so they open faster and update with the 
 from Flathub otherwise. A Flathub app that Arch also has shows "Use Arch's version". Installing
 asks for an administrator's PIN or password, as Windows does.
 
+A few apps come from their makers instead, where Flathub's copy doesn't do the job (Get apps
+lists them under "From their makers"; `vendorFor` in `services/Desktop.qml`). **Unity Hub**
+comes from Unity's own package repository, checked as apt checks it (its index signed with
+Unity's key, `apps/unity.asc`), into `~/Applications/Unity Hub` for you alone, with no password;
+Update everything keeps it up to date. From Flathub, Unity runs in a sandbox where a game that
+uses Steam can't reach Steam, and closes when Play is pressed. A Flathub copy shows "Use
+Unity's version", which brings its projects, account, settings and licence along.
+
 Opening a download installs it in the right place, with a notification while it does, and
 the app then sits in the launcher (right-click it there to uninstall):
 

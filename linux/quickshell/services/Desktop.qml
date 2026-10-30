@@ -15,7 +15,8 @@ Singleton {
     readonly property bool smoothText: !ShellSettings.values || ShellSettings.values.smoothText !== false
 
     // Where each app came from, by desktop entry id: "flatpak", "deb" (the Ubuntu space),
-    // "appimage", "pacman" (installed by file); anything else is a system package.
+    // "appimage", "pacman" (installed by file), "vendor" (from its maker, vendorFor); anything
+    // else is a system package.
     property var sources: ({})
     // The desktop's own parts, never offered for uninstalling.
     readonly property var essential: ["kitty", "org.gnome.Nautilus", "org.gnome.Software", "graphite-install"]
@@ -25,7 +26,12 @@ Singleton {
     }
 
     function sourceLabel(id) {
-        return ({ flatpak: "Flathub", deb: "Ubuntu app", appimage: "AppImage", archive: "Downloaded app", pacman: "Arch Linux", system: "System" })[sourceOf(id)];
+        const source = sourceOf(id);
+        if (source === "vendor") {
+            const made = Object.values(vendorFor).find(app => app.id === String(id).replace(/\.desktop$/, ""));
+            return made ? made.maker : "Its maker";
+        }
+        return ({ flatpak: "Flathub", deb: "Ubuntu app", appimage: "AppImage", archive: "Downloaded app", pacman: "Arch Linux", system: "System" })[source];
     }
 
     // Apps Arch Linux packages itself, by their Flathub id. These come from Arch: they use the
@@ -65,7 +71,18 @@ Singleton {
         "com.transmissionbt.Transmission": "transmission-gtk"
     })
 
-    // Arch's packages from archFor that are installed (pacman -Qq), and whether Steam is.
+    // Apps their makers publish for Linux themselves, by their Flathub id, where Flathub's copy
+    // doesn't do the job: installed from the maker, for the person (apps/install-app.sh
+    // --vendor), and updated with everything else. id is the desktop entry it gets, and the
+    // Arch package name that counts as having it too (from the AUR, say).
+    //   Unity Hub: from Flathub, Unity runs in a sandbox where a game that uses Steam can't
+    //   reach Steam, and closes when Play is pressed.
+    readonly property var vendorFor: ({
+        "com.unity.UnityHub": { id: "unityhub", maker: "Unity" }
+    })
+
+    // Arch's packages from archFor (and vendorFor) that are installed (pacman -Qq), and whether
+    // Steam is.
     property var archInstalled: ({})
 
     // Apps a newcomer is likely to want, one click each: from Arch when it has them, else Flathub.
@@ -96,11 +113,19 @@ Singleton {
 
     function isInstalled(appId) {
         if (appId === "com.valvesoftware.Steam") return archInstalled["steam"] === true || flatpaks[appId] === true;
-        return flatpaks[appId] === true || (archFor[appId] !== undefined && archInstalled[archFor[appId]] === true);
+        return flatpaks[appId] === true || nativeInstalled(appId);
     }
 
-    // Where an app comes from, for its row: "Arch Linux" or "Flathub".
+    // Installed other than from Flathub: from Arch, or from its maker.
+    function nativeInstalled(appId) {
+        if (archFor[appId] !== undefined) return archInstalled[archFor[appId]] === true;
+        const app = vendorFor[appId];
+        return app !== undefined && (sources[app.id] === "vendor" || archInstalled[app.id] === true);
+    }
+
+    // Where an app comes from, for its row: "Arch Linux", its maker, or "Flathub".
     function originOf(appId) {
+        if (vendorFor[appId] !== undefined) return vendorFor[appId].maker;
         return archFor[appId] !== undefined || appId === "com.valvesoftware.Steam" ? "Arch Linux" : "Flathub";
     }
 
@@ -113,21 +138,30 @@ Singleton {
         } else if (archFor[appId] !== undefined) {
             Quickshell.execDetached(["sh", "-c", `bash "$1" --package "$2"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", archFor[appId]]);
             refreshSoon.restart();
+        } else if (vendorFor[appId] !== undefined) {
+            Quickshell.execDetached(["sh", "-c", `bash "$1" --vendor "$2"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", vendorFor[appId].id]);
+            refreshSoon.restart();
         } else {
             Quickshell.execDetached(["bash", linux + "/apps/install-app.sh", "--flathub", appId]);
         }
     }
 
-    // A Flathub app that Arch also has: Arch's copy goes in, then the Flathub one comes out.
+    // A Flathub app that Arch also has, or its maker: that copy goes in, then the Flathub one
+    // comes out.
     function canSwitch(appId) {
-        return archFor[appId] !== undefined && flatpaks[appId] === true && archInstalled[archFor[appId]] !== true;
+        return (archFor[appId] !== undefined || vendorFor[appId] !== undefined) && flatpaks[appId] === true && !nativeInstalled(appId);
     }
 
-    function switchToArch(appId) {
+    function switchLabel(appId) {
+        return vendorFor[appId] !== undefined ? "Use " + vendorFor[appId].maker + "'s version" : "Use Arch's version";
+    }
+
+    function switchToNative(appId) {
         const busy = Object.assign({}, installing);
         busy[appId] = Date.now();
         installing = busy;
-        Quickshell.execDetached(["sh", "-c", `bash "$1" --package "$2" --replaces "$3"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh", archFor[appId], appId]);
+        const how = vendorFor[appId] !== undefined ? ["--vendor", vendorFor[appId].id] : ["--package", archFor[appId]];
+        Quickshell.execDetached(["sh", "-c", `bash "$1" "$2" "$3" --replaces "$4"; qs -c graphite ipc call taskbar rebuild >/dev/null 2>&1`, "sh", linux + "/apps/install-app.sh"].concat(how, [appId]));
         refreshSoon.restart();
     }
 
@@ -428,7 +462,7 @@ Singleton {
     // "kind id" per line: the installer's records, then the Flatpak apps.
     Process {
         id: listing
-        command: ["sh", "-c", "for f in \"$HOME/.local/share/graphite/apps\"/*; do [ -f \"$f\" ] && echo \"$(sed -n 's/^kind=//p' \"$f\") $(basename \"$f\")\"; done; flatpak list --app --columns=application 2>/dev/null | sed 's/^/flatpak /'; pacman -Qq \"$@\" 2>/dev/null | sed 's/^/arch /'", "sh", "steam"].concat(Object.values(root.archFor))
+        command: ["sh", "-c", "for f in \"$HOME/.local/share/graphite/apps\"/*; do [ -f \"$f\" ] && echo \"$(sed -n 's/^kind=//p' \"$f\") $(basename \"$f\")\"; done; flatpak list --app --columns=application 2>/dev/null | sed 's/^/flatpak /'; pacman -Qq \"$@\" 2>/dev/null | sed 's/^/arch /'", "sh", "steam"].concat(Object.values(root.archFor), Object.values(root.vendorFor).map(app => app.id))
         stdout: StdioCollector {
             onStreamFinished: {
                 const sources = {};
@@ -450,7 +484,7 @@ Singleton {
                 // Installs that have finished leave the busy list.
                 const busy = {};
                 for (const id of Object.keys(root.installing)) {
-                    const done = root.isInstalled(id) && (root.archFor[id] === undefined || arch[root.archFor[id]]);
+                    const done = root.isInstalled(id) && (root.archFor[id] === undefined && root.vendorFor[id] === undefined || root.nativeInstalled(id));
                     // Ten minutes on, it didn't work (install-app.sh said why).
                     if (!done && Date.now() - root.installing[id] < 600000) busy[id] = root.installing[id];
                 }

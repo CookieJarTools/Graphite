@@ -3,7 +3,9 @@
 // commands). Installed lists every app with where it came from (Desktop.sourceLabel), to open
 // or uninstall: Uninstall asks once more before it goes, and the desktop's own parts can't be
 // removed. Get apps shows popular picks and searches Arch's packages, Flathub and GitHub (where
-// a project's link finds that project); Install shows its progress and turns into "Installed".
+// a project's link finds that project); a few apps Flathub has come from their makers instead
+// (Desktop.vendorFor: Unity Hub, from Unity). Install shows its progress and turns into
+// "Installed".
 // A GitHub project says what installing it would put on the computer, and from whom, before it
 // does. Downloaded files (.deb, AppImage, Flatpak) install themselves when opened, as the page
 // says. Opening an app leaves the Control Panel open.
@@ -49,12 +51,13 @@ ColumnLayout {
         .sort((first, second) => first.name.localeCompare(second.name))
 
     // A search on Get apps: Flathub's finds that Arch also has (installed from Arch), the rest
-    // of Arch's own, and what only Flathub has.
+    // of Arch's own, those that come from their makers, and what only Flathub has.
     readonly property bool searching: flathubQuery.text.trim().length > 0
     // A GitHub project's link: only GitHub has anything to say.
     readonly property bool githubLink: Desktop.githubRepo(flathubQuery.text) !== ""
     readonly property var archOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] !== undefined || offer.id === "com.valvesoftware.Steam")
-    readonly property var flathubOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] === undefined && offer.id !== "com.valvesoftware.Steam")
+    readonly property var vendorOffers: Desktop.results.filter(offer => Desktop.vendorFor[offer.id] !== undefined)
+    readonly property var flathubOffers: Desktop.results.filter(offer => Desktop.archFor[offer.id] === undefined && Desktop.vendorFor[offer.id] === undefined && offer.id !== "com.valvesoftware.Steam")
     readonly property var archPackages: Desktop.packages.filter(item => !archOffers.some(offer => Desktop.archFor[offer.id] === item.name))
 
     // ---------- the search ----------
@@ -145,9 +148,9 @@ ColumnLayout {
             onPrimaryClicked: Apps.launch(modelData)
             secondary: !Desktop.canRemove(modelData.id) ? "" : root.confirming === modelData.id ? "Sure?" : "Uninstall"
             note: Desktop.canRemove(modelData.id) ? "" : "Part of the desktop"
-            // On Flathub and in Arch: Arch's opens faster and updates with the system.
-            other: Desktop.installing[modelData.id.replace(/\.desktop$/, "")] !== undefined ? "Switching..." : Desktop.canSwitch(modelData.id.replace(/\.desktop$/, "")) ? "Use Arch's version" : ""
-            onOtherClicked: if (Desktop.installing[modelData.id.replace(/\.desktop$/, "")] === undefined) Desktop.switchToArch(modelData.id.replace(/\.desktop$/, ""))
+            // From Flathub, and Arch or the maker has it: theirs opens faster and works fully.
+            other: Desktop.installing[modelData.id.replace(/\.desktop$/, "")] !== undefined ? "Switching..." : Desktop.canSwitch(modelData.id.replace(/\.desktop$/, "")) ? Desktop.switchLabel(modelData.id.replace(/\.desktop$/, "")) : ""
+            onOtherClicked: if (Desktop.installing[modelData.id.replace(/\.desktop$/, "")] === undefined) Desktop.switchToNative(modelData.id.replace(/\.desktop$/, ""))
             onSecondaryClicked: {
                 if (root.confirming !== modelData.id) {
                     root.confirming = modelData.id;
@@ -193,6 +196,21 @@ ColumnLayout {
             primaryEnabled: !modelData.installed && !busy
             onPrimaryClicked: Desktop.installPackage(modelData.name)
         }
+    }
+
+    UiText {
+        Layout.topMargin: Theme.space4
+        visible: root.kind === "get" && root.searching && root.vendorOffers.length > 0
+        text: "From their makers"
+        color: Theme.inkMuted
+        font.pixelSize: Theme.hintSize
+        font.weight: Font.DemiBold
+    }
+
+    Repeater {
+        model: root.kind === "get" && root.searching ? root.vendorOffers : []
+
+        OfferRow {}
     }
 
     UiText {
@@ -248,13 +266,14 @@ ColumnLayout {
         font.pixelSize: Theme.hintSize
     }
 
-    // An app from the Popular list or a search: from Arch when Arch has it, else from Flathub.
+    // An app from the Popular list or a search: from Arch when Arch has it, from its maker for
+    // those that come from their makers, else from Flathub.
     component OfferRow: AppRow {
         required property var modelData
         readonly property bool busy: Desktop.installing[modelData.id] !== undefined
         readonly property bool done: Desktop.isInstalled(modelData.id)
         Layout.fillWidth: true
-        icon: Quickshell.iconPath(modelData.id, true) || Quickshell.iconPath(Desktop.archFor[modelData.id] || "system-software-install", "system-software-install")
+        icon: Quickshell.iconPath(modelData.id, true) || Quickshell.iconPath(Desktop.archFor[modelData.id] || (Desktop.vendorFor[modelData.id] || {}).id || "system-software-install", "system-software-install")
         name: modelData.name
         detail: (modelData.detail ? modelData.detail + " · " : "") + "From " + Desktop.originOf(modelData.id)
         primary: done ? "Installed" : busy ? "Installing..." : "Install"
