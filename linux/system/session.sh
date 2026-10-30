@@ -7,8 +7,20 @@
 #   - which helpers answer apps' requests (file pickers, settings): without this, GTK apps such
 #     as Files can wait out a timeout before their window shows;
 #   - with NVIDIA's driver: apps from Flathub get the part that matches it (they don't open
-#     without it), and WebKit apps (the Modrinth App) skip a way of drawing that NVIDIA lacks.
+#     without it), and WebKit apps (the Modrinth App) skip a way of drawing that NVIDIA lacks;
+#   - a keyring for apps' saved sign-ins (Unity Hub, VS Code), as Windows' Credential Manager:
+#     without one they sign out whenever they close. It has no password of its own, so it opens
+#     whether the person signed in with the PIN or the password, and never asks; the keyring
+#     service starts when an app first needs it.
 mkdir -p "$HOME/.local/share/flatpak/exports/share/applications" "$HOME/.local/share/applications"
+
+keyrings="$HOME/.local/share/keyrings"
+if command -v gnome-keyring-daemon >/dev/null && [ ! -e "$keyrings/default" ]; then
+    mkdir -p -m 700 "$keyrings"
+    [ -e "$keyrings/login.keyring" ] ||
+        printf '[keyring]\ndisplay-name=Login\nctime=%s\nmtime=0\nlock-on-idle=false\nlock-after=false\n' "$(date +%s)" > "$keyrings/login.keyring"
+    echo login > "$keyrings/default"
+fi
 
 portals="$HOME/.config/xdg-desktop-portal/hyprland-portals.conf"
 if [ ! -f "$portals" ]; then

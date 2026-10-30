@@ -46,6 +46,10 @@ if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     exit 1
 fi
 
+# What the desktop has come to need since older machines were installed: the keyring for apps'
+# saved sign-ins (session.sh).
+pacman -S --needed --noconfirm gnome-keyring >>"$log" 2>&1 || true
+
 # A new kernel is only used after a restart.
 [ -d "/usr/lib/modules/$(uname -r)" ] || restart=true
 

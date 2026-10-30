@@ -19,6 +19,8 @@ packages=(
     hyprland quickshell qt6-wayland qt6-svg xdg-desktop-portal-hyprland hyprpolkitagent hyprlock
     # Look
     papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono dconf
+    # Apps' saved sign-ins (system/session.sh)
+    gnome-keyring
     # Sound, network, Bluetooth (the quick settings panel)
     pipewire wireplumber pipewire-pulse networkmanager network-manager-applet bluez bluez-utils
     # The Control Panel's helpers: idle, night light, brightness, update checks, firewall, printers

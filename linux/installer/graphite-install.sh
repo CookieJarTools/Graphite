@@ -227,7 +227,7 @@ install_steps() {
         pipewire wireplumber pipewire-pulse pipewire-alsa
         hyprland quickshell qt6-wayland qt6-svg xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpolkitagent
         hypridle hyprsunset brightnessctl
-        greetd papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono noto-fonts noto-fonts-emoji dconf
+        greetd papirus-icon-theme adwaita-icon-theme capitaine-cursors inter-font ttf-jetbrains-mono noto-fonts noto-fonts-emoji dconf gnome-keyring
         kitty nautilus firefox libnotify grim
         loupe celluloid papers slurp wl-clipboard xdg-user-dirs udisks2 gvfs exfatprogs ntfs-3g dosfstools
         distrobox podman flatpak fuse2 gnome-software xdg-utils desktop-file-utils
