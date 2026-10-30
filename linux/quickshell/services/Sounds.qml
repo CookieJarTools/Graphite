@@ -31,11 +31,12 @@ Singleton {
     })
 
     // The shell command that plays one (also used where something has to wait for the sound,
-    // as signing out does).
+    // as signing out, restarting and shutting down do). In a subshell of its own, so what comes
+    // after it still runs, and never more than a few seconds, should the sound server be stuck.
     function command(event) {
         if (!on) return "true";
         const names = (events[event] || [event]).join(" ");
-        return `for name in ${names}; do for theme in ocean freedesktop; do for ext in oga ogg wav; do f=/usr/share/sounds/$theme/stereo/$name.$ext; [ -f "$f" ] && { pw-play --media-role=Notification --volume=0.7 "$f" 2>/dev/null; exit 0; }; done; done; done`;
+        return `(for name in ${names}; do for theme in ocean freedesktop; do for ext in oga ogg wav; do f=/usr/share/sounds/$theme/stereo/$name.$ext; [ -f "$f" ] && { timeout 4 pw-play --media-role=Notification --volume=0.7 "$f" 2>/dev/null; exit 0; }; done; done; done)`;
     }
 
     // A burst (several notifications at once, a hub's devices) plays once.
