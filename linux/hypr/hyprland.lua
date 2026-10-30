@@ -279,9 +279,11 @@ end
 
 if windowMode() == "floating" then
     hl.window_rule({ match = { class = ".*" }, float = true })
-    -- Centred, but not X11 menus (Steam's: windows without a title), which open where the app puts them.
+    -- Centred, but not X11 menus (Steam's: windows without a title), which open where the app puts them,
+    -- nor Unity's windows: its menus and drop-downs are titled windows, and it puts every window
+    -- where it was (as on Windows).
     hl.window_rule({ match = { xwayland = false }, center = true })
-    hl.window_rule({ match = { xwayland = true, title = ".+" }, center = true })
+    hl.window_rule({ match = { xwayland = true, title = ".+", class = "negative:^Unity$" }, center = true })
 end
 
 -- Games (Steam and Proton, Minecraft): frames go out as soon as they are drawn (tearing
