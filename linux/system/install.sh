@@ -49,9 +49,9 @@ udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=block 
 cat "$here"/graphite-admin "$here"/system-update "$here"/pin-check "$here"/boot-setup.sh "$here"/*.service "$here"/*.timer "$here"/*.policy "$here"/*.rules | sha256sum | cut -d' ' -f1 > /var/lib/graphite/system-parts
 chmod 644 /var/lib/graphite/system-parts
 
-# A quiet start (boot-setup.sh), once: on machines installed before it existed, with the
-# splash's package fetched first. The installer runs it itself.
-if [ ! -f /etc/systemd/system/greetd.service.d/graphite.conf ] && [ -d /boot/loader/entries ]; then
+# A quiet start (boot-setup.sh): on machines installed before it existed, with the splash's
+# package fetched first, and again whenever it has changed. The installer runs it itself.
+if [ -d /boot/loader/entries ] && [ "$(sha256sum "$here/boot-setup.sh" | cut -d' ' -f1)" != "$(cat /var/lib/graphite/boot-setup 2>/dev/null)" ]; then
     pacman -Qq plymouth >/dev/null 2>&1 || pacman -S --needed --noconfirm plymouth >/dev/null 2>&1 || true
     bash "$here/boot-setup.sh" || echo "The quiet start-up couldn't be set up."
 fi

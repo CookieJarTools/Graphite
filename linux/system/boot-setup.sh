@@ -12,7 +12,9 @@ set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Run as root."; exit 1; }
 
 nvidia=false
-if lspci 2>/dev/null | grep -E 'VGA|3D|Display' | grep -qi nvidia && pacman -Qq nvidia-open nvidia-open-dkms nvidia nvidia-dkms 2>/dev/null | grep -q .; then
+# Its driver, from the whole package list (pacman -Qq with names fails when one isn't installed).
+if lspci 2>/dev/null | grep -E 'VGA|3D|Display' | grep -i nvidia >/dev/null &&
+    grep -qxE 'nvidia(-open)?(-dkms)?' <<<"$(pacman -Qq 2>/dev/null)"; then
     nvidia=true
 fi
 encrypted=false
@@ -46,15 +48,25 @@ fi
 
 # ---------- the kernel's options ----------
 
-quiet="quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=auto vt.global_cursor_default=0"
-$nvidia && quiet="$quiet nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
+# loglevel=0: nothing from the kernel over the logo, not even its emergency notices, which some
+# firmware sets off at every start (AMD X570 boards: "No irq handler for 1.55", a line for each
+# processor core, on screen for seconds until the splash). That would hide a crash at start-up
+# too, so the boot menu (hold Space as the computer starts) has "Graphite Desk (start-up
+# messages)", the same start with everything shown.
+quiet="quiet splash loglevel=0 rd.udev.log_level=3 systemd.show_status=auto vt.global_cursor_default=0"
+graphics=""
+$nvidia && graphics=" nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
+# Where the system is (root=, rd.luks...), from an entry's options.
+where() { sed -n 's/^options //p' "$1" | tr ' ' '\n' | grep -E '^(root=|rd\.luks|rw$|ro$|resume=)' | tr '\n' ' '; }
 for entry in /boot/loader/entries/*.conf; do
-    [ -f "$entry" ] || continue
-    options="$(sed -n 's/^options //p' "$entry")"
-    # Keep where the system is (root=, rd.luks...), replace the rest.
-    keep="$(tr ' ' '\n' <<<"$options" | grep -E '^(root=|rd\.luks|rw$|ro$|resume=)' | tr '\n' ' ')"
-    sed -i "s|^options .*|options ${keep}${quiet}|" "$entry"
+    [ -f "$entry" ] && [ "${entry##*/}" != graphite-messages.conf ] || continue
+    sed -i "s|^options .*|options $(where "$entry")${quiet}${graphics}|" "$entry"
 done
+main=/boot/loader/entries/graphite.conf
+if [ -f "$main" ]; then
+    sed -e 's/^title .*/title Graphite Desk (start-up messages)/' \
+        -e "s|^options .*|options $(where "$main")${graphics# }|" "$main" > /boot/loader/entries/graphite-messages.conf
+fi
 
 # ---------- the login screen after the splash ----------
 
@@ -66,6 +78,10 @@ After=plymouth-quit-wait.service systemd-user-sessions.service
 UNIT
 
 mkinitcpio -P
+
+# Done for this copy of the script (install.sh runs it again when it changes).
+mkdir -p /var/lib/graphite
+sha256sum "${BASH_SOURCE[0]}" | cut -d' ' -f1 > /var/lib/graphite/boot-setup
 
 # Everything written out now: the start-up partition is FAT, which a sudden power-off right
 # after (or a reset) can leave corrupt.
