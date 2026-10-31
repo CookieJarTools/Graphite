@@ -200,7 +200,9 @@ hl.config({
 
     misc = {
         allow_session_lock_restore = true, -- a restarted shell takes the lock screen back over
-        vrr = 2, -- variable refresh rate for fullscreen windows (games), where the screen has it
+        -- Variable refresh rate stays off: switched on for fullscreen windows, it made an HDR
+        -- screen on NVIDIA flash every time a window went fullscreen (F11 in the browser).
+        vrr = 0,
         -- An app asking to come forward (a link opened in the browser, a second start) does.
         focus_on_activate = true,
         disable_hyprland_logo = true,
