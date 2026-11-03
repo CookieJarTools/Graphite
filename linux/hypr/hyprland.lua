@@ -336,13 +336,17 @@ hl.bind("ALT + space", hl.dsp.global("quickshell:palette"))
 hl.bind("SUPER + L", hl.dsp.global("quickshell:lock"))
 
 -- Window zones (Shift + drag a window, Ctrl to span): the shell hears the left button go down
--- and up (a bind that does not take the click from apps), and Shift and Ctrl from the keyboard
--- event below. Not binds for those: a bind going off in the middle of a drag ends the drag.
+-- and up, and Shift and Ctrl from the keyboard event below. Not binds for those: a bind going
+-- off in the middle of a drag ends the drag. The button comes from Graphite's title-bar plugin
+-- (titlebars/graphite-drags.cpp), as the title bars take their clicks before any bind; without
+-- the plugin, from a bind that does not take the click from apps.
 local passOn = { non_consuming = true, ignore_mods = true }
 local passOnRelease = { non_consuming = true, ignore_mods = true, release = true }
 local superAlone = false -- Super is down and nothing else has been pressed with it
-hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-down"), passOn)
-hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-up"), passOnRelease)
+if not hl.plugin.hyprbars then
+    hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-down"), passOn)
+    hl.bind("mouse:272", hl.dsp.global("quickshell:pointer-up"), passOnRelease)
+end
 -- Super + drag moves a window; letting go of Super after it opens nothing.
 hl.bind("mouse:272", function() superAlone = false end, passOn)
 hl.bind("mouse:273", function() superAlone = false end, passOn)

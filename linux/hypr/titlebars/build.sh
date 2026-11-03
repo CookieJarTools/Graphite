@@ -4,7 +4,8 @@
 # plugin (github.com/hyprwm/hyprland-plugins), built here for the Hyprland installed, with
 # Graphite's additions (graphite-decorations.cpp: no bar on windows that draw their own;
 # graphite-drags.cpp: X11 apps that draw their own title bar, as Steam does, are dragged by it,
-# and a drag keeps going when Shift or Ctrl goes down, for window zones; graphite-minimize.cpp:
+# and for window zones a drag keeps going when Shift or Ctrl goes down, the shell hears clicks
+# on the bars, and `hyprctl titlebars` says which windows have one; graphite-minimize.cpp:
 # apps' own minimise buttons work; graphite-fonts.cpp: font settings changed since Hyprland
 # started apply when the plugin loads; and a fix for the bar's background vanishing while a
 # notification is up).

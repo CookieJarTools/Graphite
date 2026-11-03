@@ -11,6 +11,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import qs.config
 import "lib/taskbar-model.js" as Model
 import "lib/window-tags.js" as Tags
@@ -216,9 +217,40 @@ Singleton {
         const width = Math.round((area.width - gap * 3) / 2);
         const height = Math.round(area.height - gap * 2);
         const x = direction === "left" ? area.x + gap : area.x + gap * 2 + width;
-        Hyprland.dispatch(`hl.dsp.window.resize({ x = ${width}, y = ${height}, exact = true, ${window} })`);
-        Hyprland.dispatch(`hl.dsp.window.move({ x = ${x}, y = ${area.y + gap}, exact = true, ${window} })`);
-        refresh();
+        place(hwnd, { x: x, y: area.y + gap, width: width, height: height });
+    }
+
+    // Sizes and places a floating window to fill a rectangle of the screen, its title bar
+    // inside it when Hyprland draws one (Graphite's Hyprland plugin says which windows have
+    // one: `hyprctl titlebars`); Hyprland places a window by what's under the bar.
+    property var placing: null // { hwnd, rect }: the latest asked for, while the bars are read
+
+    function place(hwnd, rect) {
+        placing = { hwnd: hwnd, rect: rect };
+        titleBars.running = true;
+    }
+
+    Process {
+        id: titleBars
+        command: ["hyprctl", "-j", "titlebars"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let bars = {};
+                try {
+                    bars = JSON.parse(this.text);
+                } catch (error) {
+                    // without the plugin there are no title bars of Hyprland's
+                }
+                const placing = root.placing;
+                root.placing = null;
+                if (!placing) return;
+                const bar = bars[placing.hwnd] || 0;
+                const window = `window = "address:${placing.hwnd}"`;
+                Hyprland.dispatch(`hl.dsp.window.resize({ x = ${placing.rect.width}, y = ${placing.rect.height - bar}, exact = true, ${window} })`);
+                Hyprland.dispatch(`hl.dsp.window.move({ x = ${placing.rect.x}, y = ${placing.rect.y + bar}, exact = true, ${window} })`);
+                root.refresh();
+            }
+        }
     }
 
     // Apps that draw their own title bar but ask for the desktop's too (Zen, Discord): their

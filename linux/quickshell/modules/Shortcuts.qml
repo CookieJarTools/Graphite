@@ -81,8 +81,9 @@ Scope {
         onPressed: { if (!ShellSettings.values || ShellSettings.values.paletteHotkey !== false) ShellState.togglePalette(); }
     }
 
-    // Window zones (Zones.qml): the left button, Shift and Ctrl going down and up, passed on by
-    // hyprland.lua without taking them from apps.
+    // Window zones (Zones.qml): the left button, Shift and Ctrl going down and up, passed on
+    // without taking them from apps: the button by Graphite's title-bar plugin
+    // (hypr/titlebars/graphite-drags.cpp; by hyprland.lua without it), the keys by hyprland.lua.
     // The button's release arrives on the same shortcut; "pointer-up" is there too, as a second
     // way in (Zones ignores a repeat). Shift and Ctrl come over IPC (zones, below).
     GlobalShortcut { name: "pointer-down"; onPressed: Zones.buttonDown(); onReleased: Zones.buttonUp() }

@@ -5,8 +5,9 @@ pragma Singleton
 // one where Ctrl went down to the one under the pointer. Layouts are templates or the user's
 // own (ZoneEditor.qml), kept in settings.json as zones { enabled, layout, custom }.
 //
-// Hyprland reports no drags, so hyprland.lua passes on the left button (a global shortcut that
-// does not take the click from apps) and Shift and Ctrl (over IPC, from its keyboard event);
+// Hyprland reports no drags, so the left button is passed on as a global shortcut (by Graphite's
+// Hyprland plugin, which also hears clicks on its title bars; by hyprland.lua without it) and
+// Shift and Ctrl over IPC (hyprland.lua's keyboard event);
 // while the button is down with Shift held, the pointer and the focused window are polled,
 // and only a window that actually moved counts as dragged. Graphite's Hyprland plugin keeps the
 // drag going when Shift goes down (hypr/titlebars/graphite-drags.cpp).
@@ -163,15 +164,14 @@ Singleton {
         anchor = down ? selection.slice() : [];
     }
 
-    // Fits a window into a rectangle: out of maximised, floating, then sized and placed.
+    // Fits a window into a rectangle: out of maximised, floating, then sized and placed (its
+    // title bar inside, Taskbar.place).
     function snap(address, rect) {
         const window = `window = "address:${address}"`;
         const toplevel = Array.from(Hyprland.toplevels.values).find(candidate => Taskbar.addressOf(candidate) === address);
         if (toplevel && toplevel.lastIpcObject && toplevel.lastIpcObject.fullscreen) Hyprland.dispatch(`hl.dsp.window.fullscreen({ mode = "maximized", ${window} })`);
         Hyprland.dispatch(`hl.dsp.window.float({ action = "enable", ${window} })`);
-        Hyprland.dispatch(`hl.dsp.window.resize({ x = ${rect.width}, y = ${rect.height}, exact = true, ${window} })`);
-        Hyprland.dispatch(`hl.dsp.window.move({ x = ${rect.x}, y = ${rect.y}, exact = true, ${window} })`);
-        Taskbar.refresh();
+        Taskbar.place(address, rect);
     }
 
     // Where the pointer is and where every window is. The window being dragged is the one that
