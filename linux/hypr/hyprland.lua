@@ -22,7 +22,8 @@ hl.on("hyprland.start", function()
     -- files and links through): without them reaching the screen, apps wait half a minute.
     -- Password prompts are the shell's own (PasswordPrompt.qml): hyprpolkitagent's window crashed.
     hl.exec_cmd("dbus-update-activation-environment --systemd --all; systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE XDG_DATA_DIRS PATH; systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service; systemctl --user stop hyprpolkitagent")
-    hl.exec_cmd(shell)
+    -- The shell, started again whenever it stops (system/shell.sh).
+    hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/shell.sh\"")
     -- Idle (lock, screen off, sleep: the Control Panel writes its settings) and startup apps.
     hl.exec_cmd("hypridle")
     -- Files, started in the background so its window opens at once when asked for.

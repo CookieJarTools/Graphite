@@ -30,6 +30,7 @@ from `design/graphite/tokens.json` (`npm run build:qml-theme`).
 | Apps in the Graphite colours (GTK 4 and 3), Capitaine cursors | `gtk/` (from `npm run build:gtk-theme`), `gtk/apply.sh` |
 | Alt+Tab with live previews | `modules/Switcher.qml` |
 | Notification server and pop-ups | `services/Notifs.qml`, `modules/Toasts.qml` |
+| The taskbar and the rest of the shell come back by themselves a few seconds after stopping (a crash, or the computer running out of memory), as Windows' taskbar does | `system/shell.sh` (started by `hypr/hyprland.lua`) |
 | Window tabs: drag a window onto another, drag a tab off to split, middle-click closes | Hyprland's groups, styled in `hypr/hyprland.lua` |
 | Keys, look, start-up, floating or tiling windows, animations as quick as Windows' | `hypr/hyprland.lua` |
 | Title bars (minimise, maximise, close; drag to move, double-click to maximise) for apps that leave theirs to the desktop, such as Kitty, GTK 3 dialogs and Qt apps; X11 apps' own title bars drag their windows (Steam); a drag by one shows the window zones when Shift goes down, and a window fitted to a zone or half the screen keeps its title bar inside it | `hypr/titlebars/` (Hyprland's hyprbars plugin with Graphite's additions, built for the Hyprland installed) |
