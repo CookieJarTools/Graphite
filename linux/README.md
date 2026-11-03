@@ -1,9 +1,9 @@
-# Graphite Desk for Linux
+# Graphite for Linux
 
-The Graphite Desk shell on Linux: [Hyprland](https://hypr.land) (0.55 or later, Lua config)
+The Graphite shell on Linux: [Hyprland](https://hypr.land) (0.55 or later, Lua config)
 underneath, the shell itself written in QML with [Quickshell](https://quickshell.org) (0.3).
 It draws from the same design system as the Windows version: `config/Theme.qml` is generated
-from `design/graphite-desk/tokens.json` (`npm run build:qml-theme`).
+from `design/graphite/tokens.json` (`npm run build:qml-theme`).
 
 | Part | Where |
 | --- | --- |
@@ -113,10 +113,10 @@ its background checks while a game is fullscreen. On a real machine only: the VM
 ## Updates
 
 Updates need no terminal. Every few hours the desktop checks what's waiting (Arch's packages
-with `checkupdates`, Flatpak apps, Graphite Desk's own commits) and says so once. Control
+with `checkupdates`, Flatpak apps, Graphite's own commits) and says so once. Control
 Panel → **Updates** installs everything with one button: the system half runs as root in
 `graphite-update.service` (an administrator may start it without a password), the person's
-half (their apps, the Ubuntu space, a `git pull` of Graphite Desk) alongside it, apart from
+half (their apps, the Ubuntu space, a `git pull` of Graphite) alongside it, apart from
 the shell (a pull reloads the shell), with both halves' progress on the page. Arch's news
 since the last update is listed first, a new kernel asks for a restart, and **Install
 updates automatically** runs it once a day.

@@ -1,5 +1,5 @@
 <#
-Tries the Graphite Desk USB image (linux/installer/out/*.iso, from build-iso.sh) in a fresh
+Tries the Graphite USB image (linux/installer/out/*.iso, from build-iso.sh) in a fresh
 VirtualBox VM with an empty disk, as a computer booting the USB stick would: UEFI, 4 cores, 4 GB
 (beside the dev VM), 40 GB. The installer opens by itself; it erases only this VM's own empty disk.
 

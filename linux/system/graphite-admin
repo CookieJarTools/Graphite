@@ -46,7 +46,7 @@ not_system_drive() {
         while [ "$(lsblk -dno TYPE "$source_disk" 2>/dev/null)" != disk ] && [ "$source_disk" != /dev/ ]; do
             source_disk="/dev/$(lsblk -no PKNAME "$source_disk" 2>/dev/null | tail -1)"
         done
-        [ "$source_disk" = "$1" ] && { echo "That's the drive Graphite Desk runs from." >&2; exit 2; }
+        [ "$source_disk" = "$1" ] && { echo "That's the drive Graphite runs from." >&2; exit 2; }
     done
     return 0
 }
@@ -75,7 +75,7 @@ case "$verb" in
         [ "$admin" = yes ] && groups="wheel,$groups"
         useradd -m -G "$groups" -c "$full" -s /bin/bash "$person"
         printf '%s:%s\n' "$person" "$secret" | chpasswd
-        # Their desktop: the same Graphite Desk, from the shared copy.
+        # Their desktop: the same Graphite, from the shared copy.
         home="/home/$person"
         mkdir -p "$home/.config/quickshell" "$home/.config/hypr" "$home/.config/graphite"
         ln -sfn /opt/graphite-desk/linux/quickshell "$home/.config/quickshell/graphite"

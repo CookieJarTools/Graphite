@@ -920,7 +920,7 @@ function renderCalendar() {
 let windowsNotifications = [];
 
 function notesList() {
-  const ours = (panel.notifications || []).map((note) => ({ source: 'ours', id: String(note.time), app: 'Custom Start', title: note.title, body: note.text, time: note.time, error: note.kind === 'error' }));
+  const ours = (panel.notifications || []).map((note) => ({ source: 'ours', id: String(note.time), app: 'Graphite', title: note.title, body: note.text, time: note.time, error: note.kind === 'error' }));
   const theirs = windowsNotifications.map((note) => ({ source: 'windows', ...note, id: String(note.id) }));
   return [...ours, ...theirs].sort((first, second) => second.time - first.time);
 }

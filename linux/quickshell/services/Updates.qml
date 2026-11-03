@@ -1,13 +1,13 @@
 pragma Singleton
 // Updates without a terminal. Every few hours (and when the Updates page asks) it counts
 // what's waiting: Arch packages (checkupdates, which never touches the real package list),
-// Flatpak apps, and Graphite Desk's own commits; a notification says so once. Arch's news
+// Flatpak apps, and Graphite's own commits; a notification says so once. Arch's news
 // since the last update is listed, as some updates need a step by hand.
 //
 // install(): the system half runs as root in graphite-update.service (an administrator may
 // start it without a password; its progress is /var/lib/graphite/update.json), the person's
-// half (system/user-update.sh: their apps and Graphite Desk) alongside it, apart from the shell
-// (its progress is ~/.local/state/graphite/user-update), as an update of Graphite Desk reloads
+// half (system/user-update.sh: their apps and Graphite) alongside it, apart from the shell
+// (its progress is ~/.local/state/graphite/user-update), as an update of Graphite reloads
 // the shell part way through; both are followed again after a reload. A new kernel asks
 // for a restart. When Graphite's system parts (linux/system) have changed in an update,
 // finishSystemParts() puts them in place, after the administrator's password.
@@ -90,7 +90,7 @@ Singleton {
                 root.lastChecked = Date.now();
                 root.checking = false;
                 if (root.total > 0 && root.total !== before && !root.running) {
-                    Quickshell.execDetached(["notify-send", "-a", "Graphite Desk", "-i", "software-update-available",
+                    Quickshell.execDetached(["notify-send", "-a", "Graphite", "-i", "software-update-available",
                         "Updates available", root.total + (root.total === 1 ? " update is" : " updates are") + " available. Open Updates in the Control Panel to install."]);
                 }
             }
@@ -197,7 +197,7 @@ Singleton {
         }
     }
 
-    // Graphite Desk's own new files reload the shell by themselves.
+    // Graphite's own new files reload the shell by themselves.
     function finished() {
         lastUpdated = Math.max(lastUpdated, Date.now() / 1000);
         check();

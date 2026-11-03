@@ -1,4 +1,4 @@
-// Graphite Desk's addition to hyprbars (titlebars/build.sh compiles it in): a bar only for the
+// Graphite's addition to hyprbars (titlebars/build.sh compiles it in): a bar only for the
 // windows that leave their title bar to the desktop, which Hyprland knows from what each app
 // agreed through the decoration protocols. Apps that draw their own (GTK 4, Firefox, Electron
 // with its own frame) keep theirs, without a second bar over it.

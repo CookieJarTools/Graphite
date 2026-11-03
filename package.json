@@ -1,6 +1,6 @@
 {
-  "name": "custom-start",
-  "productName": "Custom Start",
+  "name": "graphite",
+  "productName": "Graphite",
   "version": "0.1.0",
   "description": "Custom Windows start menu replacement",
   "main": "main.js",
@@ -26,7 +26,7 @@
   },
   "build": {
     "appId": "dev.cookie.customstart",
-    "productName": "Custom Start",
+    "productName": "Graphite",
     "directories": {
       "output": "release",
       "buildResources": "build"

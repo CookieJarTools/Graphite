@@ -20,7 +20,16 @@ const LOGIN_START = process.argv.includes('--login');
 const PANIC_SHORTCUT = 'Control+Alt+Shift+Q';
 const INTRO_MILLISECONDS = 1700; // duration-intro plus a frame or two of settle
 
-if (DEV) app.setPath('userData', path.join(app.getPath('appData'), 'custom-start-dev'));
+if (DEV) app.setPath('userData', path.join(app.getPath('appData'), 'graphite-dev'));
+// Graphite was called Custom Start, and its settings folder is named after the app: carry the
+// old one over the first time, so pins, recents and settings survive the rename.
+for (const [old, now] of [['Custom Start', 'Graphite'], ['custom-start-dev', 'graphite-dev']]) {
+  const from = path.join(app.getPath('appData'), old);
+  const to = path.join(app.getPath('appData'), now);
+  if (fs.existsSync(from) && !fs.existsSync(to)) {
+    try { fs.renameSync(from, to); } catch (error) { console.error(`Could not move ${old} settings:`, error.message); }
+  }
+}
 // `--test-profile=<dir>` (dev only): a throwaway settings folder for the end-to-end tests,
 // so they never touch your pins or recents, and run alongside your own dev instance.
 const TEST_PROFILE = DEV ? (process.argv.find((arg) => arg.startsWith('--test-profile=')) || '').slice('--test-profile='.length) : '';
@@ -154,7 +163,7 @@ function createDevWindow() {
   win = new BrowserWindow({
     width: 1100,
     height: 800,
-    title: 'Custom Start (dev)',
+    title: 'Graphite (dev)',
     backgroundColor: '#141516',
     autoHideMenuBar: true,
     webPreferences: {
@@ -1993,13 +2002,15 @@ function refreshRecentItems() {
 // Windows holds "Run" entries back until the desktop has settled (about ten seconds), while
 // a sign-in task starts alongside Explorer. The task runs at normal priority (tasks default
 // to below normal) and without the default three-day time limit.
-const LOGIN_TASK_NAME = 'Custom Start';
+const LOGIN_TASK_NAME = 'Graphite';
+const OLD_LOGIN_TASK_NAME = 'Custom Start'; // before the rename; removed so it can't start a second copy
 
 function applyLoginItem() {
   if (DEV) return;
   const args = app.isPackaged ? ['--login'] : [path.resolve(__dirname), '--login'];
   app.setLoginItemSettings({ openAtLogin: false, path: process.execPath, args }); // the old "Run" entry
   setLoginTask(Boolean(settings.runAtStartup), args);
+  execFile('schtasks.exe', ['/Delete', '/TN', OLD_LOGIN_TASK_NAME, '/F'], { windowsHide: true }, () => {});
   removeDevLoginItem();
 }
 
@@ -2012,7 +2023,7 @@ function setLoginTask(enabled, args) {
     }
     const xml = loginTaskXml(args);
     if (!missing && existing.includes(escapeXml(process.execPath)) && existing.includes('<Priority>4</Priority>')) return;
-    const file = path.join(os.tmpdir(), 'custom-start-login-task.xml');
+    const file = path.join(os.tmpdir(), 'graphite-login-task.xml');
     fs.writeFileSync(file, '\ufeff' + xml, 'utf16le'); // schtasks reads task XML as UTF-16
     schtasks(['/Create', '/TN', LOGIN_TASK_NAME, '/XML', file, '/F'], (error) => {
       fs.rm(file, () => {});
@@ -2030,7 +2041,7 @@ function loginTaskXml(args) {
   const argumentText = escapeXml(args.map((arg) => (/\s/.test(arg) ? `"${arg}"` : arg)).join(' '));
   return `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>Starts Custom Start when you sign in.</Description></RegistrationInfo>
+  <RegistrationInfo><Description>Starts Graphite when you sign in.</Description></RegistrationInfo>
   <Triggers><LogonTrigger><Enabled>true</Enabled><UserId>${user}</UserId></LogonTrigger></Triggers>
   <Principals><Principal id="Author"><UserId>${user}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
   <Settings>
@@ -2067,7 +2078,7 @@ function removeDevLoginItem() {
 
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png')));
-  tray.setToolTip(DEV ? 'Custom Start (dev)' : 'Custom Start');
+  tray.setToolTip(DEV ? 'Graphite (dev)' : 'Graphite');
   const menu = Menu.buildFromTemplate([
     { label: 'Open menu', click: () => showMenu() },
     { label: 'Open Files', click: () => openFiles() },
@@ -2264,7 +2275,7 @@ const POWER_COMMANDS = { 'Lock': 'lock', 'Sleep': 'sleep', 'Sign out': 'signout'
 ipcMain.on('command', (e, name) => {
   if (POWER_COMMANDS[name]) return runPower(POWER_COMMANDS[name]);
   finishedWith(e);
-  if (name === 'Custom Start settings') return openSettingsWindow();
+  if (name === 'Graphite settings') return openSettingsWindow();
   if (SETTINGS_PAGES[name]) return shell.openExternal(SETTINGS_PAGES[name]);
   if (name === 'Task Manager') return spawn('taskmgr.exe', [], { detached: true }).unref();
   if (name === 'Toggle dark mode') return toggleDarkMode();

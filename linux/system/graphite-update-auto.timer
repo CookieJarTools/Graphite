@@ -1,5 +1,5 @@
 [Unit]
-Description=Graphite Desk automatic updates, once a day
+Description=Graphite automatic updates, once a day
 
 [Timer]
 OnBootSec=20min

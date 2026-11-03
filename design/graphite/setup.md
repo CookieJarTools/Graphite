@@ -1,6 +1,6 @@
 # Setup
 
-The order to apply Graphite Desk on Windows 11. Make a restore point first; every step is reversible.
+The order to apply Graphite on Windows 11. Make a restore point first; every step is reversible.
 
 ## 1. Strip Windows back
 
@@ -303,7 +303,7 @@ Add to `schemes` in settings.json; font `JetBrains Mono` or `Cascadia Code` 11pt
 
 ```json
 {
-  "name": "Graphite Desk",
+  "name": "Graphite",
   "background": "#232427",
   "foreground": "#EDEDEC",
   "cursorColor": "#E3AB4F",

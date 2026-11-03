@@ -25,7 +25,7 @@ picture() {
 
 saved() {
     wl-copy --type image/png < "$1"
-    notify-send -a "Graphite Desk" -i "$1" -h string:sound-name:screen-capture "Screenshot saved" "Saved to Pictures > Screenshots and copied, so you can paste it."
+    notify-send -a "Graphite" -i "$1" -h string:sound-name:screen-capture "Screenshot saved" "Saved to Pictures > Screenshots and copied, so you can paste it."
 }
 
 case "${1:-screen}" in
@@ -69,7 +69,7 @@ case "${1:-screen}" in
         ;;
     recorded)
         [ -s "$2" ] || exit 0
-        notify-send -a "Graphite Desk" -i video-x-generic -h string:sound-name:completion-success "Recording saved" "Saved to Videos > Screen Recordings: $(basename "$2")"
+        notify-send -a "Graphite" -i video-x-generic -h string:sound-name:completion-success "Recording saved" "Saved to Videos > Screen Recordings: $(basename "$2")"
         ;;
     area)
         area="$(slurp -d)" || exit 0 # Escape: no screenshot

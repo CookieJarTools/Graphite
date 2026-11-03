@@ -218,7 +218,7 @@ install() {
     folder="$cache/downloads"
     mkdir -p "$folder"
     target="$folder/$(basename "$file")"
-    notify-send -a "Graphite Desk" -i system-software-install "Downloading $name..." "$file from $owner on GitHub" 2>/dev/null
+    notify-send -a "Graphite" -i system-software-install "Downloading $name..." "$file from $owner on GitHub" 2>/dev/null
     curl -sS -L --fail --max-time 1800 -o "$target" "$url" 2>/dev/null || { say "The download from GitHub didn't finish. Check your internet connection."; exit 1; }
     # A page in place of the file (GitHub down, a link gone): nothing to install.
     if [ ! -s "$target" ] || file -b --mime-type "$target" | grep -q -E '^text/(html|plain)$'; then

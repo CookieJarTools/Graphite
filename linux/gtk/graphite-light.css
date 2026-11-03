@@ -1,4 +1,4 @@
-/* Graphite Desk (light), generated from design/graphite-desk/tokens.json by scripts/gen-gtk-theme.js.
+/* Graphite (light), generated from design/graphite/tokens.json by scripts/gen-gtk-theme.js.
    Do not edit: change the tokens and run `npm run build:gtk-theme`. */
 @define-color accent_color #83550d;
 @define-color accent_bg_color #83550d;

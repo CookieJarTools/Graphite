@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Updates everything, in a terminal: Arch Linux's packages (asks for the password), the Flatpak
-# apps, and Graphite Desk itself (a git pull of its repository; local changes are kept, and a
+# apps, and Graphite itself (a git pull of its repository; local changes are kept, and a
 # pull that would clash with them is skipped). The shell reloads by itself afterwards.
 # Graphite's Settings ("Update everything") and the launcher's "Update everything" run it.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -16,12 +16,12 @@ if command -v flatpak >/dev/null; then
 fi
 
 if [ -d "$repo/.git" ]; then
-    say "Updating Graphite Desk..."
+    say "Updating Graphite..."
     if [ -n "$(git -C "$repo" status --porcelain)" ]; then
         echo "You have changes of your own in $repo; they stay, and pulling waits until they are committed."
         git -C "$repo" status --short
     else
-        git -C "$repo" pull --ff-only || echo "Graphite Desk couldn't update (offline, or signed out of GitHub)."
+        git -C "$repo" pull --ff-only || echo "Graphite couldn't update (offline, or signed out of GitHub)."
     fi
     qs -c graphite ipc call settings reload >/dev/null 2>&1 || true
 fi

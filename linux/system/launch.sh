@@ -32,5 +32,5 @@ reason="$(sed -n '/^== /h; /^== /!H; ${x; p}' "$log" | grep -iE 'error|fail|cann
 [ "${reason#== }" != "$reason" ] && reason=""
 reason="${reason:0:200}"
 printf '%s\t%s\t%s\n' "$(date +%s)" "$name" "${reason:-It closed straight away (code $code).}" >> "$logs/failures"
-notify-send -a "Graphite Desk" -i dialog-warning "$name didn't open" "${reason:-It closed straight away.} Open Troubleshoot in the Control Panel for help." 2>/dev/null
+notify-send -a "Graphite" -i dialog-warning "$name didn't open" "${reason:-It closed straight away.} Open Troubleshoot in the Control Panel for help." 2>/dev/null
 exit 0

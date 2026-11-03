@@ -1,4 +1,4 @@
-// Turns the Graphite Desk tokens.json into GTK colours for the Linux desktop's apps: libadwaita's
+// Turns the Graphite tokens.json into GTK colours for the Linux desktop's apps: libadwaita's
 // named colours (Files, and every GTK 4 app) and the same for GTK 3, in a dark and a light file
 // (linux/gtk/graphite-dark.css, graphite-light.css). The shell links ~/.config/gtk-4.0/gtk.css
 // and ~/.config/gtk-3.0/gtk.css to the one its Dark mode setting picks.
@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const tokens = JSON.parse(fs.readFileSync(path.join(root, 'design', 'graphite-desk', 'tokens.json'), 'utf8'));
+const tokens = JSON.parse(fs.readFileSync(path.join(root, 'design', 'graphite', 'tokens.json'), 'utf8'));
 const targetDir = path.join(root, 'linux', 'gtk');
 
 const colour = (name, scheme) => {
@@ -68,7 +68,7 @@ function css(scheme) {
     insensitive_fg_color: c('ink-muted'),
   };
   lines.push(...Object.entries(gtk3).map(([name, value]) => `@define-color ${name} ${value};`));
-  return `/* Graphite Desk (${scheme}), generated from design/graphite-desk/tokens.json by scripts/gen-gtk-theme.js.
+  return `/* Graphite (${scheme}), generated from design/graphite/tokens.json by scripts/gen-gtk-theme.js.
    Do not edit: change the tokens and run \`npm run build:gtk-theme\`. */
 ${lines.join('\n')}
 

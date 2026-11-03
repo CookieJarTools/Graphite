@@ -4,9 +4,9 @@
 <!-- The Control Panel's administrator changes (graphite-admin): an administrator's password,
      remembered for a few minutes. -->
 <policyconfig>
-  <vendor>Graphite Desk</vendor>
+  <vendor>Graphite</vendor>
   <action id="org.graphite.admin">
-    <description>Change Graphite Desk's system settings</description>
+    <description>Change Graphite's system settings</description>
     <message>This changes something for everyone on this computer.</message>
     <icon_name>preferences-system</icon_name>
     <defaults>

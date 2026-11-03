@@ -1,5 +1,5 @@
 <#
-Creates the Graphite Desk test VM in VirtualBox, installs Arch Linux into it unattended, and
+Creates the Graphite test VM in VirtualBox, installs Arch Linux into it unattended, and
 starts it into the desktop.
 
   powershell -ExecutionPolicy Bypass -File linux\vm\make-vm.ps1
@@ -20,7 +20,7 @@ $here = $PSScriptRoot
 $repo = (Resolve-Path "$here\..\..").Path
 
 $userName = 'graphite'
-$vmName = 'Graphite Desk (Arch)'
+$vmName = 'Graphite (Arch)'
 $installMinutes = 60 # how long to wait for the install before giving up
 
 # ---------- VirtualBox ----------
@@ -73,7 +73,7 @@ $hash = (& $openssl passwd -6 $password).Trim()
 
 if (-not $DiscOnly) {
     Set-Content -Path "$here\credentials.txt" -Encoding ascii -Value @(
-        'The Graphite Desk test VM (made by make-vm.ps1). Kept out of git.',
+        'The Graphite test VM (made by make-vm.ps1). Kept out of git.',
         "user:     $userName",
         "password: $password",
         'It signs in by itself; the password is for sudo.'

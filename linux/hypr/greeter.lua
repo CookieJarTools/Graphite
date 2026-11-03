@@ -3,7 +3,7 @@
 -- the installer). When someone signs in, the greeter hands over to their own desktop and this
 -- Hyprland leaves with it.
 
--- Where Graphite Desk lives: the repository in /opt/graphite-desk on an installed machine, the
+-- Where Graphite lives: the repository in /opt/graphite-desk on an installed machine, the
 -- shared checkout in the test VM.
 local home = "/opt/graphite-desk/linux"
 if not io.open(home .. "/quickshell/greeter.qml") then home = "/mnt/StartMenu/linux" end

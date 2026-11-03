@@ -1,4 +1,4 @@
-# Graphite Desk: a Size column in Files (Nautilus) that gives folders their size too, as the
+# Graphite: a Size column in Files (Nautilus) that gives folders their size too, as the
 # space everything in them takes, where Files itself shows only how many items a folder holds;
 # a drive (one connected, or the links in the Drives place: drives.sh) shows the space left on
 # it, with a bar.

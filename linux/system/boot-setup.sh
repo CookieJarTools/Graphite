@@ -51,7 +51,7 @@ fi
 # loglevel=0: nothing from the kernel over the logo, not even its emergency notices, which some
 # firmware sets off at every start (AMD X570 boards: "No irq handler for 1.55", a line for each
 # processor core, on screen for seconds until the splash). That would hide a crash at start-up
-# too, so the boot menu (hold Space as the computer starts) has "Graphite Desk (start-up
+# too, so the boot menu (hold Space as the computer starts) has "Graphite (start-up
 # messages)", the same start with everything shown.
 quiet="quiet splash loglevel=0 rd.udev.log_level=3 systemd.show_status=auto vt.global_cursor_default=0"
 graphics=""
@@ -64,7 +64,7 @@ for entry in /boot/loader/entries/*.conf; do
 done
 main=/boot/loader/entries/graphite.conf
 if [ -f "$main" ]; then
-    sed -e 's/^title .*/title Graphite Desk (start-up messages)/' \
+    sed -e 's/^title .*/title Graphite (start-up messages)/' \
         -e "s|^options .*|options $(where "$main")${graphics# }|" "$main" > /boot/loader/entries/graphite-messages.conf
 fi
 
@@ -72,7 +72,7 @@ fi
 
 mkdir -p /etc/systemd/system/greetd.service.d
 cat > /etc/systemd/system/greetd.service.d/graphite.conf <<'UNIT'
-# Graphite Desk (system/boot-setup.sh): the login screen takes over from the start-up splash.
+# Graphite (system/boot-setup.sh): the login screen takes over from the start-up splash.
 [Unit]
 After=plymouth-quit-wait.service systemd-user-sessions.service
 UNIT

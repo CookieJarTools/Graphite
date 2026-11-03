@@ -1,6 +1,6 @@
 // Control Panel: Drives. Every drive and USB stick, its parts and how full they are: open,
 // connect or disconnect them, eject a USB stick, format a part or erase a whole drive. The
-// drive Graphite Desk runs from is shown but can't be formatted or erased. A Windows dynamic
+// drive Graphite runs from is shown but can't be formatted or erased. A Windows dynamic
 // disk offers to be opened, then shows its volumes like partitions, or to become a basic disk.
 import QtQuick
 import QtQuick.Layouts

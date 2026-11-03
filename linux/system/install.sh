@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Puts Graphite Desk's system parts in place (as root): the Control Panel's administrator
+# Puts Graphite's system parts in place (as root): the Control Panel's administrator
 # helper and the system update, root-owned in /usr/local/lib/graphite (so the copy in
 # /opt/graphite-desk, which its owner can edit, never runs as root by itself), their systemd
 # units (and the one opening Windows dynamic disks), the polkit rules, the hard drives'

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The Graphite Desk installer: puts Arch Linux with Graphite Desk on this computer. The USB
+# The Graphite installer: puts Arch Linux with Graphite on this computer. The USB
 # stick opens its graphical front end (quickshell/installer.qml), which asks everything in a
 # few friendly screens and runs this with the answers; without a screen it asks in plain text
 # screens itself (dialog): the network (Wi-Fi, when there is no cable), the disk to use (all of
@@ -7,7 +7,7 @@
 # time zone and keyboard, and whether to set up gaming. Then it installs and restarts into
 # Graphite's login screen.
 #
-# It runs from the Graphite Desk USB stick (build-iso.sh makes it); Graphite Desk's
+# It runs from the Graphite USB stick (build-iso.sh makes it); Graphite's
 # repository (with its git history) is on the stick in /usr/share/graphite-desk and goes to
 # /opt/graphite-desk, owned by the person: they can change it, pull updates and push, and the
 # login screen can still read it. The Wi-Fi joined on the stick is kept for the new system.
@@ -27,8 +27,8 @@ source_dir=/usr/share/graphite-desk
 target=/mnt
 log=/tmp/graphite-install.log
 export DIALOGRC=/usr/share/graphite-desk/linux/installer/dialogrc
-title="Graphite Desk"
-backtitle="Graphite Desk installer"
+title="Graphite"
+backtitle="Graphite installer"
 
 lines=false
 [ "${GRAPHITE_PROGRESS:-}" = lines ] && lines=true
@@ -106,9 +106,9 @@ if [ -z "${DISK:-}" ]; then
         items+=("$name" "$note")
     done < <(lsblk -dpno NAME,SIZE,MODEL -e 7,11 | awk '{name=$1; size=$2; $1=$2=""; sub(/^ +/, ""); print name, size, $0}')
     [ ${#items[@]} -gt 0 ] || fail "No disk was found to install on."
-    DISK="$(ask --menu "Which disk should Graphite Desk go on?\n\nEverything on it will be erased." 16 72 6 "${items[@]}")" || exit 1
+    DISK="$(ask --menu "Which disk should Graphite go on?\n\nEverything on it will be erased." 16 72 6 "${items[@]}")" || exit 1
     disk_note="$(lsblk -dno SIZE,MODEL "$DISK" | xargs)"
-    ask --defaultno --yesno "Everything on this disk will be erased:\n\n    $DISK  ($disk_note)\n\nThis includes Windows and all your files. It can't be undone.\n\nErase it and install Graphite Desk?" 14 64 || exit 1
+    ask --defaultno --yesno "Everything on this disk will be erased:\n\n    $DISK  ($disk_note)\n\nThis includes Windows and all your files. It can't be undone.\n\nErase it and install Graphite?" 14 64 || exit 1
     confirm="$(ask --inputbox "To confirm, type ERASE in capitals:" 9 64)" || exit 1
     [ "$confirm" = "ERASE" ] || { say "Nothing was erased. Restart to start again."; exit 1; }
 fi
@@ -246,7 +246,7 @@ install_steps() {
         if [ "$gpu" = "#nvidia" ]; then nvidia=true; else packages+=("$gpu"); fi
     done < <(bash "$source_dir/linux/installer/gpu-packages.sh")
 
-    step 10 "Downloading and installing Arch Linux and Graphite Desk..."
+    step 10 "Downloading and installing Arch Linux and Graphite..."
     # pacstrap's own progress, as the bar between 10 and 75.
     pacstrap -K "$target" "${packages[@]}" 2>&1 | tee -a "$log" | grep --line-buffered -E '^\(\s*[0-9]+/[0-9]+\) installing' | \
         while read -r line; do
@@ -302,7 +302,7 @@ useradd -m -G wheel,video,input -c "$FULL_NAME" -s /bin/bash "$USER_NAME"
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
 
-# Start-up: systemd-boot, straight into Graphite Desk (boot-setup.sh below makes it quiet).
+# Start-up: systemd-boot, straight into Graphite (boot-setup.sh below makes it quiet).
 bootctl install --esp-path=/boot
 cat > /boot/loader/loader.conf <<LOADER
 default graphite.conf
@@ -310,7 +310,7 @@ timeout 0
 editor no
 LOADER
 cat > /boot/loader/entries/graphite.conf <<ENTRY
-title Graphite Desk
+title Graphite
 linux /vmlinuz-linux
 ${microcode:+initrd /$microcode.img}
 initrd /initramfs-linux.img
@@ -417,7 +417,7 @@ rm -f /tmp/graphite-failed /tmp/graphite-gaming-failed /tmp/graphite-apps-failed
 if $lines; then
     install_steps
 else
-    install_steps | dialog --backtitle "$backtitle" --title "Installing Graphite Desk" --gauge "Starting..." 10 72 0
+    install_steps | dialog --backtitle "$backtitle" --title "Installing Graphite" --gauge "Starting..." 10 72 0
 fi
 
 if [ -f /tmp/graphite-failed ]; then
@@ -437,7 +437,7 @@ if $lines; then
     [ -f /tmp/graphite-apps-failed ] && echo "NOTE apps $(tr '\n' ' ' < /tmp/graphite-apps-failed)"
     echo "DONE"
 elif [ -z "${GRAPHITE_ANSWERS:-}" ]; then
-    say "Graphite Desk is installed.$gaming_note\n\nPress Enter to restart. When the screen goes dark, remove the USB stick. Then sign in with the password you chose." 13
+    say "Graphite is installed.$gaming_note\n\nPress Enter to restart. When the screen goes dark, remove the USB stick. Then sign in with the password you chose." 13
     # Everything is written and unmounted: no need to wait for the USB stick's services to stop
     # (which hangs when the stick is pulled out early).
     reboot -f

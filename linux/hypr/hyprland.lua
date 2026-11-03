@@ -1,4 +1,4 @@
--- Graphite Desk on Hyprland (0.55+, Lua config). linux/setup.sh links this file to
+-- Graphite on Hyprland (0.55+, Lua config). linux/setup.sh links this file to
 -- ~/.config/hypr/hyprland.lua; Hyprland reloads it on save.
 --
 -- The shell (Quickshell, linux/quickshell) draws the desktop, the bar, the launcher, Alt+Tab
@@ -109,7 +109,7 @@ if keyboardFile then
     keyboardFile:close()
 end
 
--- ---------- look: Graphite (design/graphite-desk/tokens.json) ----------
+-- ---------- look: Graphite (design/graphite/tokens.json) ----------
 
 local accent = "0xffe3ab4f"        -- accent
 local edge = "0xff35363a"          -- line

@@ -1,4 +1,4 @@
-// Graphite Desk's fourth addition to hyprbars: font settings changed since Hyprland started (as
+// Graphite's fourth addition to hyprbars: font settings changed since Hyprland started (as
 // fonts/fonts.conf's grey smoothing for Hyprland's own text) apply when the plugin loads, not
 // only at the next sign-in. Hyprland draws text with Pango's default font map, so it's told
 // that fontconfig's settings changed, the way GTK does it when they do.

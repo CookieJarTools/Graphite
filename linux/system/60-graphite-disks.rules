@@ -1,4 +1,4 @@
-# Graphite Desk: spinning hard drives use the BFQ scheduler, which keeps apps opening quickly
+# Graphite: spinning hard drives use the BFQ scheduler, which keeps apps opening quickly
 # while something else is reading or writing (updates, or warm.sh reading apps in ahead), and
 # gives warm.sh only the disk's spare time. Solid-state drives keep the kernel's choice.
 ACTION=="add|change", KERNEL=="sd[a-z]*|hd[a-z]*", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"

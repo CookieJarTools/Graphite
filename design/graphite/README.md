@@ -1,4 +1,4 @@
-# Graphite Desk
+# Graphite
 
 A minimal Windows 11 shell: soft graphite cards on a dark backdrop, no desktop, search first. Every window reads like a calm card: a thin title strip, generous inset content, quiet ghost actions and a keyboard hint at the foot.
 
@@ -91,7 +91,7 @@ Linear-style line icons: 16px on a 16px grid, 1.5px stroke, round caps and joins
 | Toasts | Native notifications, restyled with Windhawk's notification styler mod where available; Focus mode for quiet hours |
 | Files | Files (files.community): tabs, dual pane, Mica backdrop, custom theme. Native Explorer as fallback |
 | Intro, Home, search scrim | `GraphiteShell.ahk` (in `setup.md`) |
-| Terminal | Windows Terminal with the Graphite Desk scheme |
+| Terminal | Windows Terminal with the Graphite scheme |
 
 ## Usage rules
 

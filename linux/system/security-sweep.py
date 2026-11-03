@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Graphite Desk's security sweep, for the Control Panel's Privacy & security page
+# Graphite's security sweep, for the Control Panel's Privacy & security page
 # (services/Security.qml), which runs it every day or week and shows what it found. It runs as
 # the person and changes nothing: each check says in plain words what it found, with the
 # details, its state ("ok"; "look", worth a look; "act", needs doing; "note", for knowing), and

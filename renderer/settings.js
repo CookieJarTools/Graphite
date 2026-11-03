@@ -9,7 +9,7 @@ function escapeHtml(text) {
 }
 
 function render(model) {
-  document.getElementById('version').textContent = `Custom Start ${model.version}${model.dev ? ' (dev)' : ''}`;
+  document.getElementById('version').textContent = `Graphite ${model.version}${model.dev ? ' (dev)' : ''}`;
   const focusedId = document.activeElement && document.activeElement.dataset.id;
   sectionsElement.innerHTML = model.sections.map((section) => `
     <section class="section">

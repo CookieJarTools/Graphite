@@ -53,7 +53,7 @@ function show(message) {
   toast.className = 'card arriving';
   const actions = (message.actions || []).slice(0, 2);
   toast.innerHTML =
-    `<div class="strip">${glyphs.shell}<span class="app">${escapeHtml(message.app || 'Graphite Desk')}</span>`
+    `<div class="strip">${glyphs.shell}<span class="app">${escapeHtml(message.app || 'Graphite')}</span>`
     + `<span class="time">now</span><button class="dismiss" aria-label="Dismiss">${glyphs.close}</button></div>`
     + `<div class="body"><p class="title">${message.kind === 'error' ? `<span class="bad">${glyphs.danger}</span>` : ''}${escapeHtml(message.title)}</p>`
     + (message.text ? `<p class="text">${escapeHtml(message.text)}</p>` : '') + '</div>'

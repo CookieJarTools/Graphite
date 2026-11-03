@@ -62,7 +62,7 @@ Singleton {
         onTriggered: {
             if (root.toAct + root.toLook === 0) return;
             const count = root.toAct + root.toLook;
-            Quickshell.execDetached(["notify-send", "-a", "Graphite Desk", "-i", root.toAct ? "security-low" : "security-medium",
+            Quickshell.execDetached(["notify-send", "-a", "Graphite", "-i", root.toAct ? "security-low" : "security-medium",
                 "Security sweep: " + count + (count === 1 ? " thing" : " things") + (root.toAct ? " to do" : " to look at"),
                 "See Control Panel > Privacy & security."]);
         }

@@ -22,7 +22,7 @@ the script takes both discs out and starts it into the desktop. The install's lo
 To see the VM's screen from Windows (for scripts and checks):
 
 ```powershell
-& "$env:ProgramFiles\Oracle\VirtualBox\VBoxManage.exe" controlvm "Graphite Desk (Arch)" screenshotpng shot.png
+& "$env:ProgramFiles\Oracle\VirtualBox\VBoxManage.exe" controlvm "Graphite (Arch)" screenshotpng shot.png
 ```
 
 VirtualBox's screenshot can miss what the desktop draws with 3D; from inside, the scripts
@@ -30,7 +30,7 @@ here write into this folder through the share. Run them with guest control (the 
 password from `credentials.txt` in a file of its own):
 
 ```powershell
-& "$env:ProgramFiles\Oracle\VirtualBox\VBoxManage.exe" guestcontrol "Graphite Desk (Arch)" run --username graphite --passwordfile pw.txt --exe /bin/bash -- -lc "bash /mnt/StartMenu/linux/vm/look.sh"
+& "$env:ProgramFiles\Oracle\VirtualBox\VBoxManage.exe" guestcontrol "Graphite (Arch)" run --username graphite --passwordfile pw.txt --exe /bin/bash -- -lc "bash /mnt/StartMenu/linux/vm/look.sh"
 ```
 
 | Script | |
@@ -53,7 +53,7 @@ but WSL 2 and Docker stop working until it is back on:
    (`bcdedit /set hypervisorlaunchtype auto` and a restart bring it back.)
 
 More cores help too, with the VM switched off:
-`VBoxManage modifyvm "Graphite Desk (Arch)" --cpus 6`.
+`VBoxManage modifyvm "Graphite (Arch)" --cpus 6`.
 
 Everything here except the scripts and this file stays out of git: the ISOs, the VM and its
 disk, `credentials.txt`.

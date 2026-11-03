@@ -36,7 +36,7 @@ ColumnLayout {
         }
 
         CpRow {
-            label: "Graphite Desk"
+            label: "Graphite"
             hint: "Version " + (Machine.about.version || "?") + " on Arch Linux (kernel " + (Machine.about.kernel || "?") + ")"
         }
     }

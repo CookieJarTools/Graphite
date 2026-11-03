@@ -1,4 +1,4 @@
-// Graphite Desk, generated from design/graphite-desk/tokens.json by scripts/gen-qml-theme.js.
+// Graphite, generated from design/graphite/tokens.json by scripts/gen-qml-theme.js.
 // Do not edit: change the tokens and run `npm run build:qml-theme`.
 pragma Singleton
 

@@ -1,6 +1,6 @@
-# The Graphite Desk installer
+# The Graphite installer
 
-A USB stick that installs Arch Linux with Graphite Desk on a computer, in a few friendly
+A USB stick that installs Arch Linux with Graphite on a computer, in a few friendly
 screens (Region, Keyboard, Network, Disk, Account, Privacy, Look and feel, Apps), then sets
 it all up while you watch. Without working graphics it falls back to plain text screens.
 **It erases the whole disk you choose** (Windows included), so copy anything you want to keep
@@ -9,7 +9,7 @@ first.
 ## Making the USB stick
 
 1. Build the image (on Arch, or in the test VM): `sudo bash linux/installer/build-iso.sh <repo>`.
-   It lands in `linux/installer/out/graphite-desk-<date>-x86_64.iso` (about 1.6 GB). It holds
+   It lands in `linux/installer/out/graphite-<date>-x86_64.iso` (about 1.6 GB). It holds
    the repository as committed, so commit first (`GRAPHITE_FROM_WORKTREE=1` puts the working
    folder's changes on it too, for trying them before committing).
 2. Write it to a USB stick of 4 GB or more with [Rufus](https://rufus.ie) (choose the image,
@@ -31,7 +31,7 @@ first.
 4. Press Restart at the end; once the screen goes dark, take out the stick. The computer starts
    at Graphite's login screen.
 
-Graphite Desk lives in `/opt/graphite-desk` (the repository, owned by you): change it there,
+Graphite lives in `/opt/graphite-desk` (the repository, owned by you): change it there,
 `git pull` and `git push` as usual (sign in to GitHub first, as the repository is private), or
 use Settings, **Update everything**.
 

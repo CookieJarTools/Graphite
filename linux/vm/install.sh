@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unattended install of the Graphite Desk test VM, run in the Arch Linux live ISO by
+# Unattended install of the Graphite test VM, run in the Arch Linux live ISO by
 # cloud-init (user-data). Wipes the VM's one disk, installs Arch with Hyprland, Quickshell
 # and what the shell uses, signs the user in automatically and starts the desktop, with the
 # shell running straight from the Windows checkout (VMware shared folder "StartMenu").
@@ -15,7 +15,7 @@ source "$here/vm.env"
 log=/root/graphite-install.log
 exec > >(tee -a "$log") 2>&1
 
-echo "== Graphite Desk VM install, $(date) =="
+echo "== Graphite VM install, $(date) =="
 
 # The disk: the one fixed, non-removable disk.
 disk="$(lsblk -dpno NAME,TYPE,RM | awk '$2 == "disk" && $3 == "0" { print $1; exit }')"
@@ -123,7 +123,7 @@ default arch.conf
 timeout 0
 LOADER
 cat > /boot/loader/entries/arch.conf <<ENTRY
-title Arch Linux (Graphite Desk)
+title Arch Linux (Graphite)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 options root=PARTUUID=$ROOT_PARTUUID rw quiet
@@ -144,7 +144,7 @@ session   include   system-auth
 PAM
 fi
 
-# Graphite's login screen at start (greetd), reading Graphite Desk from the shared folder.
+# Graphite's login screen at start (greetd), reading Graphite from the shared folder.
 bash /root/greetd-setup.sh "$SHARE/linux" gb
 
 home="/home/$USER_NAME"

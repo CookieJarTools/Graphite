@@ -47,7 +47,7 @@ if (!process.argv.includes('--no-build')) {
   execSync('npm run build', { cwd: root, stdio: 'ignore' });
 }
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), 'custom-start-e2e-'));
+const work = fs.mkdtempSync(path.join(os.tmpdir(), 'graphite-e2e-'));
 const profile = path.join(work, 'profile');
 const fixture = path.join(work, 'files');
 fs.mkdirSync(path.join(fixture, 'gamma'), { recursive: true });

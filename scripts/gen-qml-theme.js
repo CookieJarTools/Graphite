@@ -1,4 +1,4 @@
-// Turns the Graphite Desk tokens.json into linux/quickshell/config/Theme.qml: a QML singleton with
+// Turns the Graphite tokens.json into linux/quickshell/config/Theme.qml: a QML singleton with
 // every colour (dark and light, following Theme.dark), sizes and spacing as numbers,
 // durations in milliseconds and easings as bezier curves for QML animations. The Linux shell
 // draws from it exactly as the Windows one draws from renderer/tokens.css.
@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const source = path.join(root, 'design', 'graphite-desk', 'tokens.json');
+const source = path.join(root, 'design', 'graphite', 'tokens.json');
 const target = path.join(root, 'linux', 'quickshell', 'config', 'Theme.qml');
 
 const tokens = JSON.parse(fs.readFileSync(source, 'utf8'));
@@ -69,7 +69,7 @@ function typeProperties() {
   return lines;
 }
 
-const qml = `// ${tokens.name}, generated from design/graphite-desk/tokens.json by scripts/gen-qml-theme.js.
+const qml = `// ${tokens.name}, generated from design/graphite/tokens.json by scripts/gen-qml-theme.js.
 // Do not edit: change the tokens and run \`npm run build:qml-theme\`.
 pragma Singleton
 

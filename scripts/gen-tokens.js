@@ -1,10 +1,10 @@
-// Turns the Graphite Desk tokens.json into renderer/tokens.css: one custom property per
+// Turns the Graphite tokens.json into renderer/tokens.css: one custom property per
 // token, dark values on :root and light values when Windows is in light app mode.
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const source = path.join(root, 'design', 'graphite-desk', 'tokens.json');
+const source = path.join(root, 'design', 'graphite', 'tokens.json');
 const target = path.join(root, 'renderer', 'tokens.css');
 
 const tokens = JSON.parse(fs.readFileSync(source, 'utf8'));
@@ -35,7 +35,7 @@ function typeEntries() {
   return [...families, ...styles];
 }
 
-let css = `/* ${tokens.name} — generated from design/graphite-desk/tokens.json by scripts/gen-tokens.js. Do not edit. */\n`;
+let css = `/* ${tokens.name} — generated from design/graphite/tokens.json by scripts/gen-tokens.js. Do not edit. */\n`;
 css += `:root {\n${lines([...colorsFor(primaryTheme), ...typeEntries(), ...otherFamilies()])}\n}\n`;
 for (const themeId of otherThemes) {
   css += `@media (prefers-color-scheme: ${themeId}) {\n  :root {\n${lines(colorsFor(themeId)).replace(/^/gm, '  ')}\n  }\n}\n`;

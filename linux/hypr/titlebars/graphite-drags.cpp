@@ -1,4 +1,4 @@
-// Graphite Desk's second addition to hyprbars, dragging windows:
+// Graphite's second addition to hyprbars, dragging windows:
 //
 // X11 apps that draw their own title bar (Steam) can be dragged by it. They ask the window
 // manager to move or resize them with _NET_WM_MOVERESIZE, which Hyprland 0.57 says it supports

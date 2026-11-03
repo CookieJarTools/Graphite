@@ -84,7 +84,7 @@ Scope {
                 "package-remove": "Uninstall " + first,
                 "flatpak-remove": "Uninstall " + app(first),
                 "clean": "Free up space",
-                "install": "Update Graphite Desk's system parts",
+                "install": "Update Graphite's system parts",
                 "dynamic-disks": "Open a Windows dynamic disk"
             })[verb] || "Change a system setting";
         }

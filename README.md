@@ -1,6 +1,6 @@
-# Custom Start (Graphite Desk)
+# Graphite
 
-A minimal Windows 11 shell built to the Graphite Desk design system: no desktop, search
+A minimal Windows 11 shell built to the Graphite design system: no desktop, search
 first, calm cards. Electron draws every surface; a small C# helper does what Chromium
 can't (keyboard hooks, window management, the shell hook, DWM previews).
 
@@ -97,7 +97,7 @@ Runs the launcher as an ordinary resizable window, without taking over your syst
   For example `npm run dev -- --tabs --alttab`. The Win-key launcher is switched on
   from the tray ("Replace Windows Start menu").
 - **Nothing else changes.** Power buttons and the dark mode command only log, no
-  startup entry is written, and settings live in `%AppData%/custom-start-dev`, so the
+  startup entry is written, and settings live in `%AppData%/graphite-dev`, so the
   installed app is untouched and both can run side by side.
 - **Previews.** The tray has Preview launcher, Preview palette, Preview Home, Play intro,
   Preview switcher and Test toast. To start on one: `npm run dev -- --preview=home`
@@ -132,9 +132,9 @@ main.js            Electron main: windows, tray, settings, IPC, helper lifecycle
 files-main.js      Files windows and their file system work
 preload.js         contextBridge API surface for every page
 renderer/          index (launcher and palette), home, switcher, tabstrip, taskbar,
-                   files, toast: HTML/CSS/JS per surface, built to design/graphite-desk
-renderer/tokens.css  Generated from design/graphite-desk/tokens.json by scripts/gen-tokens.js
-design/            The Graphite Desk design system: tokens, component specs and previews
+                   files, toast: HTML/CSS/JS per surface, built to design/graphite
+renderer/tokens.css  Generated from design/graphite/tokens.json by scripts/gen-tokens.js
+design/            The Graphite design system: tokens, component specs and previews
 helper/            WinKeyHelper: headless C# sidecar
 scripts/           gen-icon.js (tray icon), gen-tokens.js (tokens.css)
 ```
@@ -163,7 +163,7 @@ Commands and events are listed at the top of `helper/Program.cs`.
 
 ## Settings
 
-`%AppData%/Custom Start/settings.json` (dev mode: `%AppData%/custom-start-dev`): pinned apps, labels, recents, density, which
+`%AppData%/Graphite/settings.json` (dev mode: `%AppData%/graphite-dev`): pinned apps, labels, recents, density, which
 pieces are on, and the crash-recovery records (`hiddenTabs`, `nativeTaskbar`). "Run at
 startup" uses the per-user login item (HKCU Run key).
 

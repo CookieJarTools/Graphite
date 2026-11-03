@@ -1,4 +1,4 @@
-// Switcher: the Alt+Tab replacement (design/graphite-desk/components/Switcher).
+// Switcher: the Alt+Tab replacement (design/graphite/components/Switcher).
 // The main process owns the window list and the selection; this page only draws the
 // cards and reports where each preview well sits, so the helper can have DWM paint
 // the live window pictures into them.

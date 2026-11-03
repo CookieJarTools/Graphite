@@ -1,5 +1,5 @@
 //@ pragma IconTheme Papirus-Dark
-// Graphite Desk for Linux: the shell, on Hyprland. Run with `qs -c graphite` (linux/setup.sh
+// Graphite for Linux: the shell, on Hyprland. Run with `qs -c graphite` (linux/setup.sh
 // links this folder to ~/.config/quickshell/graphite). Edits load live while it runs.
 import QtQuick
 import Quickshell

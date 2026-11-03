@@ -1,4 +1,4 @@
-# Graphite Desk: Windows dynamic disks' volumes opened at start-up, so they connect like any
+# Graphite: Windows dynamic disks' volumes opened at start-up, so they connect like any
 # partition (the Control Panel's Drives page turns this on: graphite-admin dynamic-disks).
 [Unit]
 Description=Open Windows dynamic disks

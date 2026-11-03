@@ -41,7 +41,7 @@ mkdir -p "$manifests" "$applications"
 note=""
 failing="Couldn't install"
 notify() {
-    local args=(-a "Graphite Desk" -i system-software-install -p)
+    local args=(-a "Graphite" -i system-software-install -p)
     [ -n "$note" ] && args+=(-r "$note")
     note=$(notify-send "${args[@]}" "$1" "${2:-}" 2>/dev/null || true)
 }

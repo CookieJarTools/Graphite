@@ -89,7 +89,7 @@ ColumnLayout {
         CpRow {
             visible: Updates.partsChanged && !Updates.running
             glyph: "dialog-password-symbolic"
-            label: "Finish updating Graphite Desk"
+            label: "Finish updating Graphite"
             hint: "Some system files changed. Enter your password to finish."
 
             PillButton {
@@ -126,7 +126,7 @@ ColumnLayout {
             label: [
                 Updates.packages.length ? Updates.packages.length + " system" : "",
                 Updates.appCount ? Updates.appCount + " app" + (Updates.appCount === 1 ? "" : "s") : "",
-                Updates.deskCount ? "Graphite Desk" : ""
+                Updates.deskCount ? "Graphite" : ""
             ].filter(part => part).join(", ")
             hint: "All of these install together"
             opens: Updates.packages.length > 0

@@ -1,4 +1,4 @@
-// Launcher: Start and search in one panel (design/graphite-desk/components/Launcher).
+// Launcher: Start and search in one panel (design/graphite/components/Launcher).
 // home.html loads this same script in Home mode: the idle state is just the search
 // field and recent rows on the backdrop, and the panel never closes.
 
@@ -50,7 +50,7 @@ const commands = [
   { name: 'Bluetooth and devices', alias: 'bt', glyph: 'bluetooth', keys: [] },
   { name: 'Task Manager', alias: 'tm', glyph: 'activity', keys: ['Ctrl', 'Shift', 'Esc'] },
   { name: 'Toggle dark mode', alias: 'dark', glyph: 'moon', keys: [] },
-  { name: 'Custom Start settings', alias: 'cs', glyph: 'settings', keys: [] },
+  { name: 'Graphite settings', alias: 'gs', glyph: 'settings', keys: [] },
   { name: 'Lock', alias: 'lock', glyph: 'lock', keys: ['Win', 'L'] },
   { name: 'Sleep', alias: 'sleep', glyph: 'sleep', keys: [] },
   { name: 'Sign out', alias: 'out', glyph: 'signout', keys: [] },

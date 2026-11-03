@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sets up Graphite Desk on an existing Arch Linux install (a VirtualBox or VMware VM, or a real
+# Sets up Graphite on an existing Arch Linux install (a VirtualBox or VMware VM, or a real
 # machine): installs Hyprland, Quickshell and what the shell uses, starts the services, and
 # links the configs to this checkout, so the shell runs straight from the repo. Run it as your
 # normal user (it asks for sudo), from the checkout, for example in a VM's shared folder:
@@ -91,5 +91,5 @@ Done. Log in on the console and start the desktop with:
     start-hyprland
 
 Super opens the launcher, Alt+Tab switches windows, Super+Enter opens a terminal.
-Try a notification with:  notify-send "Hello" "From Graphite Desk"
+Try a notification with:  notify-send "Hello" "From Graphite"
 DONE

@@ -1,4 +1,4 @@
-// Files: the file manager from the Explorer design (design/graphite-desk/components/Explorer).
+// Files: the file manager from the Explorer design (design/graphite/components/Explorer).
 // Main-process side: one frameless window per Files instance, and the file system work
 // the renderer asks for. Deleting always goes to the Recycle Bin.
 

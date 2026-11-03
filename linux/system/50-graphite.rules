@@ -1,4 +1,4 @@
-// Graphite Desk: what an administrator sitting at the computer may do without typing their
+// Graphite: what an administrator sitting at the computer may do without typing their
 // password, as on Windows: install updates, set the time zone, the clock, the computer's name
 // and the keyboard, and connect the computer's own drives.
 polkit.addRule(function (action, subject) {

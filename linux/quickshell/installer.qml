@@ -1,5 +1,5 @@
 //@ pragma IconTheme Papirus-Dark
-// The Graphite Desk installer's screens, on the USB stick (installer/gui.lua runs it in its own
+// The Graphite installer's screens, on the USB stick (installer/gui.lua runs it in its own
 // Hyprland as the stick's "live" user): a sidebar of steps (how far along, about how long is left) and a card for each step: Welcome, Region, Keyboard, Network, Disk, Account,
 // Privacy, Look and feel, Apps, then Installing (a checklist, the bar, tips) and "You're all
 // set". Enter continues.
@@ -303,7 +303,7 @@ ShellRoot {
 
     readonly property var stages: [
         { id: "disk", name: "Preparing the disk" },
-        { id: "system", name: "Installing Graphite Desk" },
+        { id: "system", name: "Installing Graphite" },
         { id: "account", name: "Setting up your account" },
         { id: "security", name: "Securing this PC" },
         { id: "games", name: "Setting up for games", only: () => root.gaming || root.apps.includes("com.valvesoftware.Steam") },
@@ -453,7 +453,7 @@ ShellRoot {
                 ColumnLayout {
                     spacing: 0
                     UiText {
-                        text: "Graphite Desk"
+                        text: "Graphite"
                         font.weight: Font.DemiBold
                     }
                     UiText {
@@ -615,7 +615,7 @@ ShellRoot {
 
                         UiText {
                             Layout.fillWidth: true
-                            text: ["", "Where are you?", "Which keyboard do you have?", "Connect to a network", "Where should Graphite Desk go?", "Create your account", "Privacy and security", "Choose a look", "Install apps", root.failed ? "Something went wrong" : "Installing"][root.page] || ""
+                            text: ["", "Where are you?", "Which keyboard do you have?", "Connect to a network", "Where should Graphite go?", "Create your account", "Privacy and security", "Choose a look", "Install apps", root.failed ? "Something went wrong" : "Installing"][root.page] || ""
                             font.pixelSize: 22
                             font.weight: Font.Bold
                         }
@@ -627,12 +627,12 @@ ShellRoot {
                             text: ["",
                                 "Sets your language, date format and time zone.",
                                 "Type below to check your keys work as expected.",
-                                "You need the internet to install Graphite Desk, updates and apps.",
+                                "You need the internet to install Graphite, updates and apps.",
                                 "Everything on the disk you choose is deleted, including Windows and your files.",
                                 "This is the name you'll see when you sign in.",
                                 "Choose how to protect this PC.",
                                 "You can change this later.",
-                                "These are installed with Graphite Desk. " + root.apps.length + " selected.",
+                                "These are installed with Graphite. " + root.apps.length + " selected.",
                                 root.failed ? root.failText : "This can take a while. Keep your PC plugged in."][root.page] || ""
                             color: root.page === 4 || (root.page === 9 && root.failed) ? Theme.danger : Theme.inkMuted
                         }
@@ -662,7 +662,7 @@ ShellRoot {
 
                         UiText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "Graphite Desk is installed. Restart to sign in."
+                            text: "Graphite is installed. Restart to sign in."
                             color: Theme.inkMuted
                         }
 
@@ -1123,7 +1123,7 @@ ShellRoot {
             Switchable {
                 Layout.topMargin: Theme.space3
                 visible: root.disk !== null
-                label: "Erase " + (root.disk ? root.disk.model : "") + " and install Graphite Desk"
+                label: "Erase " + (root.disk ? root.disk.model : "") + " and install Graphite"
                 detail: "This deletes everything on the disk. Back up your files first."
                 on: root.eraseAgreed
                 onToggled: root.eraseAgreed = !root.eraseAgreed

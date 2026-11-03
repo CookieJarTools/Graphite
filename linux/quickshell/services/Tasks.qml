@@ -3,7 +3,7 @@ pragma Singleton
 // how busy the processor, disks and graphics card are, memory in use, disk and network speed
 // (with a minute of history for the graphs), and what is running: "Apps" are the programs with a window (each with all
 // the processes it started, found through their parents, which open beneath it), "Background"
-// everything else of the person's, and "Desktop" what makes the desktop itself: Graphite Desk
+// everything else of the person's, and "Desktop" what makes the desktop itself: Graphite
 // (the shell and its helpers, such as the wrapper each app is started through, in one entry)
 // and the parts that are never ended. Ending a task asks its windows to close first, then stops
 // its processes, and forces them only if they are still there a few seconds later.
@@ -172,7 +172,7 @@ Singleton {
         return program.startsWith(name) ? program : name;
     }
 
-    // What Graphite Desk runs from its own folder (the wrapper each app is started through, the
+    // What Graphite runs from its own folder (the wrapper each app is started through, the
     // update checks, warm.sh): the desktop's, not tasks of their own.
     readonly property var deskPaths: ["/.config/quickshell/graphite/", "/opt/graphite-desk/", "qs -c graphite"]
 
@@ -205,7 +205,7 @@ Singleton {
     }
 
     // Each window's process and everything below it make one app; the shell and its helpers
-    // make Graphite Desk; the rest are background, or the desktop's own parts.
+    // make Graphite; the rest are background, or the desktop's own parts.
     function group(processes) {
         const byPid = {};
         const tree = {};
@@ -227,7 +227,7 @@ Singleton {
 
         const found = {};
         for (const window of windows) {
-            // The shell's own windows (this one, the Control Panel) are Graphite Desk's.
+            // The shell's own windows (this one, the Control Panel) are Graphite's.
             if (taken[window.pid] || (byPid[window.pid] && isDesk(byPid[window.pid]))) continue;
             const key = window.class || window.initialClass || String(window.pid);
             const app = found[key] || { key: key, name: appName(key, window.title), icon: key, pids: [], cpu: 0, memory: 0, disk: 0, windows: [], app: true, desk: false, command: "", processes: [] };
@@ -257,8 +257,8 @@ Singleton {
         }
 
         // Then the shell with everything it runs, and its helpers by themselves: a wrapper whose
-        // app has no window is Graphite Desk's, not what it started.
-        const desk = { key: "graphite", name: "Graphite Desk", icon: "user-desktop", pids: [], cpu: 0, memory: 0, disk: 0, windows: [], app: false, desk: true, command: "", processes: [] };
+        // app has no window is Graphite's, not what it started.
+        const desk = { key: "graphite", name: "Graphite", icon: "user-desktop", pids: [], cpu: 0, memory: 0, disk: 0, windows: [], app: false, desk: true, command: "", processes: [] };
         gather(desk, processes.filter(process => process.name === "qs" || process.name === "quickshell").map(process => process.pid), byPid, taken);
         for (const process of processes.filter(process => !taken[process.pid] && isDesk(process))) {
             taken[process.pid] = true;
@@ -322,7 +322,7 @@ Singleton {
             'if [ -n "$app" ]; then case "$exe" in /app/*) exe="$app${exe#/app}" ;; *) exe="" ;; esac; fi',
             'if [ -n "$exe" ] && [ -e "$exe" ]; then exec nautilus --select "$exe"; fi',
             'if [ -n "$app" ]; then exec nautilus --new-window "$app"; fi',
-            'notify-send -a "Graphite Desk" -i dialog-information "Can\'t find where it is" "Its program can\'t be read: it may belong to the system."'
+            'notify-send -a "Graphite" -i dialog-information "Can\'t find where it is" "Its program can\'t be read: it may belong to the system."'
         ].join("\n"), "sh", String(pid)]);
     }
 

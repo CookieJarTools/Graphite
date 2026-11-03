@@ -1,4 +1,4 @@
-// Graphite Desk's third addition to hyprbars: apps' own minimise buttons work (Discord, Steam,
+// Graphite's third addition to hyprbars: apps' own minimise buttons work (Discord, Steam,
 // any app that draws its own title bar). Hyprland 0.57 hears the request (xdg_toplevel
 // set_minimized, or an X11 app's) but does nothing with it; here the window goes where the shell
 // keeps minimised windows, the special workspace "minimized" (services/Taskbar.qml), as the

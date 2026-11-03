@@ -383,7 +383,7 @@ Singleton {
                 for (const file of this.text.split("\n").filter(line => line)) {
                     const base = file.split("/").pop();
                     Quickshell.execDetached(["sh", "-c",
-                        `[ "$(notify-send -a 'Graphite Desk' -i system-software-install --action=default=Install --wait "Install $2?" "Download finished. Click to install it.")" = default ] && bash "$3" "$1"`,
+                        `[ "$(notify-send -a 'Graphite' -i system-software-install --action=default=Install --wait "Install $2?" "Download finished. Click to install it.")" = default ] && bash "$3" "$1"`,
                         "sh", file, base, root.linux + "/apps/install-app.sh"]);
                 }
             }
@@ -428,7 +428,7 @@ Singleton {
         ShellState.openSettings("apps-installed");
     }
 
-    // The system, the apps and Graphite Desk itself, on the Control Panel's Updates page.
+    // The system, the apps and Graphite itself, on the Control Panel's Updates page.
     function updateEverything() {
         ShellState.openSettings("updates");
         Updates.install();
@@ -437,11 +437,11 @@ Singleton {
     // In the background: the password once (pkexec's window), then notifications as it goes.
     function setUpGaming() {
         Quickshell.execDetached(["sh", "-c", [
-            "notify-send -a 'Graphite Desk' -i applications-games 'Setting up gaming' 'Installing Steam, Minecraft and graphics drivers. This takes a few minutes.'",
+            "notify-send -a 'Graphite' -i applications-games 'Setting up gaming' 'Installing Steam, Minecraft and graphics drivers. This takes a few minutes.'",
             `if pkexec env GRAPHITE_USER="$USER" bash "${linux}/gaming.sh" --background > /tmp/graphite-gaming.log 2>&1; then`,
-            "  notify-send -a 'Graphite Desk' -i applications-games 'Gaming set up' 'Steam and the Modrinth App are installed. If new drivers were installed, restart.'",
+            "  notify-send -a 'Graphite' -i applications-games 'Gaming set up' 'Steam and the Modrinth App are installed. If new drivers were installed, restart.'",
             "else",
-            "  notify-send -a 'Graphite Desk' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from Apps in the Control Panel. Details: /tmp/graphite-gaming.log'",
+            "  notify-send -a 'Graphite' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from Apps in the Control Panel. Details: /tmp/graphite-gaming.log'",
             "fi"
         ].join("\n")]);
     }

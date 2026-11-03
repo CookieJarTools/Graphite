@@ -4,7 +4,7 @@
 # full speed while a game runs), MangoHud (an FPS overlay), gamescope and power profiles.
 # Minecraft gets settings against the stutter modpacks show: enough memory, fixed from the
 # start, and garbage collection tuned for short pauses (Aikar's flags), under GameMode and on
-# the discrete GPU. Graphite Desk's Settings runs this in a terminal ("Set up gaming"); run it
+# the discrete GPU. Graphite's Settings runs this in a terminal ("Set up gaming"); run it
 # again any time, it only adds what is missing. Real hardware: a VM has no GPU for games.
 #
 #   gaming.sh                    in a terminal, asks for the password as it goes

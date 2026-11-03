@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Moves Graphite Desk onto another drive, as it is: from a hard drive to a solid-state one, for
+# Moves Graphite onto another drive, as it is: from a hard drive to a solid-state one, for
 # a quicker start and apps that open as quickly as on Windows. The drive named is erased (after
 # asking) and laid out as the installer lays one out (a boot partition, then the system), the
 # running system is copied onto it, and the computer starts from it from then on. The drive it
@@ -81,13 +81,13 @@ grep -q "$new_root" "$new/etc/fstab" && grep -q "$new_boot" "$new/etc/fstab" &&
 esp_part=$(blkid -s PARTUUID -o value "$(part 1)")
 if ! efibootmgr -v | grep -qi "$esp_part"; then
     efibootmgr -q --create --disk "$disk" --part 1 --loader '\EFI\systemd\systemd-bootx64.efi' \
-        --label "Graphite Desk ($(lsblk -ndo MODEL "$disk" | xargs))"
+        --label "Graphite ($(lsblk -ndo MODEL "$disk" | xargs))"
 fi
 entry=$(efibootmgr -v | grep -i "$esp_part" | head -1 | grep -o '^Boot[0-9A-Fa-f]\{4\}' | cut -c5-)
 order=$(efibootmgr | sed -n 's/^BootOrder: //p')
 efibootmgr -q --bootorder "$(echo "$entry,$order" | tr ',' '\n' | awk '!seen[$0]++' | paste -sd,)"
 # An earlier copy's entry whose partition is gone (the drive erased since).
-efibootmgr -v | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} Graphite Desk .*HD([0-9]*,GPT,\([0-9A-Fa-f-]*\),.*/\1 \2/p' |
+efibootmgr -v | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} Graphite .*HD([0-9]*,GPT,\([0-9A-Fa-f-]*\),.*/\1 \2/p' |
     while read -r number partuuid; do
         lsblk -no PARTUUID | grep -qix "$partuuid" || efibootmgr -q -b "$number" -B
     done

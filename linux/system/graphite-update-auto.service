@@ -1,10 +1,10 @@
 [Unit]
-Description=Graphite Desk automatic update (when turned on in the Control Panel)
+Description=Graphite automatic update (when turned on in the Control Panel)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/systemd-inhibit --what=sleep:shutdown --who="Graphite Desk" --why="Installing updates" /usr/local/lib/graphite/system-update --auto
+ExecStart=/usr/bin/systemd-inhibit --what=sleep:shutdown --who="Graphite" --why="Installing updates" /usr/local/lib/graphite/system-update --auto
 Nice=19
 IOSchedulingClass=idle

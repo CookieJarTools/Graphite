@@ -1,4 +1,4 @@
-/* Toasts, built to design/graphite-desk/components/Toast. The window covers the top-right
+/* Toasts, built to design/graphite/components/Toast. The window covers the top-right
    corner; only the cards take the mouse (see toast.js). */
 
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }

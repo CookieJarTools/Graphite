@@ -256,7 +256,7 @@ Singleton {
     function openPath(path, folder) {
         const name = path.split("/").filter(Boolean).pop() || path;
         const opener = folder ? "nautilus --new-window \"$1\"" : "xdg-open \"$1\"";
-        Quickshell.execDetached(["sh", "-c", `if [ -e "$1" ]; then ${opener} >/dev/null 2>&1 & else notify-send -a "Graphite Desk" "Can't find ${name.replace(/["$`\\]/g, "")}" "$1"; fi`, "sh", path]);
+        Quickshell.execDetached(["sh", "-c", `if [ -e "$1" ]; then ${opener} >/dev/null 2>&1 & else notify-send -a "Graphite" "Can't find ${name.replace(/["$`\\]/g, "")}" "$1"; fi`, "sh", path]);
     }
 
     function searchWeb(query) {
