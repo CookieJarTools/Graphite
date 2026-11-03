@@ -28,10 +28,9 @@ hl.on("hyprland.start", function()
     -- Files, started in the background so its window opens at once when asked for.
     hl.exec_cmd("nautilus --gapplication-service")
     hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../system/autostart.sh\"")
-    -- Title bars (below): built the first time this version of Hyprland starts, as after an update.
-    if not exists(titlebars) then
-        hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../hypr/titlebars/build.sh\" >/dev/null 2>&1 && hyprctl reload")
-    end
+    -- Title bars (below): built again whenever they didn't load, as after an update to Hyprland
+    -- or its libraries (build.sh returns at once when its build is current).
+    hl.exec_cmd("bash \"$HOME/.config/quickshell/graphite/../hypr/titlebars/build.sh\" >/dev/null 2>&1 && { hyprctl plugin list | grep -q hyprbars || { hyprctl plugin load \"" .. titlebars .. "\" && hyprctl reload; }; }")
     -- The VM's guest tools: shared clipboard and resizing with the window (VirtualBox or VMware).
     hl.exec_cmd("command -v VBoxClient-all >/dev/null && VBoxClient-all; command -v vmware-user >/dev/null && vmware-user")
 end)

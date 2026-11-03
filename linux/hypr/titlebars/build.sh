@@ -16,8 +16,11 @@ set -euo pipefail
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 version="$(pkg-config --modversion hyprland)"
 out="${XDG_DATA_HOME:-$HOME/.local/share}/graphite/hyprbars-$version.so"
-# Built already, from these same additions.
-stamp="$(cat "$here"/build.sh "$here"/graphite-* | sha256sum | cut -d' ' -f1)"
+# Built already, from these same additions and for this same Hyprland. Arch rebuilds Hyprland
+# against new libraries without changing its version, and a plugin built before that refuses
+# to load ("Version mismatch"), so the libraries' versions count too.
+deps="$(pkg-config --modversion hyprland aquamarine hyprutils hyprlang hyprgraphics hyprcursor 2>/dev/null || true)"
+stamp="$( { cat "$here"/build.sh "$here"/graphite-*; echo "$deps"; } | sha256sum | cut -d' ' -f1)"
 if [ -f "$out" ] && [ "$(cat "$out.stamp" 2>/dev/null)" = "$stamp" ]; then
     echo "$out"
     exit 0
