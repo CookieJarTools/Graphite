@@ -77,6 +77,10 @@ if nvidia then
     -- Apps drawn with WebKit (the Modrinth App, some installers) show a blank window otherwise.
     hl.env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
     hl.env("GSK_RENDERER", "ngl")
+    -- Room for the shaders games have compiled (10 GB). The driver keeps 1 GB, which a big
+    -- modded Minecraft with a shader pack fills, so it compiled them all again on every start
+    -- and every join: minutes, and long enough for a server to time it out.
+    hl.env("__GL_SHADER_DISK_CACHE_SIZE", "10737418240")
 end
 
 -- Apps installed from Flathub (theirs and everyone's), alongside the system's: the launcher
