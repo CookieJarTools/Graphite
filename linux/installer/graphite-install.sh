@@ -322,9 +322,6 @@ if [ -n "$guest_services" ] && [ "\${guest_services#vboxservice}" != "$guest_ser
     printf '#%%PAM-1.0\nauth include system-auth\naccount include system-auth\nsession include system-auth\n' > /etc/pam.d/vboxservice
 fi
 
-# Memory: compressed swap in RAM.
-printf '[zram0]\nzram-size = min(ram / 2, 8192)\n' > /etc/systemd/zram-generator.conf
-
 # Printers on the network are found by name.
 sed -i 's/^hosts: mymachines /hosts: mymachines mdns_minimal [NOTFOUND=return] /' /etc/nsswitch.conf
 

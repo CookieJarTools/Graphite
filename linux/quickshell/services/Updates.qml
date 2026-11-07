@@ -43,7 +43,7 @@ Singleton {
     readonly property bool autoUpdates: ShellSettings.values ? !!ShellSettings.values.autoUpdates : false
 
     // Graphite's system parts in this copy, as install.sh records the ones it put in place.
-    readonly property string partsHash: `cd -P "${linux}/system" && cat graphite-admin system-update pin-check boot-setup.sh *.service *.timer *.policy *.rules 2>/dev/null | sha256sum | cut -d' ' -f1`
+    readonly property string partsHash: `cd -P "${linux}/system" && cat graphite-admin system-update pin-check boot-setup.sh *.service *.timer *.policy *.rules *.conf 2>/dev/null | sha256sum | cut -d' ' -f1`
     // A shell line for whatever needs the newest graphite-admin: the system parts put in place
     // first when this copy has moved on (one password covers both: polkit keeps it a while).
     readonly property string partsFirst: `[ "$(${partsHash})" = "$(cat /var/lib/graphite/system-parts 2>/dev/null)" ] || pkexec /usr/local/lib/graphite/graphite-admin install >/dev/null || exit 1`
