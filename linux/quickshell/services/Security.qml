@@ -17,6 +17,9 @@ Singleton {
 
     // { time (s), malware, checks: [{ id, title, state: ok|look|act|note, summary, details, fix }] }
     property var results: null
+    // The finding whose fix is under way, until the look after it has finished (its button
+    // says so: a first malware scan takes minutes).
+    property string fixing: ""
     readonly property var checks: results ? results.checks || [] : []
     readonly property int toAct: checks.filter(item => item.state === "act").length
     readonly property int toLook: checks.filter(item => item.state === "look").length
@@ -37,6 +40,7 @@ Singleton {
     Process {
         id: sweeper
         onExited: {
+            if (!installWait.running) root.fixing = "";
             answer.reload();
             notifyAfter.restart();
         }
@@ -96,13 +100,16 @@ Singleton {
         else if (action === "accounts") ShellState.openSettings("accounts");
         else if (action === "startup") ShellState.openSettings("apps");
         else if (action === "firewall") {
+            fixing = item.id;
             Machine.setFirewall(true);
             sweepSoon.restart();
         } else if (action === "install") {
+            fixing = item.id;
             Desktop.installPackage(item.fix.package);
             installWait.waitingFor = item.fix.package;
             installWait.restart();
         } else if (action === "trash") {
+            fixing = item.id;
             Quickshell.execDetached(["gio", "trash"].concat(item.fix.files || []));
             sweepSoon.restart();
         }

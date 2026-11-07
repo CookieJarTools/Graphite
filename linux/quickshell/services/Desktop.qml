@@ -221,14 +221,17 @@ Singleton {
         packageCheck.restart();
     }
 
-    // Which of the packages being installed are in now.
+    // Which of the packages being installed are in now, and which installs ended without them
+    // (the password cancelled, or offline: install-app.sh says why), so none waits forever.
     Process {
         id: packageInstalled
         stdout: StdioCollector {
             onStreamFinished: {
-                const done = this.text.split("\n").filter(line => line);
+                const lines = this.text.split("\n").filter(line => line);
+                const done = lines.filter(line => !line.startsWith("ended "));
+                const ended = lines.filter(line => line.startsWith("ended ")).map(line => line.slice(6));
                 const busy = {};
-                for (const name of Object.keys(root.installingPackages)) if (!done.includes(name)) busy[name] = true;
+                for (const name of Object.keys(root.installingPackages)) if (!done.includes(name) && !ended.includes(name)) busy[name] = true;
                 root.installingPackages = busy;
                 root.packages = root.packages.map(item => Object.assign({}, item, { installed: item.installed || done.includes(item.name) }));
             }
@@ -240,7 +243,8 @@ Singleton {
         repeat: true
         running: Object.keys(root.installingPackages).length > 0
         onTriggered: {
-            packageInstalled.command = ["sh", "-c", "pacman -Qq \"$@\" 2>/dev/null", "sh"].concat(Object.keys(root.installingPackages));
+            // The installs still going first, so one ending in between is seen as in.
+            packageInstalled.command = ["sh", "-c", "for name; do pgrep -f \"install-app\\.sh --package $(printf %s \"$name\" | sed 's/[.+]/\\\\&/g')( |\\$)\" >/dev/null || echo \"ended $name\"; done; pacman -Qq \"$@\" 2>/dev/null", "sh"].concat(Object.keys(root.installingPackages));
             packageInstalled.running = true;
         }
     }

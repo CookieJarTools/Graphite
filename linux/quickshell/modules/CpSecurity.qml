@@ -72,10 +72,14 @@ ColumnLayout {
                     onClicked: page.opened = page.opened === finding.modelData.id ? "" : finding.modelData.id
                 }
 
+                // While its fix is under way: installing, then looking again.
                 PillButton {
+                    readonly property bool installing: !!finding.modelData.fix && Desktop.installingPackages[finding.modelData.fix.package] === true
+                    readonly property bool checking: Security.fixing === finding.modelData.id
                     visible: !!finding.modelData.fix
                     primary: finding.modelData.state === "act"
-                    text: finding.modelData.fix ? finding.modelData.fix.label : ""
+                    enabled: !installing && !checking
+                    text: installing ? "Installing..." : checking ? "Checking..." : finding.modelData.fix ? finding.modelData.fix.label : ""
                     onClicked: Security.fix(finding.modelData)
                 }
 
