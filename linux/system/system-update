@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # The system half of "Update everything", run as root by graphite-update.service (which any
 # administrator may start without a password, see 50-graphite.rules): Arch's keyring first,
-# then every package, the system's Flatpak apps, and a tidy of old downloads. Its progress is
+# then every package, the apps from the AUR (aur-update, which builds them in a sandbox), the
+# system's Flatpak apps, and a tidy of old downloads. Its progress is
 # /var/lib/graphite/update.json, which the Control Panel reads:
 #   { "state": "running" | "done" | "failed", "step": "...", "percent": 0-100,
-#     "time": seconds, "restart": true when a new kernel waits for a restart }
+#     "time": seconds, "restart": true when a new kernel waits for a restart,
+#     "note": what couldn't be updated, or "" }
 # With --auto (graphite-update.timer) it only runs when someone has turned on automatic
 # updates (~/.config/graphite/auto-updates says "on").
 set -uo pipefail
@@ -13,10 +15,11 @@ log=/var/log/graphite-update.log
 mkdir -p /var/lib/graphite
 chmod 755 /var/lib/graphite
 restart=false
+note=""
 
 status() {
-    printf '{"state":"%s","step":"%s","percent":%d,"time":%d,"restart":%s}\n' \
-        "$1" "${2//\"/}" "$3" "$(date +%s)" "$restart" > "$state.tmp"
+    printf '{"state":"%s","step":"%s","percent":%d,"time":%d,"restart":%s,"note":"%s"}\n' \
+        "$1" "${2//\"/}" "$3" "$(date +%s)" "$restart" "$(tr -d '"\\' <<<"$note")" > "$state.tmp"
     chmod 644 "$state.tmp"
     mv "$state.tmp" "$state"
 }
@@ -49,6 +52,16 @@ fi
 # What the desktop has come to need since older machines were installed: the keyring for apps'
 # saved sign-ins (session.sh).
 pacman -S --needed --noconfirm gnome-keyring >>"$log" 2>&1 || true
+
+# Apps from the AUR, against the packages just updated: its steps, and what couldn't be updated.
+if [ -x /usr/local/lib/graphite/aur-update ]; then
+    while read -r kind text; do
+        case "$kind" in
+            STEP) status running "$text" 82 ;;
+            NOTE) note="$text" ;;
+        esac
+    done < <(/usr/local/lib/graphite/aur-update 2>>"$log")
+fi
 
 # A new kernel is only used after a restart.
 [ -d "/usr/lib/modules/$(uname -r)" ] || restart=true

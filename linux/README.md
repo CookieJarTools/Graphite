@@ -114,13 +114,22 @@ its background checks while a game is fullscreen. On a real machine only: the VM
 ## Updates
 
 Updates need no terminal. Every few hours the desktop checks what's waiting (Arch's packages
-with `checkupdates`, Flatpak apps, Graphite's own commits) and says so once. Control
-Panel → **Updates** installs everything with one button: the system half runs as root in
-`graphite-update.service` (an administrator may start it without a password), the person's
-half (their apps, the Ubuntu space, a `git pull` of Graphite) alongside it, apart from
-the shell (a pull reloads the shell), with both halves' progress on the page. Arch's news
-since the last update is listed first, a new kernel asks for a restart, and **Install
+with `checkupdates`, apps from the AUR, Flatpak apps, Graphite's own commits) and says so
+once. Control Panel → **Updates** installs everything with one button: the system half runs
+as root in `graphite-update.service` (an administrator may start it without a password), the
+person's half (their apps, the Ubuntu space, a `git pull` of Graphite) alongside it, apart
+from the shell (a pull reloads the shell), with both halves' progress on the page. Arch's
+news since the last update is listed first, a new kernel asks for a restart, and **Install
 updates automatically** runs it once a day.
+
+Apps installed from the AUR (with yay, say) update with the rest, without yay
+(`system/aur-update`). Each is built in a throwaway systemd sandbox (`DynamicUser`, which
+sees nobody's home), never as the person: as the update needs no password, anything they
+can change could otherwise be installed by root. Root then installs only the packages it
+built in place of ones that came from no repository, so a build can't replace one of Arch's
+own. What it needs from Arch to build is installed for the build and removed after it, and
+a package that needs another from the AUR, or doesn't build, is left as it was, with a note
+on the page.
 
 ## Text
 

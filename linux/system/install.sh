@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Puts Graphite's system parts in place (as root): the Control Panel's administrator
-# helper and the system update, root-owned in /usr/local/lib/graphite (so the copy in
-# /opt/graphite-desk, which its owner can edit, never runs as root by itself), their systemd
-# units (and the one opening Windows dynamic disks), the polkit rules, the hard drives'
-# scheduler, the folder for password hints, the compressed swap, and the firewall, on.
+# helper and the system update (with aur-update, for apps from the AUR), root-owned in
+# /usr/local/lib/graphite (so the copy in /opt/graphite-desk, which its owner can edit, never
+# runs as root by itself), their systemd units (and the one opening Windows dynamic disks),
+# the polkit rules, the hard drives' scheduler, the folder for password hints, the
+# compressed swap, and the firewall, on.
 # The installer runs it; afterwards the Control Panel's Updates page offers it when these
 # files change (graphite-admin install).
 set -euo pipefail
@@ -11,7 +12,7 @@ here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 [ "$(id -u)" = 0 ] || { echo "Run as root."; exit 1; }
 
 install -d -m 755 /usr/local/lib/graphite /var/lib/graphite /var/lib/graphite/hints
-install -m 755 -o root -g root "$here/graphite-admin" "$here/system-update" "$here/pin-check" /usr/local/lib/graphite/
+install -m 755 -o root -g root "$here/graphite-admin" "$here/system-update" "$here/aur-update" "$here/pin-check" /usr/local/lib/graphite/
 
 # Signing in with a PIN: checked in front of the password, on the login screen (greetd) and
 # the lock screen (its own PAM service, graphite-lock).
@@ -50,7 +51,7 @@ install -m 644 "$here/zram-generator.conf" /etc/systemd/zram-generator.conf
 install -m 644 "$here/99-graphite-memory.conf" /etc/sysctl.d/
 sysctl -q -p /etc/sysctl.d/99-graphite-memory.conf 2>/dev/null || true
 # What was installed, so the Updates page can tell when the repository's copy has moved on.
-cat "$here"/graphite-admin "$here"/system-update "$here"/pin-check "$here"/boot-setup.sh "$here"/*.service "$here"/*.timer "$here"/*.policy "$here"/*.rules "$here"/*.conf | sha256sum | cut -d' ' -f1 > /var/lib/graphite/system-parts
+cat "$here"/graphite-admin "$here"/system-update "$here"/aur-update "$here"/pin-check "$here"/boot-setup.sh "$here"/*.service "$here"/*.timer "$here"/*.policy "$here"/*.rules "$here"/*.conf | sha256sum | cut -d' ' -f1 > /var/lib/graphite/system-parts
 chmod 644 /var/lib/graphite/system-parts
 
 # A quiet start (boot-setup.sh): on machines installed before it existed, with the splash's

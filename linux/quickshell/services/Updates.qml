@@ -1,7 +1,8 @@
 pragma Singleton
 // Updates without a terminal. Every few hours (and when the Updates page asks) it counts
 // what's waiting: Arch packages (checkupdates, which never touches the real package list),
-// Flatpak apps, and Graphite's own commits; a notification says so once. Arch's news
+// apps from the AUR (system/aur-update; the system half builds them in a sandbox), Flatpak
+// apps, and Graphite's own commits; a notification says so once. Arch's news
 // since the last update is listed, as some updates need a step by hand.
 //
 // install(): the system half runs as root in graphite-update.service (an administrator may
@@ -23,15 +24,18 @@ Singleton {
 
     property bool checking: false
     property var packages: []      // ["mesa 24.1 -> 24.2", ...]
+    property var aur: []           // the same, from the AUR
     property int appCount: 0
     property int deskCount: 0
-    readonly property int total: packages.length + appCount + deskCount
+    readonly property int total: packages.length + aur.length + appCount + deskCount
     property double lastChecked: 0
     property var news: []          // [{ title, link, date }] since the last update
     property bool partsChanged: false
 
     // The system half's progress, and the person's half.
-    property var system: ({ state: "", step: "", percent: 0, time: 0, restart: false })
+    property var system: ({ state: "", step: "", percent: 0, time: 0, restart: false, note: "" })
+    // What the system half couldn't update, for an hour after.
+    readonly property string systemNote: system.note && Date.now() / 1000 - (system.time || 0) < 3600 ? system.note : ""
     property bool userRunning: false
     property string userStep: ""
     property string userNote: ""
@@ -43,7 +47,7 @@ Singleton {
     readonly property bool autoUpdates: ShellSettings.values ? !!ShellSettings.values.autoUpdates : false
 
     // Graphite's system parts in this copy, as install.sh records the ones it put in place.
-    readonly property string partsHash: `cd -P "${linux}/system" && cat graphite-admin system-update pin-check boot-setup.sh *.service *.timer *.policy *.rules *.conf 2>/dev/null | sha256sum | cut -d' ' -f1`
+    readonly property string partsHash: `cd -P "${linux}/system" && cat graphite-admin system-update aur-update pin-check boot-setup.sh *.service *.timer *.policy *.rules *.conf 2>/dev/null | sha256sum | cut -d' ' -f1`
     // A shell line for whatever needs the newest graphite-admin: the system parts put in place
     // first when this copy has moved on (one password covers both: polkit keeps it a while).
     readonly property string partsFirst: `[ "$(${partsHash})" = "$(cat /var/lib/graphite/system-parts 2>/dev/null)" ] || pkexec /usr/local/lib/graphite/graphite-admin install >/dev/null || exit 1`
@@ -58,6 +62,7 @@ Singleton {
         id: checker
         command: ["bash", "-c", [
             "echo '== packages'; command -v checkupdates >/dev/null && checkupdates 2>/dev/null",
+            `echo '== aur'; python3 -I "${root.linux}/system/aur-update" --check 2>/dev/null`,
             "echo '== apps'; flatpak remote-ls --updates --user --columns=application 2>/dev/null; flatpak remote-ls --updates --system --columns=application 2>/dev/null",
             // Never asking for a sign-in: the shell started on tty1, where git would wait for one forever.
             `echo '== desk'; repo="${Quickshell.shellDir}/../.."; GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" timeout 60 git -C "$repo" fetch -q </dev/null 2>/dev/null && git -C "$repo" rev-list --count HEAD..@{u} 2>/dev/null`,
@@ -78,6 +83,7 @@ Singleton {
                 }
                 const before = root.total;
                 root.packages = sections.packages || [];
+                root.aur = sections.aur || [];
                 root.appCount = (sections.apps || []).filter(line => line.includes(".")).length;
                 root.deskCount = parseInt((sections.desk || ["0"])[0]) || 0;
                 const parts = sections.parts || [];
@@ -106,7 +112,7 @@ Singleton {
     function install() {
         if (running) return;
         started = true;
-        system = { state: "running", step: "Starting", percent: 1, time: Date.now() / 1000, restart: false };
+        system = { state: "running", step: "Starting", percent: 1, time: Date.now() / 1000, restart: false, note: "" };
         Quickshell.execDetached(["systemctl", "start", "--no-block", "graphite-update.service"]);
         userStep = "";
         userNote = "";

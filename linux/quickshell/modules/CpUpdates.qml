@@ -64,8 +64,8 @@ ColumnLayout {
                 },
                 UiText {
                     Layout.fillWidth: true
-                    visible: Updates.userNote.length > 0
-                    text: Updates.userNote
+                    visible: text.length > 0
+                    text: [Updates.systemNote, Updates.userNote].filter(note => note).join("\n")
                     color: Theme.inkMuted
                     font.pixelSize: Theme.hintSize
                     wrapMode: Text.WordWrap
@@ -125,18 +125,19 @@ ColumnLayout {
         CpRow {
             label: [
                 Updates.packages.length ? Updates.packages.length + " system" : "",
+                Updates.aur.length ? Updates.aur.length + " from the AUR" : "",
                 Updates.appCount ? Updates.appCount + " app" + (Updates.appCount === 1 ? "" : "s") : "",
                 Updates.deskCount ? "Graphite" : ""
             ].filter(part => part).join(", ")
             hint: "All of these install together"
-            opens: Updates.packages.length > 0
+            opens: Updates.packages.length + Updates.aur.length > 0
             onClicked: page.showList = !page.showList
 
             below: [
                 UiText {
                     Layout.fillWidth: true
                     visible: page.showList
-                    text: Updates.packages.join("\n")
+                    text: Updates.packages.concat(Updates.aur).join("\n")
                     color: Theme.inkMuted
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.identifierSize

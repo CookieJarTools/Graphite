@@ -1,0 +1,229 @@
+#!/usr/bin/python3 -I
+# Apps from the AUR (the Arch User Repository, which yay installs from) for "Update everything":
+# which have a newer version there, and their update. Each is built in a sandbox of its own (a
+# throwaway systemd user that sees nobody's files), never as the person: the system update runs
+# without a password, so whatever they can change could otherwise end up installed by root.
+# Root only puts in what the sandbox built, and only in place of packages that came from no
+# repository, so a build can't swap out one of Arch's own.
+#
+#   aur-update --check        what's newer, one "name 1.0-1 -> 1.1-1" line each, as checkupdates
+#   aur-update                as root (system-update): each one built and put in, its progress
+#                             as "STEP ..." lines, what couldn't be as one "NOTE ..." line, and
+#                             the details on stderr
+#   aur-update --fetch BASE   in the sandbox: the AUR's package base BASE, its .SRCINFO printed
+#   aur-update --build BASE   in the sandbox: BASE built into ~/built/BASE
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.parse
+import urllib.request
+
+AUR = "https://aur.archlinux.org"
+HOME = os.path.expanduser("~")
+# Its folder, which only the sandbox writes to, and the root-owned copy of this file it runs.
+STATE = "/var/lib/graphite-aur"
+SELF = "/usr/local/lib/graphite/aur-update"
+SANDBOX = ["systemd-run", "--quiet", "--wait", "--pipe", "--collect", "--unit=graphite-aur-build",
+           "-p", "DynamicUser=yes", "-p", "User=graphite-aur", "-p", "StateDirectory=graphite-aur",
+           "-p", "ProtectHome=yes", "-p", "PrivateDevices=yes", "-p", "Nice=10", "-p", "IOSchedulingClass=idle",
+           "-p", "RuntimeMaxSec=3600", "-p", f"WorkingDirectory={STATE}", "-E", f"HOME={STATE}"]
+# The names the AUR allows, so a base is safe in a path.
+BASE_NAME = re.compile(r"^[a-z0-9@._+][a-z0-9@._+-]*$")
+PACKAGE_FILE = re.compile(r"\.pkg\.tar\.\w+$")
+
+
+def run(command, **options):
+    return subprocess.run(command, capture_output=True, text=True, **options)
+
+
+def log(text):
+    print(text, file=sys.stderr, flush=True)
+
+
+def vercmp(first, second):
+    return int(run(["vercmp", first, second]).stdout.strip() or 0)
+
+
+# The values of some keys of a .SRCINFO ("\tdepends = glibc>=2.0"), in every section.
+def values(srcinfo, *keys):
+    found = []
+    for line in srcinfo.splitlines():
+        key, _, value = line.strip().partition(" = ")
+        if key in keys and value:
+            found.append(value)
+    return found
+
+
+# Installed packages from no repository, with a newer version in the AUR (not those pacman is
+# told to leave alone): {name: (installed, newer, package base)}.
+def newer():
+    installed = dict(line.split()[:2] for line in run(["pacman", "-Qm"]).stdout.splitlines() if len(line.split()) >= 2)
+    ignored = set(run(["pacman-conf", "IgnorePkg"]).stdout.split())
+    names = sorted(name for name in installed if name not in ignored)
+    found = {}
+    for start in range(0, len(names), 100):
+        query = urllib.parse.urlencode([("arg[]", name) for name in names[start:start + 100]])
+        with urllib.request.urlopen(f"{AUR}/rpc/v5/info?{query}", timeout=20) as answer:
+            results = json.load(answer).get("results") or []
+        for item in results:
+            name, version = item.get("Name"), item.get("Version")
+            if name in installed and version and vercmp(version, installed[name]) > 0:
+                found[name] = (installed[name], version, item.get("PackageBase") or name)
+    return found
+
+
+def check():
+    for name, (old, new, _) in sorted(newer().items()):
+        print(f"{name} {old} -> {new}")
+
+
+# ---------- in the sandbox ----------
+
+def fetch(base):
+    source = os.path.join(HOME, "src", base)
+    if os.path.isdir(os.path.join(source, ".git")):
+        subprocess.run(["git", "-C", source, "fetch", "-q", "origin", "master"], stdout=sys.stderr, check=True)
+        subprocess.run(["git", "-C", source, "reset", "-q", "--hard", "FETCH_HEAD"], stdout=sys.stderr, check=True)
+        # The last version's downloads too: the new one brings its own.
+        subprocess.run(["git", "-C", source, "clean", "-q", "-fdx"], stdout=sys.stderr, check=True)
+    else:
+        shutil.rmtree(source, ignore_errors=True)
+        os.makedirs(os.path.dirname(source), exist_ok=True)
+        subprocess.run(["git", "clone", "-q", f"{AUR}/{base}.git", source], stdout=sys.stderr, check=True)
+    with open(os.path.join(source, ".SRCINFO")) as srcinfo:
+        sys.stdout.write(srcinfo.read())
+
+
+def build(base):
+    source = os.path.join(HOME, "src", base)
+    built = os.path.join(HOME, "built", base)
+    shutil.rmtree(built, ignore_errors=True)
+    os.makedirs(built)
+    with open(os.path.join(source, ".SRCINFO")) as srcinfo:
+        keys = values(srcinfo.read(), "validpgpkeys")
+    # The keys its downloads are signed with, as yay offers to fetch them.
+    for key in keys:
+        subprocess.run(["gpg", "--batch", "--keyserver", "hkps://keyserver.ubuntu.com", "--recv-keys", key], stdout=sys.stderr)
+    subprocess.run(["makepkg", "--noconfirm", "--nocheck", "--force", "--clean", "--cleanbuild"], cwd=source, stdout=sys.stderr, check=True,
+                   env=dict(os.environ, PKGDEST=built, BUILDDIR=os.path.join(HOME, "build")))
+
+
+# ---------- as root ----------
+
+def sandbox(mode, base):
+    done = subprocess.run(SANDBOX + [SELF, mode, base], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    return done.stdout if done.returncode == 0 else None
+
+
+def installed_names():
+    return set(run(["pacman", "-Qq"]).stdout.split())
+
+
+# What the sandbox built for base, moved into a folder of root's own. Opened a folder at a time
+# without following links, so the sandbox can't point root at any other file.
+def collect(base, into):
+    files = []
+    folder = os.open(STATE, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in ("built", base):
+            inner = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=folder)
+            os.close(folder)
+            folder = inner
+        for entry in os.scandir(folder):
+            if not PACKAGE_FILE.search(entry.name) or not entry.is_file(follow_symlinks=False):
+                continue
+            with os.fdopen(os.open(entry.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=folder), "rb") as reading, \
+                    open(os.path.join(into, entry.name), "wb") as writing:
+                shutil.copyfileobj(reading, writing)
+            os.unlink(entry.name, dir_fd=folder)
+            files.append(os.path.join(into, entry.name))
+    finally:
+        os.close(folder)
+    return files
+
+
+# One package base: fetched, what it needs from Arch's repositories put in, built, and the
+# packages of it that are installed replaced. What it only needed for building goes again.
+def update_base(base):
+    srcinfo = sandbox("--fetch", base)
+    if srcinfo is None:
+        log(f"{base}: couldn't be fetched from the AUR")
+        return False
+    needs = values(srcinfo, "depends", "makedepends", "depends_x86_64", "makedepends_x86_64")
+    missing = run(["pacman", "-T", "--"] + needs).stdout.split() if needs else []
+    before = installed_names()
+    try:
+        if missing and subprocess.run(["pacman", "-S", "--needed", "--asdeps", "--noconfirm", "--"] + missing, stdout=sys.stderr).returncode != 0:
+            log(f"{base}: needs {', '.join(missing)}, which aren't all in Arch's repositories")
+            return False
+        if sandbox("--build", base) is None:
+            log(f"{base}: didn't build")
+            return False
+        with tempfile.TemporaryDirectory(dir="/var/tmp", prefix="graphite-aur-") as folder:
+            ours = set(run(["pacman", "-Qmq"]).stdout.split())
+            files = [path for path in collect(base, folder) if run(["pacman", "-Qqp", "--", path]).stdout.strip() in ours]
+            if not files:
+                log(f"{base}: built nothing that's installed")
+                return False
+            if subprocess.run(["pacman", "-U", "--noconfirm", "--"] + files, stdout=sys.stderr).returncode != 0:
+                log(f"{base}: couldn't be installed")
+                return False
+        return True
+    finally:
+        added = installed_names() - before
+        leftover = sorted(added & set(run(["pacman", "-Qdtq"]).stdout.split()))
+        if leftover:
+            subprocess.run(["pacman", "-Rns", "--noconfirm", "--"] + leftover, stdout=sys.stderr)
+
+
+def update():
+    try:
+        waiting = newer()
+    except (OSError, ValueError) as error:
+        log(f"Couldn't reach the AUR: {error}")
+        print("NOTE Apps from the AUR weren't updated: couldn't reach it.", flush=True)
+        return
+    bases = {}
+    for name, (_, _, base) in sorted(waiting.items()):
+        bases.setdefault(base, []).append(name)
+    if not bases:
+        return
+    tools = run(["pacman", "-T", "--", "base-devel", "git"]).stdout.split()
+    if tools and subprocess.run(["pacman", "-S", "--needed", "--noconfirm", "--"] + tools, stdout=sys.stderr).returncode != 0:
+        print("NOTE Apps from the AUR weren't updated: the tools to build them couldn't be installed.", flush=True)
+        return
+    failed = []
+    for number, (base, names) in enumerate(bases.items(), 1):
+        print(f"STEP Updating {names[0]} from the AUR ({number} of {len(bases)})", flush=True)
+        log(f"== {base} ({', '.join(names)})")
+        if not BASE_NAME.match(base) or not update_base(base):
+            failed += names
+    if failed:
+        print(f"NOTE Couldn't update {', '.join(failed)} from the AUR. The details are in /var/log/graphite-update.log.", flush=True)
+
+
+def main():
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode == "--check":
+        try:
+            check()
+        except (OSError, ValueError):
+            sys.exit(1)
+    elif mode in ("--fetch", "--build") and len(sys.argv) == 3 and BASE_NAME.match(sys.argv[2]):
+        try:
+            (fetch if mode == "--fetch" else build)(sys.argv[2])
+        except (OSError, subprocess.CalledProcessError) as error:
+            log(str(error))
+            sys.exit(1)
+    elif not mode and os.geteuid() == 0:
+        update()
+    else:
+        log("Usage: aur-update --check | --fetch BASE | --build BASE, or as root with nothing")
+        sys.exit(2)
+
+
+main()
