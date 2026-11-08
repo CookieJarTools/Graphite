@@ -63,11 +63,14 @@ ColumnLayout {
         border.width: 1
 
         Flickable {
+            id: choices
             anchors.fill: parent
             anchors.margins: Theme.space1
             contentHeight: list.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+
+            WheelScroll { flickable: choices; step: 72 }
 
             ColumnLayout {
                 id: list

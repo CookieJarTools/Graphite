@@ -304,6 +304,8 @@ FloatingWindow {
                     contentHeight: pageLoader.implicitHeight + Theme.space10
                     boundsBehavior: Flickable.StopAtBounds
 
+                    WheelScroll { flickable: flick }
+
                     Loader {
                         id: pageLoader
                         x: Theme.space6

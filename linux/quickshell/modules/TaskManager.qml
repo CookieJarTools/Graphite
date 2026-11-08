@@ -544,12 +544,15 @@ FloatingWindow {
                 }
 
                 Flickable {
+                    id: processView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     visible: root.tab === "processes"
                     clip: true
                     contentHeight: processList.implicitHeight + Theme.space4
                     boundsBehavior: Flickable.StopAtBounds
+
+                    WheelScroll { flickable: processView }
 
                     ColumnLayout {
                         id: processList
@@ -726,12 +729,15 @@ FloatingWindow {
                 // ---------- startup apps ----------
 
                 Flickable {
+                    id: startupView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     visible: root.tab === "startup"
                     clip: true
                     contentHeight: startupList.implicitHeight + Theme.space6
                     boundsBehavior: Flickable.StopAtBounds
+
+                    WheelScroll { flickable: startupView }
 
                     ColumnLayout {
                         id: startupList

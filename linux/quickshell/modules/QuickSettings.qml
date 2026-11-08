@@ -63,12 +63,15 @@ PanelFrame {
     }
 
     Flickable {
+        id: pageList
         Layout.fillWidth: true
         visible: root.page !== ""
         implicitHeight: Math.min(contentHeight, 420)
         contentHeight: lists.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+
+        WheelScroll { flickable: pageList }
 
         ColumnLayout {
             id: lists

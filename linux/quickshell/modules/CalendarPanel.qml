@@ -160,12 +160,15 @@ PanelFrame {
     }
 
     ListView {
+        id: noteList
         Layout.fillWidth: true
         visible: Notifs.history.length > 0
         implicitHeight: Math.min(contentHeight, 260)
         clip: true
         spacing: Theme.space2
         model: Notifs.history
+
+        WheelScroll { flickable: noteList }
 
         delegate: NoteCard { width: ListView.view.width }
     }

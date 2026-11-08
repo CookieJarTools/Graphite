@@ -268,6 +268,8 @@ FocusScope {
             contentHeight: body.implicitHeight + Theme.space2 * 2
             boundsBehavior: Flickable.StopAtBounds
 
+            WheelScroll { flickable: flick }
+
             ColumnLayout {
                 id: body
 
