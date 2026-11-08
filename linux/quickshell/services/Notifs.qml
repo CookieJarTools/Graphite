@@ -1,7 +1,7 @@
 pragma Singleton
 // The shell is the notification server (org.freedesktop.Notifications): every app's
 // notifications come here, show as pop-ups in the top-right corner (Toasts.qml) and stay
-// listed in the calendar panel until dismissed.
+// listed in the calendar panel until dismissed. A click on one leads to where it came from.
 
 import QtQuick
 import Quickshell
@@ -60,11 +60,30 @@ Singleton {
         notification.dismiss(); // its closed signal forgets it
     }
 
-    // The app's default action ("default"), as a click on the notification.
+    // A click on a notification: the app's own default action ("default") if it has one, and
+    // the app brought forward, as an app can't always raise its own window on Wayland; started
+    // when it has no window (one in the tray shows itself again). Graphite's own notifications
+    // say where they lead, in an "x-graphite-open" hint: a Control Panel page
+    // ("settings:updates") or a file.
     function open(notification) {
+        const place = String((notification.hints || {})["x-graphite-open"] || "");
         const action = Array.from(notification.actions).find(candidate => candidate.identifier === "default");
         if (action) action.invoke();
-        else dismiss(notification);
+        if (place.startsWith("settings:")) ShellState.openSettings(place.slice(9));
+        else if (place.startsWith("/")) Quickshell.execDetached(["xdg-open", place]);
+        else bringForward(notification);
+        hidePopup(notification);
+        if (!action) dismiss(notification);
+    }
+
+    function bringForward(notification) {
+        // notify-send's own name, and Graphite's (its desktop entries are its installer's).
+        if (["Graphite", "notify-send", ""].includes(notification.appName || "")) return;
+        const entry = Apps.entryFor(notification.desktopEntry) || Apps.entryFor(notification.appName);
+        if (!entry) return;
+        const window = Taskbar.windows.find(candidate => candidate.key === entry.id);
+        if (window) Taskbar.focusWindow(window.hwnd);
+        else Apps.launch(entry);
     }
 
     function clearAll() {

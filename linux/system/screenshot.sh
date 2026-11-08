@@ -25,7 +25,7 @@ picture() {
 
 saved() {
     wl-copy --type image/png < "$1"
-    notify-send -a "Graphite" -i "$1" -h string:sound-name:screen-capture "Screenshot saved" "Saved to Pictures > Screenshots and copied, so you can paste it."
+    notify-send -a "Graphite" -i "$1" -h string:sound-name:screen-capture -h "string:x-graphite-open:$1" "Screenshot saved" "Saved to Pictures > Screenshots and copied, so you can paste it."
 }
 
 case "${1:-screen}" in
@@ -72,7 +72,7 @@ case "${1:-screen}" in
         # Copied as the file itself, as a file manager copies one, so it pastes into a chat, an
         # email or a folder (a video's contents aren't something apps take from the clipboard).
         python3 -I -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).absolute().as_uri(), end="\r\n")' "$2" | wl-copy --type text/uri-list
-        notify-send -a "Graphite" -i video-x-generic -h string:sound-name:completion-success "Recording saved" "Saved to Videos > Screen Recordings and copied, so you can paste it: $(basename "$2")"
+        notify-send -a "Graphite" -i video-x-generic -h string:sound-name:completion-success -h "string:x-graphite-open:$2" "Recording saved" "Saved to Videos > Screen Recordings and copied, so you can paste it: $(basename "$2")"
         ;;
     area)
         area="$(slurp -d)" || exit 0 # Escape: no screenshot

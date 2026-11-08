@@ -445,7 +445,7 @@ Singleton {
             `if pkexec env GRAPHITE_USER="$USER" bash "${linux}/gaming.sh" --background > /tmp/graphite-gaming.log 2>&1; then`,
             "  notify-send -a 'Graphite' -i applications-games 'Gaming set up' 'Steam and the Modrinth App are installed. If new drivers were installed, restart.'",
             "else",
-            "  notify-send -a 'Graphite' -i dialog-warning 'Gaming setup didn'\\''t finish' 'Try again from Apps in the Control Panel. Details: /tmp/graphite-gaming.log'",
+            "  notify-send -a 'Graphite' -i dialog-warning -h string:x-graphite-open:settings:apps 'Gaming setup didn'\\''t finish' 'Try again from Apps in the Control Panel. Details: /tmp/graphite-gaming.log'",
             "fi"
         ].join("\n")]);
     }

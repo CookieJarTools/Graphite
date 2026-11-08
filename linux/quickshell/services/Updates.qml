@@ -96,7 +96,7 @@ Singleton {
                 root.lastChecked = Date.now();
                 root.checking = false;
                 if (root.total > 0 && root.total !== before && !root.running) {
-                    Quickshell.execDetached(["notify-send", "-a", "Graphite", "-i", "software-update-available",
+                    Quickshell.execDetached(["notify-send", "-a", "Graphite", "-i", "software-update-available", "-h", "string:x-graphite-open:settings:updates",
                         "Updates available", root.total + (root.total === 1 ? " update is" : " updates are") + " available. Open Updates in the Control Panel to install."]);
                 }
             }
