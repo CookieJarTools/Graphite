@@ -74,8 +74,9 @@ if nvidia then
     hl.env("LIBVA_DRIVER_NAME", "nvidia")
     hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
     hl.env("NVD_BACKEND", "direct")
-    -- Apps drawn with WebKit (the Modrinth App, some installers) show a blank window otherwise.
-    hl.env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+    -- Apps drawn with WebKit (the Modrinth App, the Epic Games Launcher) keep its GPU drawing:
+    -- turned off (WEBKIT_DISABLE_DMABUF_RENDERER), as older WebKit needed against a blank window,
+    -- the Epic launcher drew only what was under the pointer, the rest flashing blank.
     hl.env("GSK_RENDERER", "ngl")
     -- Room for the shaders games have compiled (10 GB). The driver keeps 1 GB, which a big
     -- modded Minecraft with a shader pack fills, so it compiled them all again on every start
