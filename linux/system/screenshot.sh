@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Screenshots and screen recordings, for the Snipping Tool (services/Capture.qml): pictures go
-# in Pictures/Screenshots and are copied too, ready to paste; videos go in Videos/Screen
-# Recordings. xdg-user-dir answers the home folder itself when a folder isn't set up.
+# in Pictures/Screenshots and videos in Videos/Screen Recordings, and both are copied too, ready
+# to paste. xdg-user-dir answers the home folder itself when a folder isn't set up.
 #
 #   screenshot.sh still OUTPUT FILE          the screen OUTPUT as it is now, for the tool to show
 #   screenshot.sh cut STILL X Y W H          a part of that still (in its own pixels) saved
@@ -9,7 +9,7 @@
 #   screenshot.sh record output NAME | area "X,Y WxH"
 #                                            records until stopped (SIGINT), with wf-recorder or
 #                                            else gpu-screen-recorder; prints the file's path first
-#   screenshot.sh recorded FILE              says where a finished recording went
+#   screenshot.sh recorded FILE              copies a finished recording and says where it went
 #   screenshot.sh screen | area              the whole screen, or an area dragged out with slurp
 folder() {
     local dir
@@ -69,7 +69,10 @@ case "${1:-screen}" in
         ;;
     recorded)
         [ -s "$2" ] || exit 0
-        notify-send -a "Graphite" -i video-x-generic -h string:sound-name:completion-success "Recording saved" "Saved to Videos > Screen Recordings: $(basename "$2")"
+        # Copied as the file itself, as a file manager copies one, so it pastes into a chat, an
+        # email or a folder (a video's contents aren't something apps take from the clipboard).
+        python3 -I -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).absolute().as_uri(), end="\r\n")' "$2" | wl-copy --type text/uri-list
+        notify-send -a "Graphite" -i video-x-generic -h string:sound-name:completion-success "Recording saved" "Saved to Videos > Screen Recordings and copied, so you can paste it: $(basename "$2")"
         ;;
     area)
         area="$(slurp -d)" || exit 0 # Escape: no screenshot
