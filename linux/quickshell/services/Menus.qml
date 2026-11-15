@@ -67,6 +67,7 @@ Singleton {
             rows.push({ text: off ? "Show title bar" : "Hide title bar", action: () => Taskbar.setTitleBar(appId, off) });
         }
         if (windows.length === 1) rows.push({ text: "Minimise", action: () => Taskbar.minimize(windows[0].hwnd) });
+        else if (windows.length > 1) rows.push({ text: "Minimise all " + windows.length + " windows", action: () => windows.forEach(window => Taskbar.minimize(window.hwnd)) });
         if (windows.length > 0) {
             rows.push({
                 text: windows.length > 1 ? "Close all " + windows.length + " windows" : "Close window",
