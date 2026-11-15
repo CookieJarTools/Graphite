@@ -1,7 +1,7 @@
 pragma Singleton
 // The bar's menus, as rows for Menu.qml: an app's, a window's, a folder's, the bar's own (a
-// right click on its empty part), and the tags one for a window. `at` is where a menu opens:
-// { screen, x, y, above }.
+// right click on its empty part), the tags one for a window, and a tray icon's (the app's own
+// menu, read over D-Bus). `at` is where a menu opens: { screen, x, y, above }.
 
 import QtQuick
 import Quickshell
@@ -128,5 +128,61 @@ Singleton {
         rows.push({ text: "Task Manager", action: () => { ShellState.openTaskManager(); } });
         rows.push({ text: "Taskbar settings", action: () => ShellState.openSettings("personalise") });
         return rows;
+    }
+
+    // ---------- a tray icon's menu ----------
+
+    // The app's own menu (StatusNotifierItem), shown as the shell's: Qt's platform menus need
+    // a mode the shell doesn't run in. Its entries come over D-Bus a moment after they're asked
+    // for; the menu opens once they have. One level: an entry with its own submenu is left out.
+    // Where it will open, while the entries come (and, from the tray panel, while the panel
+    // goes): the bar it came from stays up meanwhile (Bar.qml), for two seconds at most.
+    property var trayAt: null
+
+    Timer {
+        id: trayWait
+        interval: 2000
+        onTriggered: root.trayAt = null
+    }
+
+    // The entries come in a new list, or into the list there is.
+    QsMenuOpener {
+        id: trayOpener
+        onChildrenChanged: root.showTrayMenu()
+    }
+
+    Connections {
+        target: trayOpener.children
+        function onValuesChanged() { root.showTrayMenu(); }
+    }
+
+    // Holds the bar up for a menu about to open at `at`.
+    function holdTrayMenu(at) {
+        trayAt = at;
+        trayWait.restart();
+    }
+
+    function openTrayMenu(item, at) {
+        if (!item || !item.hasMenu) return;
+        holdTrayMenu(at);
+        trayOpener.menu = item.menu;
+        showTrayMenu();
+    }
+
+    function showTrayMenu() {
+        const entries = trayOpener.children ? Array.from(trayOpener.children.values) : [];
+        if (!trayAt || entries.length === 0) return;
+        const rows = entries.filter(entry => !entry.hasChildren).map(entry => entry.isSeparator ? separator : {
+            text: entry.text.replace(/_(?=\S)/, ""), // the mnemonic's underscore
+            enabled: entry.enabled,
+            checked: entry.buttonType === QsMenuButtonType.None ? undefined : entry.checkState === Qt.Checked,
+            action: () => entry.triggered()
+        });
+        // No separator first or last, nor two together.
+        const tidy = rows.filter((row, index) => !row.separator || (index > 0 && index < rows.length - 1 && !rows[index - 1].separator));
+        // The menu is up before the place is let go, so the bar never sees a moment without either.
+        open(trayAt, tidy);
+        trayAt = null;
+        trayWait.stop();
     }
 }

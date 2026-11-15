@@ -1,6 +1,6 @@
 // The apps' tray icons (StatusNotifierItem), over the chevron. A click is the app's own
-// click; a right click opens its menu; a middle click its second action. The hovered icon's
-// name shows underneath.
+// click; a right click opens its menu (in the shell's own menu, once the panel has gone); a
+// middle click its second action. The hovered icon's name shows underneath.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -19,9 +19,21 @@ PanelFrame {
     panelWidth: (count === 0 ? emptyText.implicitWidth : columns * 38) + Theme.space4 * 2
     property string hovered: ""
 
-    QsMenuAnchor {
-        id: menu
-        anchor.window: root
+    // Where a menu opens: over the clicked icon's column, above the panel.
+    function menuAt(cell) {
+        const point = cell.mapToItem(null, 0, 0);
+        const top = root.screen.height - root.margins.bottom - root.implicitHeight;
+        return { screen: root.screenName, x: root.margins.left + point.x, y: top - Theme.space2, above: true };
+    }
+
+    // A right click's menu waits until the panel's window has gone: going after the menu had
+    // opened, it would close the menu too. Menus holds the bar up meanwhile.
+    property var menuFor: null
+    onOpenChanged: if (open) menuFor = null
+    onVisibleChanged: {
+        if (visible || !menuFor) return;
+        Menus.openTrayMenu(menuFor.item, menuFor.at);
+        menuFor = null;
     }
 
     GridLayout {
@@ -61,9 +73,9 @@ PanelFrame {
                         const item = cell.modelData;
                         if (event.button === Qt.RightButton || (event.button === Qt.LeftButton && item.onlyMenu)) {
                             if (!item.hasMenu) return;
-                            menu.menu = item.menu;
-                            menu.anchor.item = cell;
-                            menu.open();
+                            root.menuFor = { item: item, at: root.menuAt(cell) };
+                            Menus.holdTrayMenu(root.menuFor.at);
+                            ShellState.closePanels();
                         } else if (event.button === Qt.MiddleButton) {
                             item.secondaryActivate();
                         } else {

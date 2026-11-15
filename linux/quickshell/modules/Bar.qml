@@ -49,7 +49,7 @@ Scope {
     }
     readonly property bool inUse: ShellState.launcherOpen || (ShellState.barBusy && (ShellState.panelScreen === screenName || (ShellState.popover && ShellState.popover.screen === screenName)
         || (ShellState.menu && ShellState.menu.screen === screenName) || (ShellState.tagPanel && ShellState.tagPanel.screen === screenName)))
-        || previewRef !== "" || dragRef !== ""
+        || (Menus.trayAt !== null && Menus.trayAt.screen === screenName) || previewRef !== "" || dragRef !== ""
     readonly property bool shown: !autoHide || revealed || inUse
 
     onShownChanged: if (!shown) ShellState.closePanels()

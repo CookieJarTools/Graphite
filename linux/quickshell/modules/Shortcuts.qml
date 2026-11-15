@@ -7,6 +7,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Services.SystemTray
+import qs.config
 import qs.services
 
 Scope {
@@ -183,6 +185,10 @@ Scope {
             const item = Taskbar.items[index];
             const at = { screen: screen.name, x: screen.width / 2 - 100, y: screen.height - 72, above: true };
             if (item) Menus.open(at, item.type === "folder" ? Menus.folderItems(item) : Menus.appItems(item, at, null));
+        }
+        function tray(index: int): void {
+            const screen = Quickshell.screens[0];
+            Menus.openTrayMenu(SystemTray.items.values[index], { screen: screen.name, x: screen.width / 2, y: screen.height - Theme.barTop - Theme.space2, above: true });
         }
         function popover(index: int): void {
             const screen = Quickshell.screens[0];
