@@ -303,6 +303,11 @@ hl.window_rule({ match = { class = "^(steam_app_.*|Minecraft.*|minecraft.*|games
 -- comes back from the taskbar like any window.
 hl.window_rule({ match = { class = "^(steam_app_.*|.*\\.exe|Minecraft.*|minecraft.*|gamescope)$" }, suppress_event = "activatefocus" })
 
+-- Modal dialogs carry the tag "graphite-dialog", so the shell knows them: it puts other windows
+-- back where they were last time (services/WindowMemory.qml) but leaves these where they open.
+-- Hyprland doesn't tell the shell which window belongs to which, but it knows a modal one.
+hl.window_rule({ match = { modal = true }, tag = "+graphite-dialog" })
+
 -- Animations as quick as Windows' (speed is in tenths of a second; Hyprland's own fallback is
 -- most of a second), on the design's curves: ease-enter for what arrives, ease-exit for what goes.
 hl.curve("enter", { type = "bezier", points = { {0.16, 1}, {0.3, 1} } })

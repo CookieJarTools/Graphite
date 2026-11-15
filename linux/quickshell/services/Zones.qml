@@ -145,7 +145,11 @@ Singleton {
 
     function buttonUp() {
         if (!pointerDown) return;
-        if (showing && selection.length && dragged) snap(dragged, union(selection.map(index => zoneRect(zones[index], area))));
+        if (showing && selection.length && dragged) {
+            const rect = union(selection.map(index => zoneRect(zones[index], area)));
+            WindowMemory.dockedInto(dragged, selection, monitorName, rect); // it opens there next time
+            snap(dragged, rect);
+        }
         dragged = "";
         grab = null;
         pointerDown = false;

@@ -106,6 +106,16 @@ ColumnLayout {
             onClicked: ShellState.zoneEditorOpen = true
         }
 
+        CpRow {
+            label: "Remember where windows were"
+            hint: "Apps open their windows in the same place and size as last time, maximised or in their zones."
+            ToggleSwitch {
+                on: WindowMemory.enabled
+                enabled: !page.values.tiling
+                onToggled: WindowMemory.setEnabled(!(page.values.rememberWindows !== false))
+            }
+        }
+
         // Apps whose extra title bar was hidden (the taskbar's right-click menu: Hide title bar).
         CpRow {
             visible: Taskbar.titleBarOff.length > 0

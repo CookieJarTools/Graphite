@@ -28,6 +28,7 @@ pragma Singleton
 //   systemSounds   sounds for events: signing in, a password asked for, notifications (Sounds.qml)
 //   titleBarOff   app ids whose windows go without Hyprland's title bar (Taskbar.setTitleBar)
 //   zones      { enabled, layout, custom }, the window zones' layout (Zones.qml)
+//   rememberWindows   windows open where they were last time (WindowMemory.qml)
 //   securitySweep   { every: "day" | "week" | "off", malware }, the security sweep (Security.qml)
 //   drivesConnected   file system ids of drives kept connected after a restart (Drives.qml)
 // Changes go through update(), which saves a moment later.
@@ -84,6 +85,7 @@ Singleton {
             systemSounds: true,
             titleBarOff: [],
             zones: { enabled: true, layout: "priority", custom: [] },
+            rememberWindows: true,
             securitySweep: { every: "day", malware: false },
             drivesConnected: []
         };
