@@ -45,7 +45,9 @@ FloatingWindow {
         { id: "updates", name: "Updates", glyph: "software-update-available-symbolic", words: "update upgrade install automatic restart news", source: "CpUpdates.qml" },
         { id: "security", name: "Privacy & security", glyph: "security-high-symbolic", words: "firewall security privacy lock encryption permissions camera microphone location", source: "CpSecurity.qml" },
         { id: "drives", name: "Drives", glyph: "drive-harddisk-symbolic", words: "drive disk usb stick format erase wipe partition storage eject mount", source: "CpDrives.qml" },
-        { id: "system", name: "System", glyph: "computer-symbolic", words: "about storage disk space clean processor memory graphics version reload", source: "CpSystem.qml" },
+        { id: "storage", name: "Storage", glyph: "drive-harddisk-system-symbolic", words: "storage disk space full free up clean cleanup delete cache caches screenshots recordings downloads bin trash claude chats folders", source: "CpStorage.qml" },
+        { id: "storage-clean", parent: "storage", name: "Clean-up", glyph: "edit-clear-all-symbolic", words: "clean up cleanup free space delete caches screenshots recordings downloads bin claude chats", source: "CpCleanup.qml" },
+        { id: "system", name: "System", glyph: "computer-symbolic", words: "about processor memory graphics version reload", source: "CpSystem.qml" },
         { id: "troubleshoot", name: "Troubleshoot", glyph: "dialog-information-symbolic", words: "problem fix broken help app won't open not opening slow crash driver nvidia firefox", source: "CpTroubleshoot.qml" }
     ]
 

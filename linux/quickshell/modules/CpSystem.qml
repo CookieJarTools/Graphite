@@ -1,5 +1,5 @@
-// Control Panel: System. What the computer is, its storage (with a clean-up), and Graphite
-// Desk's version; and a way to reload the desktop.
+// Control Panel: System. What the computer is and Graphite Desk's version, the way to its
+// storage (CpStorage.qml), and a way to reload the desktop.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -44,43 +44,12 @@ ColumnLayout {
     CpSection {
         title: "Storage"
 
-        Repeater {
-            model: Machine.storage
-
-            CpRow {
-                id: diskRow
-                required property var modelData
-                glyph: "drive-harddisk-symbolic"
-                label: modelData.mount === "/" ? "This computer" : modelData.mount
-                hint: Machine.size(modelData.free) + " free of " + Machine.size(modelData.size)
-
-                below: [
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 6
-                        radius: 3
-                        color: Theme.surface300
-
-                        Rectangle {
-                            width: parent.width * diskRow.modelData.percent
-                            height: parent.height
-                            radius: 3
-                            color: diskRow.modelData.percent > 0.9 ? Theme.danger : Theme.accent
-                        }
-                    }
-                ]
-            }
-        }
-
         CpRow {
-            glyph: "edit-clear-all-symbolic"
-            label: "Free up space"
-            hint: "Deletes old updates and other temporary files. Your files are safe."
-            PillButton {
-                text: Machine.cleaning ? "Cleaning..." : "Clean up"
-                enabled: !Machine.cleaning
-                onClicked: Machine.clean()
-            }
+            glyph: "drive-harddisk-system-symbolic"
+            label: "Storage and clean-up"
+            hint: "What's taking up space on your drives, and what can go"
+            opens: true
+            onClicked: ShellState.settingsPage = "storage"
         }
     }
 
