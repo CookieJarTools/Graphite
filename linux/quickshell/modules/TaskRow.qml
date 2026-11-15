@@ -1,6 +1,7 @@
-// A row of the task manager's list (TaskManager.qml, `manager`): a group's heading, an entry
-// (an app, a background process, a part of the desktop) or a process beneath one; its figures
-// on their shades, a chevron to open it, a right-click menu.
+// A row of the task manager's list (TaskManager.qml, `manager`), 32 px: a group's heading, an
+// entry (an app, a background process, a part of the desktop) or a process beneath one; its
+// PID and figures in mono, right aligned, on their shades; a chevron to open it, a right-click
+// menu. The chosen row is tinted with the accent.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -20,20 +21,25 @@ Rectangle {
     readonly property bool on: !heading && manager.selected === task.key
     readonly property int count: task.processes ? task.processes.length : 0
     Layout.fillWidth: true
-    implicitHeight: heading ? 40 : 34
-    radius: Theme.radiusSm
-    color: on ? Theme.accentSoft : rowMouse.containsMouse && !heading ? Theme.surface200 : "transparent"
+    implicitHeight: heading ? 36 : 32
+    radius: Theme.radiusRow
+    color: on ? Theme.accentSoft : rowMouse.containsMouse && !heading ? Theme.hoverRow : "transparent"
+    clip: true
+
+    Accessible.role: heading ? Accessible.StaticText : Accessible.Row
+    Accessible.name: heading ? (modelData.group || "") : task.name
+    Accessible.selected: on
 
     UiText {
         visible: row.heading
         anchors.left: parent.left
         anchors.leftMargin: manager.lead
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space1
+        anchors.bottomMargin: Theme.space1 + 2
         text: row.modelData.group || ""
-        color: Theme.inkMuted
-        font.pixelSize: Theme.hintSize
-        font.weight: Font.DemiBold
+        color: Theme.inkFaint
+        font.pixelSize: Theme.sectionSize
+        font.weight: Theme.labelWeight
     }
 
     MouseArea {
@@ -53,17 +59,6 @@ Rectangle {
         }
     }
 
-    // The chosen row's mark.
-    Rectangle {
-        visible: row.on
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        width: 3
-        height: 16
-        radius: 2
-        color: Theme.accent
-    }
-
     RowLayout {
         visible: !row.heading
         anchors.fill: parent
@@ -80,7 +75,8 @@ Rectangle {
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 name: row.open ? "pan-down-symbolic" : "pan-end-symbolic"
-                tint: Theme.inkMuted
+                implicitSize: 14
+                tint: Theme.inkFaint
             }
 
             MouseArea {
@@ -105,29 +101,34 @@ Rectangle {
                 visible: row.depth === 1 || !(row.task.app || row.task.desk)
                 anchors.centerIn: parent
                 name: "application-x-executable-symbolic"
-                tint: Theme.inkMuted
-                opacity: 0.7
+                implicitSize: 14
+                tint: Theme.inkFaint
             }
         }
 
         UiText {
             Layout.fillWidth: true
             text: row.task.name
-            font.weight: row.depth === 0 && !!(row.task.app || row.task.desk) ? Font.Medium : Font.Normal
+            color: row.depth === 1 ? Theme.inkMuted : Theme.ink
+            font.weight: row.depth === 0 && !!(row.task.app || row.task.desk) ? Theme.labelWeight : Theme.bodyWeight
         }
 
         UiText {
             visible: row.depth === 0 && row.count > 1
             Layout.rightMargin: Theme.space3
-            text: "(" + row.count + ")"
-            color: Theme.inkMuted
-            font.pixelSize: Theme.hintSize
+            text: row.count
+            color: Theme.inkFaint
+            font.family: Theme.fontMono
+            font.pixelSize: Theme.sectionSize
         }
 
+        // The PID: a process's own, or an entry's when it is a single process.
         UiText {
-            visible: row.depth === 1
-            Layout.rightMargin: Theme.space3
-            text: "PID " + row.task.pid
+            Layout.preferredWidth: manager.pidWidth
+            Layout.fillHeight: true
+            rightPadding: Theme.space3
+            horizontalAlignment: Text.AlignRight
+            text: row.depth === 1 ? String(row.task.pid || "") : row.task.pids && row.task.pids.length === 1 ? String(row.task.pids[0]) : ""
             color: Theme.inkMuted
             font.family: Theme.fontMono
             font.pixelSize: Theme.identifierSize
@@ -148,7 +149,7 @@ Rectangle {
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                     text: parent.modelData.text
-                    color: parent.modelData.muted ? Theme.inkMuted : Theme.ink
+                    color: parent.modelData.muted ? Theme.inkFaint : Theme.inkMuted
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.identifierSize
                 }

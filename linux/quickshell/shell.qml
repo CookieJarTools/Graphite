@@ -28,6 +28,27 @@ ShellRoot {
         property: "dark"
         value: root.dark
     }
+    // The rest of the look, from the Control Panel's Personalisation page (Look.qml).
+    Binding {
+        target: Theme
+        property: "accentName"
+        value: ShellSettings.values ? ShellSettings.values.accent || "indigo" : "indigo"
+    }
+    Binding {
+        target: Theme
+        property: "blur"
+        value: !ShellSettings.values || ShellSettings.values.blur !== false
+    }
+    Binding {
+        target: Theme
+        property: "speed"
+        value: ShellSettings.values ? Number(ShellSettings.values.animationSpeed) || 1 : 1
+    }
+    Binding {
+        target: Theme
+        property: "reducedMotion"
+        value: !!ShellSettings.values && ShellSettings.values.windowAnimations === false
+    }
     onDarkChanged: Desktop.applyLook(dark)
     Component.onCompleted: {
         Desktop.applyLook(dark);

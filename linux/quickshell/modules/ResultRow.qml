@@ -1,5 +1,6 @@
-// One search result: its kind, its alias, its icon, the name (the match in the accent) and
-// where it is, its launcher label, the keys that also do it, and when it was last used.
+// One search result, 44 px: its icon, its alias, the name (the match in the accent) and where
+// it is, its launcher label, the keys that also do it, when it was last used, and its kind
+// ("App", "File", "Folder", "Action") at the right end.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -18,40 +19,40 @@ Rectangle {
     signal menuRequested(var event)
 
     readonly property string label: item && item.kind === "Apps" ? Search.labelOf(item.id) : ""
-    readonly property string kindGlyph: ({ Apps: "application-x-executable-symbolic", Files: "text-x-generic-symbolic", Folders: "folder-symbolic", Commands: "system-run-symbolic" })[item ? item.kind : "Apps"] || "application-x-executable-symbolic"
+    readonly property string kindName: ({ Apps: "App", Files: "File", Folders: "Folder", Commands: "Action" })[item ? item.kind : ""] || ""
 
     implicitHeight: 44
-    radius: Theme.radiusSm
-    color: selected ? Theme.surface300 : "transparent"
+    radius: Theme.radiusControl
+    color: selected ? Theme.accentSoft : "transparent"
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    Accessible.role: Accessible.ListItem
+    Accessible.name: item ? item.name + (kindName ? ", " + kindName : "") : ""
+    Accessible.selected: selected
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Theme.space2
+        anchors.leftMargin: Theme.space3
         anchors.rightMargin: Theme.space3
         spacing: Theme.space3
 
-        Glyph {
-            name: root.kindGlyph
-            opacity: 0.5
-        }
-
-        UiText {
-            Layout.preferredWidth: 44
-            textFormat: Text.StyledText
-            opacity: ShellState.showHints || (root.match.length > 0 && !!root.item && !!root.item.alias) ? 1 : 0
-            text: root.item ? Search.mark(root.item.alias || "", root.match) : ""
-            color: Theme.inkMuted
-            font.family: Theme.fontMono
-            font.pixelSize: Theme.identifierSize
-        }
-
         IconImage {
-            implicitSize: 24
+            implicitSize: 18
             source: !root.item ? ""
                 : root.item.kind === "Apps" ? Quickshell.iconPath(root.item.icon, "application-x-executable")
                 : root.item.kind === "Commands" ? Quickshell.iconPath(root.item.glyph, "system-run")
                 : root.item.kind === "Folders" ? Quickshell.iconPath("folder", "inode-directory")
                 : Quickshell.iconPath("text-x-generic", "unknown")
+        }
+
+        UiText {
+            visible: ShellState.showHints || (root.match.length > 0 && !!root.item && !!root.item.alias)
+            Layout.preferredWidth: 36
+            textFormat: Text.StyledText
+            text: root.item ? Search.mark(root.item.alias || "", root.match) : ""
+            color: Theme.inkFaint
+            font.family: Theme.fontMono
+            font.pixelSize: Theme.sectionSize
         }
 
         ColumnLayout {
@@ -62,15 +63,17 @@ Rectangle {
                 Layout.fillWidth: true
                 textFormat: Text.StyledText
                 text: root.item ? Search.mark(root.item.name, root.match) : ""
-                font.weight: Font.Medium
+                font.pixelSize: Theme.labelSize
+                font.weight: Theme.labelWeight
             }
 
             UiText {
                 Layout.fillWidth: true
                 visible: !!(root.item && root.item.path)
                 text: root.item && root.item.path ? root.item.path : ""
-                color: Theme.inkMuted
-                font.pixelSize: Theme.hintSize
+                color: Theme.inkFaint
+                font.family: Theme.fontMono
+                font.pixelSize: Theme.sectionSize
                 elide: Text.ElideMiddle
             }
         }
@@ -82,7 +85,7 @@ Rectangle {
             implicitHeight: 20
             radius: 10
             color: "transparent"
-            border.color: Theme.line
+            border.color: Theme.cardBorder
             border.width: 1
 
             RowLayout {
@@ -100,7 +103,7 @@ Rectangle {
                 UiText {
                     text: root.label
                     color: Theme.inkMuted
-                    font.pixelSize: Theme.hintSize
+                    font.pixelSize: Theme.sectionSize
                 }
             }
         }
@@ -114,8 +117,17 @@ Rectangle {
         }
 
         UiText {
+            visible: text.length > 0
             text: root.item ? Search.timeAgo(root.item.time) : ""
-            color: Theme.inkMuted
+            color: Theme.inkFaint
+            font.pixelSize: Theme.sectionSize
+        }
+
+        UiText {
+            Layout.minimumWidth: 40
+            horizontalAlignment: Text.AlignRight
+            text: root.kindName
+            color: Theme.inkFaint
             font.pixelSize: Theme.hintSize
         }
     }

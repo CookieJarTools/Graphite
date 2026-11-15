@@ -36,7 +36,7 @@ Singleton {
     property int processCount: 0
     property var link: ({ name: "", kind: "", mbits: 0 })   // the network adapter to the internet
     property var gpu: null            // { name, busy (0 to 1), memoryUsed, memoryTotal (MiB), temperature }
-    property var history: ({ cpu: [], memory: [], disk: [], net: [], gpu: [] }) // the last 30 samples, 0 to 1
+    property var history: ({ cpu: [], memory: [], disk: [], net: [], gpu: [] }) // the last 40 samples, 0 to 1
 
     // The network's use of its link, when the adapter says how fast it is (Wi-Fi often doesn't).
     readonly property real netBusy: link.mbits > 0 ? (netDown + netUp) * 8 / (link.mbits * 1000000) : 0
@@ -152,7 +152,7 @@ Singleton {
         }
         previous = { time: now, disk: disk, net: net, busy: busy };
 
-        const push = (list, value) => list.concat([Math.max(0, Math.min(1, value))]).slice(-30);
+        const push = (list, value) => list.concat([Math.max(0, Math.min(1, value))]).slice(-40);
         history = {
             cpu: push(history.cpu, cpu),
             memory: push(history.memory, memoryUsed / Math.max(1, memoryTotal)),

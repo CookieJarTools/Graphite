@@ -17,7 +17,7 @@ FloatingWindow {
     implicitWidth: 980
     implicitHeight: 720
     minimumSize: Qt.size(720, 480)
-    color: Theme.surface100
+    color: Theme.window
 
     onVisibleChanged: {
         if (!visible) {
@@ -51,6 +51,29 @@ FloatingWindow {
         { id: "troubleshoot", name: "Troubleshoot", glyph: "dialog-information-symbolic", words: "problem fix broken help app won't open not opening slow crash driver nvidia firefox", source: "CpTroubleshoot.qml" }
     ]
 
+    // The line under each page's heading.
+    readonly property var blurbs: ({
+        "network": "Wi-Fi, cables, VPNs and aeroplane mode.",
+        "devices": "Bluetooth, mice, touchpads, keyboards and printers.",
+        "display": "Screens, their size and sharpness, and night light.",
+        "sound": "Where sound goes and comes from, and how loud.",
+        "power": "Battery, power mode, and when the screen sleeps.",
+        "personalise": "How the desktop looks and moves, the taskbar and windows.",
+        "apps": "What's installed, what opens files, and what starts with you.",
+        "apps-installed": "Everything installed, to open or remove.",
+        "apps-get": "Find and install more apps.",
+        "shortcuts": "The keys that do things, and your own.",
+        "accounts": "The people who use this computer, and their passwords.",
+        "time": "The clock, the time zone and the computer's name.",
+        "updates": "Updates for the system, the apps and Graphite.",
+        "security": "The firewall, encryption and what apps may use.",
+        "drives": "Drives and USB sticks: connect, eject, format.",
+        "storage": "What fills the drives, and room to free up.",
+        "storage-clean": "Caches and leftovers that are safe to remove.",
+        "system": "This computer, its parts and Graphite's version.",
+        "troubleshoot": "Fixes for things that have stopped working."
+    })
+
     // A page's own pages (Apps' Installed apps and Get apps) show in the sidebar only when found.
     readonly property var shownPages: {
         const query = search.text.trim().toLowerCase();
@@ -80,49 +103,41 @@ FloatingWindow {
 
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 260
-                color: Theme.header
-
-                // A warm glow from the lower left, as on the backdrop.
-                Rectangle {
-                    anchors.fill: parent
-                    gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.55; color: "transparent" }
-                        GradientStop { position: 1; color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.07) }
-                    }
-                }
+                Layout.preferredWidth: Theme.sidebarWidth
+                color: Theme.sidebar
 
                 Rectangle {
                     anchors.right: parent.right
                     width: 1
                     height: parent.height
-                    color: Theme.line
+                    color: Theme.divider
                 }
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: Theme.space3
+                    anchors.margins: Theme.space2 + 2
                     spacing: Theme.space2
 
                     // Who is signed in.
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.margins: Theme.space2
-                        spacing: Theme.space3
+                        Layout.margins: Theme.space1
+                        Layout.topMargin: Theme.space2
+                        spacing: Theme.space2 + 2
 
                         Rectangle {
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            radius: 18
-                            color: Theme.surface300
-                            border.color: Theme.line
+                            implicitWidth: 32
+                            implicitHeight: 32
+                            radius: 16
+                            color: Theme.accentSoft
+                            border.color: Theme.accent
+                            border.width: 1
 
                             UiText {
                                 anchors.centerIn: parent
                                 text: root.me ? (root.me.full || root.me.name).slice(0, 1).toUpperCase() : ""
-                                color: Theme.inkMuted
-                                font.weight: Font.DemiBold
+                                color: Theme.accentText
+                                font.weight: Theme.headingWeight
                             }
                         }
 
@@ -133,14 +148,14 @@ FloatingWindow {
                             UiText {
                                 Layout.fillWidth: true
                                 text: root.me ? (root.me.full || root.me.name) : ""
-                                font.weight: Font.DemiBold
+                                font.weight: Theme.headingWeight
                             }
 
                             UiText {
                                 Layout.fillWidth: true
                                 text: root.me && root.me.admin ? "Administrator · Local account" : "Local account"
-                                color: Theme.inkMuted
-                                font.pixelSize: Theme.hintSize
+                                color: Theme.inkFaint
+                                font.pixelSize: Theme.sectionSize
                             }
                         }
                     }
@@ -148,27 +163,34 @@ FloatingWindow {
                     // Find a setting.
                     Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: 36
-                        radius: Theme.radiusSm
-                        color: Theme.surface200
-                        border.color: search.activeFocus ? Theme.accent : Theme.line
+                        implicitHeight: 30
+                        radius: Theme.radiusControl
+                        color: Theme.tileOff
+                        border.color: search.activeFocus ? Theme.accentText : Theme.cardBorder
                         border.width: 1
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: Theme.space3
-                            anchors.rightMargin: Theme.space2
+                            anchors.leftMargin: Theme.space2 + 2
+                            anchors.rightMargin: 5
                             spacing: Theme.space2
 
-                            Glyph { name: "system-search-symbolic" }
+                            Glyph {
+                                name: "system-search-symbolic"
+                                implicitSize: 14
+                                tint: Theme.inkFaint
+                            }
 
                             TextInput {
                                 id: search
                                 Layout.fillWidth: true
                                 color: Theme.ink
+                                selectionColor: Theme.accentSoft
                                 font.family: Theme.fontSans
                                 font.pixelSize: Theme.actionSize
                                 clip: true
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: "Find a setting"
                                 function focusField() { forceActiveFocus(); selectAll(); }
                                 Keys.onReturnPressed: if (root.shownPages.length) ShellState.settingsPage = root.shownPages[0].id
                                 Keys.onEscapePressed: text = ""
@@ -177,7 +199,7 @@ FloatingWindow {
                                     anchors.fill: parent
                                     visible: search.text.length === 0
                                     text: "Find a setting"
-                                    color: Theme.inkMuted
+                                    color: Theme.inkFaint
                                     font.pixelSize: Theme.actionSize
                                 }
                             }
@@ -190,8 +212,8 @@ FloatingWindow {
                     // The pages.
                     ColumnLayout {
                         Layout.fillWidth: true
-                        Layout.topMargin: Theme.space2
-                        spacing: 2
+                        Layout.topMargin: Theme.space1
+                        spacing: 1
 
                         Repeater {
                             model: root.shownPages
@@ -201,32 +223,31 @@ FloatingWindow {
                                 required property var modelData
                                 readonly property bool on: root.current.id === modelData.id || root.current.parent === modelData.id
                                 Layout.fillWidth: true
-                                implicitHeight: 38
-                                radius: Theme.radiusSm
-                                color: on ? Theme.surface300 : pageMouse.containsMouse ? Qt.rgba(Theme.surface300.r, Theme.surface300.g, Theme.surface300.b, 0.5) : "transparent"
+                                implicitHeight: 32
+                                radius: Theme.radiusRow
+                                color: on ? Theme.activeRow : pageMouse.containsMouse ? Theme.hoverRow : "transparent"
+                                Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
-                                // The chosen page's mark.
-                                Rectangle {
-                                    visible: pageButton.on
-                                    anchors.left: parent.left
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: 3
-                                    height: 16
-                                    radius: 2
-                                    color: Theme.accent
-                                }
+                                Accessible.role: Accessible.PageTab
+                                Accessible.name: modelData.name
+                                Accessible.selected: on
+                                Accessible.onPressAction: ShellState.settingsPage = modelData.id
 
                                 RowLayout {
                                     anchors.fill: parent
-                                    anchors.leftMargin: Theme.space3
-                                    spacing: Theme.space3
+                                    anchors.leftMargin: Theme.space2 + 2
+                                    spacing: Theme.space2 + 2
 
-                                    Glyph { name: pageButton.modelData.glyph }
+                                    Glyph {
+                                        name: pageButton.modelData.glyph
+                                        tint: pageButton.on ? Theme.ink : Theme.inkMuted
+                                    }
 
                                     UiText {
                                         Layout.fillWidth: true
                                         text: pageButton.modelData.name
-                                        font.weight: pageButton.on ? Font.DemiBold : Font.Normal
+                                        color: pageButton.on ? Theme.ink : Theme.inkMuted
+                                        font.weight: Theme.labelWeight
                                     }
                                 }
 
@@ -243,7 +264,7 @@ FloatingWindow {
                             visible: root.shownPages.length === 0
                             Layout.margins: Theme.space2
                             text: "Nothing matches"
-                            color: Theme.inkMuted
+                            color: Theme.inkFaint
                         }
                     }
 
@@ -258,43 +279,50 @@ FloatingWindow {
                 Layout.fillHeight: true
                 spacing: 0
 
-                Rectangle {
+                // The heading and its line, 28 px down and 36 px in.
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-                    color: Theme.header
+                    Layout.topMargin: 28
+                    Layout.leftMargin: root.currentParent ? Theme.space5 : Theme.space9
+                    Layout.rightMargin: Theme.space4
+                    spacing: Theme.space2
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: root.currentParent ? Theme.space3 : Theme.space6
-                        anchors.rightMargin: Theme.space3
-                        spacing: Theme.space2
+                    // A page's own page: back to it, and its name before this one's.
+                    BarButton {
+                        Layout.alignment: Qt.AlignTop
+                        visible: root.currentParent !== null
+                        glyph: "go-previous-symbolic"
+                        label: "Back"
+                        onClicked: ShellState.settingsPage = root.current.parent
+                    }
 
-                        // A page's own page: back to it, and its name before this one's.
-                        BarButton {
-                            visible: root.currentParent !== null
-                            glyph: "go-previous-symbolic"
-                            onClicked: ShellState.settingsPage = root.current.parent
-                        }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
 
                         UiText {
                             Layout.fillWidth: true
                             text: root.currentParent ? root.currentParent.name + "  ›  " + root.current.name : root.current.name
-                            font.pixelSize: 20
-                            font.weight: Font.DemiBold
+                            font.pixelSize: Theme.headingSize
+                            font.weight: Theme.headingWeight
+                            font.letterSpacing: -0.2
                         }
 
-                        BarButton {
-                            visible: !ShellState.deskPlugin
-                            glyph: "window-close-symbolic"
-                            onClicked: ShellState.settingsOpen = false
+                        UiText {
+                            Layout.fillWidth: true
+                            visible: text.length > 0
+                            text: root.blurbs[root.current.id] || ""
+                            color: Theme.inkFaint
+                            font.pixelSize: Theme.hintSize
                         }
                     }
 
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 1
-                        color: Theme.line
+                    BarButton {
+                        Layout.alignment: Qt.AlignTop
+                        visible: !ShellState.deskPlugin
+                        glyph: "window-close-symbolic"
+                        label: "Close"
+                        onClicked: ShellState.settingsOpen = false
                     }
                 }
 
@@ -310,8 +338,8 @@ FloatingWindow {
 
                     Loader {
                         id: pageLoader
-                        x: Theme.space6
-                        width: Math.min(flick.width - Theme.space6 * 2, 820)
+                        x: Theme.space9
+                        width: Math.min(flick.width - Theme.space9 * 2, 820)
                         active: root.visible
                         source: root.current.source
                         onLoaded: {

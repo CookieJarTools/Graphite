@@ -1,6 +1,8 @@
-// The launcher (the Super key) and the compact search (Alt+Space): LauncherView in a card over
-// a dimmed screen, on the screen with the focused window. Escape or a click outside closes.
+// The launcher (the Super key) and the compact search (Alt+Space): LauncherView in a 560 px
+// panel 190 px from the top, over a dimmed screen, on the screen with the focused window. It
+// drops in from 8 px above, growing from 98%; Escape or a click outside closes it.
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -38,7 +40,7 @@ PanelWindow {
         anchors.fill: parent
         color: Theme.scrim
         opacity: root.open ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: root.open ? Theme.durationBase : Theme.durationFast } }
+        Behavior on opacity { NumberAnimation { duration: root.open ? Theme.durationScrim : Theme.durationFast } }
 
         MouseArea {
             anchors.fill: parent
@@ -46,24 +48,39 @@ PanelWindow {
         }
     }
 
+    RectangularShadow {
+        anchors.fill: card
+        opacity: card.opacity
+        scale: card.scale
+        transform: Translate { y: drop.y }
+        offset.y: 32
+        blur: 80
+        spread: -12
+        radius: card.radius
+        color: Qt.rgba(0, 0, 0, Theme.dark ? 0.6 : 0.2)
+    }
+
     Rectangle {
         id: card
 
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * (root.palette ? 0.2 : 0.14)
-        width: Math.min(root.palette ? 640 : Theme.launcherWidth, parent.width - Theme.space4 * 2)
+        y: Math.min(Theme.launcherTop, parent.height * 0.18)
+        width: Math.min(Theme.launcherWidth, parent.width - Theme.space4 * 2)
         height: Math.min(root.palette ? 440 : 600, parent.height - y - Theme.space10)
         radius: Theme.radiusLg
-        color: Theme.surface200
-        border.color: Theme.glassEdge
+        color: Theme.glass(Theme.panel, 0.96)
+        border.color: Theme.border
         border.width: 1
         clip: true
         opacity: root.open ? 1 : 0
+        scale: root.open ? 1 : Theme.grow(0.98)
         transform: Translate {
-            y: root.open ? 0 : Theme.rise
-            Behavior on y { NumberAnimation { duration: root.open ? 220 : 140; easing.type: Easing.BezierSpline; easing.bezierCurve: root.open ? Theme.easeEnter : Theme.easeExit } }
+            id: drop
+            y: root.open ? 0 : -Theme.rise
+            Behavior on y { NumberAnimation { duration: root.open ? Theme.durationLauncherIn : Theme.durationFast; easing.type: Easing.BezierSpline; easing.bezierCurve: root.open ? Theme.easeOut : Theme.easeIn } }
         }
-        Behavior on opacity { NumberAnimation { duration: root.open ? 220 : 140; easing.type: Easing.BezierSpline; easing.bezierCurve: root.open ? Theme.easeEnter : Theme.easeExit } }
+        Behavior on opacity { NumberAnimation { duration: root.open ? Theme.durationLauncherIn : Theme.durationFast; easing.type: Easing.BezierSpline; easing.bezierCurve: root.open ? Theme.easeOut : Theme.easeIn } }
+        Behavior on scale { NumberAnimation { duration: root.open ? Theme.durationLauncherIn : Theme.durationFast; easing.type: Easing.BezierSpline; easing.bezierCurve: root.open ? Theme.easeOut : Theme.easeIn } }
 
         MouseArea { anchors.fill: parent } // clicks on the card stay on it
 

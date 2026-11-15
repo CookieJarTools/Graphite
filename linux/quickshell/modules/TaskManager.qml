@@ -1,8 +1,10 @@
 // The task manager (Ctrl+Shift+Esc), as Windows 11's: its pages on a rail on the left.
-// Processes: the apps with windows (each opens, by its chevron, to show its processes), the
-// background processes and the desktop's own, with the processor, memory and disk each uses,
-// shaded by how busy, and the totals over each column; search (Ctrl+F), sort by any column,
-// End task (Delete) and a right-click menu (a double click on an app switches to it).
+// Processes: two tiles, the processor (its use now and a bar history) and memory (its use and
+// how many processes share it); then the apps with windows (each opens, by its chevron, to show
+// its processes), the background processes and the desktop's own, with the PID and the
+// processor, memory and disk each uses in mono, shaded by how busy, and the totals over each
+// column; search (Ctrl+F), sort by any column, a right-click menu (a double click on an app
+// switches to it), and along the foot what is chosen and End task (Delete).
 // Performance: the processor, memory, disk, network and graphics card, each a card with its
 // graph, the chosen one large beside them. Startup apps: what starts when you sign in, each with
 // its switch. Numbers come from Tasks.qml while it is open.
@@ -22,7 +24,7 @@ FloatingWindow {
     implicitWidth: 1040
     implicitHeight: 700
     minimumSize: Qt.size(760, 480)
-    color: Theme.surface100
+    color: Theme.window
 
     property string tab: "processes"    // "processes", "performance" or "startup"
     property string selected: ""         // the chosen row's key
@@ -55,13 +57,19 @@ FloatingWindow {
         { id: "startup", name: "Startup apps", glyph: "system-run-symbolic" }
     ]
     readonly property var page: pages.find(candidate => candidate.id === tab) || pages[0]
+    readonly property var blurbs: ({
+        processes: "What is running, and what each is using.",
+        performance: "The processor, memory, drives, network and graphics over the last minute.",
+        startup: "What opens by itself when you sign in."
+    })
 
     // The columns' widths, shared by the headings and the rows.
     readonly property int lead: 28        // the chevron's space
-    readonly property int cpuWidth: 84
-    readonly property int memoryWidth: 104
-    readonly property int diskWidth: 96
-    readonly property int netWidth: 96
+    readonly property int pidWidth: 80
+    readonly property int cpuWidth: 80
+    readonly property int memoryWidth: 100
+    readonly property int diskWidth: 90
+    readonly property int netWidth: 90
 
     // ---------- what the list shows ----------
 
@@ -188,10 +196,18 @@ FloatingWindow {
         ].filter(item => item.visible !== false);
     }
 
-    // A cell's shade, from pale to the accent, by how busy (0 to 1), as Windows shades its columns.
+    // A cell's shade, from nothing to the accent, by how busy (0 to 1), as Windows shades its
+    // columns.
     function heat(level) {
         const amount = Math.max(0, Math.min(1, level || 0));
-        return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.05 + 0.45 * amount);
+        return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, amount < 0.02 ? 0 : 0.04 + 0.32 * amount);
+    }
+
+    // The foot's line: what is chosen, or how many processes there are.
+    function selectionText() {
+        if (!chosen) return Tasks.processCount + " processes · none selected";
+        const pid = chosen.pids && chosen.pids.length === 1 ? "  ·  PID " + chosen.pids[0] : chosen.pids && chosen.pids.length > 1 ? "  ·  " + chosen.pids.length + " processes" : "";
+        return chosen.name + " selected" + pid;
     }
 
     function percent(fraction) {
@@ -286,46 +302,37 @@ FloatingWindow {
 
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 212
-                color: Theme.header
-
-                // A warm glow from the lower left, as on the Control Panel.
-                Rectangle {
-                    anchors.fill: parent
-                    gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.55; color: "transparent" }
-                        GradientStop { position: 1; color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.07) }
-                    }
-                }
+                Layout.preferredWidth: 200
+                color: Theme.sidebar
 
                 Rectangle {
                     anchors.right: parent.right
                     width: 1
                     height: parent.height
-                    color: Theme.line
+                    color: Theme.divider
                 }
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: Theme.space3
-                    spacing: 2
+                    anchors.margins: Theme.space2 + 2
+                    spacing: 1
 
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.margins: Theme.space2
+                        Layout.topMargin: Theme.space3
                         Layout.bottomMargin: Theme.space3
-                        spacing: Theme.space3
+                        spacing: Theme.space2 + 2
 
                         Glyph {
                             name: "utilities-system-monitor-symbolic"
-                            tint: Theme.accent
+                            tint: Theme.accentText
                         }
 
                         UiText {
                             Layout.fillWidth: true
                             text: "Task Manager"
-                            font.weight: Font.DemiBold
+                            font.weight: Theme.headingWeight
                         }
                     }
 
@@ -337,31 +344,30 @@ FloatingWindow {
                             required property var modelData
                             readonly property bool on: root.tab === modelData.id
                             Layout.fillWidth: true
-                            implicitHeight: 38
-                            radius: Theme.radiusSm
-                            color: on ? Theme.surface300 : pageMouse.containsMouse ? Qt.rgba(Theme.surface300.r, Theme.surface300.g, Theme.surface300.b, 0.5) : "transparent"
+                            implicitHeight: 32
+                            radius: Theme.radiusRow
+                            color: on ? Theme.activeRow : pageMouse.containsMouse ? Theme.hoverRow : "transparent"
+                            Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
 
-                            Rectangle {
-                                visible: pageButton.on
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 3
-                                height: 16
-                                radius: 2
-                                color: Theme.accent
-                            }
+                            Accessible.role: Accessible.PageTab
+                            Accessible.name: modelData.name
+                            Accessible.selected: on
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: Theme.space3
-                                spacing: Theme.space3
+                                anchors.leftMargin: Theme.space2 + 2
+                                spacing: Theme.space2 + 2
 
-                                Glyph { name: pageButton.modelData.glyph }
+                                Glyph {
+                                    name: pageButton.modelData.glyph
+                                    tint: pageButton.on ? Theme.ink : Theme.inkMuted
+                                }
 
                                 UiText {
                                     Layout.fillWidth: true
                                     text: pageButton.modelData.name
-                                    font.weight: pageButton.on ? Font.DemiBold : Font.Normal
+                                    color: pageButton.on ? Theme.ink : Theme.inkMuted
+                                    font.weight: Theme.labelWeight
                                 }
                             }
 
@@ -385,8 +391,9 @@ FloatingWindow {
                         Layout.fillWidth: true
                         Layout.margins: Theme.space2
                         text: "CPU " + root.percent(Tasks.cpu) + "  ·  Memory " + root.percent(Tasks.memoryUsed / Math.max(1, Tasks.memoryTotal))
-                        color: Theme.inkMuted
-                        font.pixelSize: Theme.hintSize
+                        color: Theme.inkFaint
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.sectionSize
                     }
                 }
             }
@@ -398,93 +405,203 @@ FloatingWindow {
                 Layout.fillHeight: true
                 spacing: 0
 
-                Rectangle {
+                // The heading and its line, and the search on the right.
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-                    color: Theme.header
+                    Layout.topMargin: Theme.space6
+                    Layout.leftMargin: Theme.space7
+                    Layout.rightMargin: Theme.space4
+                    Layout.bottomMargin: Theme.space4
+                    spacing: Theme.space2
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Theme.space6
-                        anchors.rightMargin: Theme.space3
-                        spacing: Theme.space2
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
 
                         UiText {
+                            Layout.fillWidth: true
                             text: root.page.name
-                            font.pixelSize: Theme.nameSize
-                            font.weight: Font.DemiBold
+                            font.pixelSize: Theme.headingSize
+                            font.weight: Theme.headingWeight
+                            font.letterSpacing: -0.2
                         }
 
-                        Item { Layout.fillWidth: true }
+                        UiText {
+                            Layout.fillWidth: true
+                            text: root.blurbs[root.page.id] || ""
+                            color: Theme.inkFaint
+                            font.pixelSize: Theme.hintSize
+                        }
+                    }
 
-                        // Search: a name, part of a command line, or a PID.
-                        Rectangle {
-                            visible: root.tab === "processes"
-                            Layout.preferredWidth: 300
-                            implicitHeight: 36
-                            radius: Theme.radiusSm
-                            color: Theme.surface200
-                            border.color: search.activeFocus ? Theme.accent : Theme.line
-                            border.width: 1
+                    // Search: a name, part of a command line, or a PID.
+                    Rectangle {
+                        visible: root.tab === "processes"
+                        Layout.preferredWidth: 220
+                        implicitHeight: 30
+                        radius: Theme.radiusControl
+                        color: Theme.tileOff
+                        border.color: search.activeFocus ? Theme.accentText : Theme.cardBorder
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: Theme.space2 + 2
+                            anchors.rightMargin: 5
+                            spacing: Theme.space2
+
+                            Glyph {
+                                name: "system-search-symbolic"
+                                implicitSize: 14
+                                tint: Theme.inkFaint
+                            }
+
+                            TextInput {
+                                id: search
+                                Layout.fillWidth: true
+                                color: Theme.ink
+                                selectionColor: Theme.accentSoft
+                                font.family: Theme.fontSans
+                                font.pixelSize: Theme.actionSize
+                                clip: true
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: "Search by name or PID"
+                                Keys.onEscapePressed: {
+                                    if (text) text = "";
+                                    else ShellState.taskManagerOpen = false;
+                                }
+
+                                UiText {
+                                    anchors.fill: parent
+                                    visible: search.text.length === 0
+                                    text: "Search by name or PID"
+                                    color: Theme.inkFaint
+                                    font.pixelSize: Theme.actionSize
+                                }
+                            }
+
+                            KeyChip { text: "Ctrl" }
+                            KeyChip { text: "F" }
+                        }
+                    }
+
+                    BarButton {
+                        visible: !ShellState.deskPlugin
+                        glyph: "window-close-symbolic"
+                        label: "Close"
+                        onClicked: ShellState.taskManagerOpen = false
+                    }
+                }
+
+                // ---------- the tiles: the processor and memory ----------
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: false
+                    Layout.leftMargin: Theme.space7
+                    Layout.rightMargin: Theme.space7
+                    Layout.bottomMargin: Theme.space2
+                    visible: root.tab === "processes"
+                    spacing: Theme.space3
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        implicitHeight: processorTile.implicitHeight + 14 * 2
+                        radius: Theme.radiusCard
+                        color: Theme.cardFill
+                        border.color: Theme.cardBorder
+                        border.width: 1
+
+                        ColumnLayout {
+                            id: processorTile
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            spacing: Theme.space3
 
                             RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: Theme.space3
-                                anchors.rightMargin: Theme.space2
-                                spacing: Theme.space2
+                                Layout.fillWidth: true
 
-                                Glyph {
-                                    name: "system-search-symbolic"
-                                    tint: Theme.inkMuted
-                                }
-
-                                TextInput {
-                                    id: search
+                                UiText {
                                     Layout.fillWidth: true
-                                    color: Theme.ink
-                                    selectionColor: Theme.accentSoft
-                                    font.family: Theme.fontSans
-                                    font.pixelSize: Theme.actionSize
-                                    clip: true
-                                    Keys.onEscapePressed: {
-                                        if (text) text = "";
-                                        else ShellState.taskManagerOpen = false;
-                                    }
-
-                                    UiText {
-                                        anchors.fill: parent
-                                        visible: search.text.length === 0
-                                        text: "Search by name or PID"
-                                        color: Theme.inkMuted
-                                        font.pixelSize: Theme.actionSize
-                                    }
+                                    text: "Processor"
+                                    color: Theme.inkFaint
+                                    font.pixelSize: Theme.sectionSize
+                                    font.weight: Theme.labelWeight
                                 }
 
-                                KeyChip { text: "Ctrl" }
-                                KeyChip { text: "F" }
+                                UiText {
+                                    text: root.percent(Tasks.cpu)
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 15
+                                    font.weight: Theme.labelWeight
+                                }
                             }
-                        }
 
-                        PillButton {
-                            visible: root.tab === "processes"
-                            danger: true
-                            text: "End task"
-                            enabled: Tasks.canEnd(root.chosen)
-                            onClicked: root.endChosen()
-                        }
-
-                        BarButton {
-                            visible: !ShellState.deskPlugin
-                            glyph: "window-close-symbolic"
-                            onClicked: ShellState.taskManagerOpen = false
+                            TaskBars {
+                                Layout.fillWidth: true
+                                points: Tasks.history.cpu
+                            }
                         }
                     }
 
                     Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 1
-                        color: Theme.line
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        implicitHeight: processorTile.implicitHeight + 14 * 2
+                        radius: Theme.radiusCard
+                        color: Theme.cardFill
+                        border.color: Theme.cardBorder
+                        border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            spacing: Theme.space3
+
+                            RowLayout {
+                                Layout.fillWidth: true
+
+                                UiText {
+                                    Layout.fillWidth: true
+                                    text: "Memory"
+                                    color: Theme.inkFaint
+                                    font.pixelSize: Theme.sectionSize
+                                    font.weight: Theme.labelWeight
+                                }
+
+                                UiText {
+                                    text: root.percent(Tasks.memoryUsed / Math.max(1, Tasks.memoryTotal))
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 15
+                                    font.weight: Theme.labelWeight
+                                }
+                            }
+
+                            Item { Layout.fillHeight: true }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 6
+                                radius: 3
+                                color: Theme.track
+
+                                Rectangle {
+                                    width: parent.width * Math.max(0, Math.min(1, Tasks.memoryUsed / Math.max(1, Tasks.memoryTotal)))
+                                    height: parent.height
+                                    radius: 3
+                                    color: Theme.accent
+                                    Behavior on width { NumberAnimation { duration: Theme.durationBars; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut } }
+                                }
+                            }
+
+                            UiText {
+                                Layout.fillWidth: true
+                                text: Tasks.size(Tasks.memoryUsed) + " in use across " + Tasks.processCount + " processes"
+                                color: Theme.inkMuted
+                                font.pixelSize: Theme.hintSize
+                            }
+                        }
                     }
                 }
 
@@ -498,13 +615,18 @@ FloatingWindow {
                     spacing: 0
 
                     TaskHeading {
-
                         manager: root
                         Layout.fillWidth: true
                         Layout.leftMargin: root.lead
                         label: "Name"
                         key: "name"
                         alignRight: false
+                    }
+                    TaskHeading {
+                        manager: root
+                        Layout.preferredWidth: root.pidWidth
+                        label: "PID"
+                        key: ""
                     }
                     TaskHeading {
                         manager: root
@@ -538,9 +660,11 @@ FloatingWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
+                    Layout.leftMargin: Theme.space3
+                    Layout.rightMargin: Theme.space3
                     visible: root.tab === "processes"
                     implicitHeight: 1
-                    color: Theme.line
+                    color: Theme.divider
                 }
 
                 Flickable {
@@ -574,12 +698,46 @@ FloatingWindow {
                     }
                 }
 
+                // ---------- the foot: what is chosen, and End task ----------
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    visible: root.tab === "processes"
+                    implicitHeight: 1
+                    color: Theme.divider
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 48
+                    Layout.leftMargin: Theme.space7
+                    Layout.rightMargin: Theme.space4
+                    visible: root.tab === "processes"
+                    spacing: Theme.space3
+
+                    UiText {
+                        Layout.fillWidth: true
+                        text: root.selectionText()
+                        color: root.chosen ? Theme.inkMuted : Theme.inkFaint
+                        font.pixelSize: Theme.hintSize
+                    }
+
+                    PillButton {
+                        danger: true
+                        text: "End task"
+                        enabled: Tasks.canEnd(root.chosen)
+                        onClicked: root.endChosen()
+                    }
+                }
+
                 // ---------- performance ----------
 
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.margins: Theme.space4
+                    Layout.leftMargin: Theme.space7
+                    Layout.rightMargin: Theme.space7
+                    Layout.bottomMargin: Theme.space6
                     visible: root.tab === "performance"
                     spacing: Theme.space4
 
@@ -597,11 +755,12 @@ FloatingWindow {
                                 required property var modelData
                                 readonly property bool on: root.current.id === modelData.id
                                 Layout.fillWidth: true
-                                implicitHeight: 64
-                                radius: Theme.radiusMd
-                                color: on ? Theme.surface300 : cardMouse.containsMouse ? Theme.surface200 : "transparent"
-                                border.color: on ? Qt.rgba(card.modelData.colour.r, card.modelData.colour.g, card.modelData.colour.b, 0.6) : "transparent"
+                                implicitHeight: 60
+                                radius: Theme.radiusCard
+                                color: on ? Theme.activeRow : cardMouse.containsMouse ? Theme.hoverRow : Theme.cardFill
+                                border.color: on ? Qt.rgba(card.modelData.colour.r, card.modelData.colour.g, card.modelData.colour.b, 0.5) : Theme.cardBorder
                                 border.width: 1
+                                Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -623,14 +782,15 @@ FloatingWindow {
                                         UiText {
                                             Layout.fillWidth: true
                                             text: card.modelData.name
-                                            font.weight: Font.DemiBold
+                                            font.weight: Theme.labelWeight
                                         }
 
                                         UiText {
                                             Layout.fillWidth: true
                                             text: card.modelData.value
                                             color: Theme.inkMuted
-                                            font.pixelSize: Theme.hintSize
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: Theme.sectionSize
                                         }
                                     }
                                 }
@@ -650,14 +810,14 @@ FloatingWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: Theme.radiusMd
-                        color: Theme.surface200
-                        border.color: Theme.line
+                        radius: Theme.radiusCard
+                        color: Theme.cardFill
+                        border.color: Theme.cardBorder
                         border.width: 1
 
                         ColumnLayout {
                             anchors.fill: parent
-                            anchors.margins: Theme.space6
+                            anchors.margins: Theme.space5
                             spacing: Theme.space2
 
                             RowLayout {
@@ -666,8 +826,8 @@ FloatingWindow {
 
                                 UiText {
                                     text: root.current.name
-                                    font.pixelSize: Theme.displaySize
-                                    font.weight: Font.DemiBold
+                                    font.pixelSize: Theme.headingSize
+                                    font.weight: Theme.headingWeight
                                 }
 
                                 UiText {
@@ -681,7 +841,7 @@ FloatingWindow {
                             UiText {
                                 Layout.fillWidth: true
                                 text: root.current.caption
-                                color: Theme.inkMuted
+                                color: Theme.inkFaint
                                 font.pixelSize: Theme.hintSize
                             }
 
@@ -710,14 +870,16 @@ FloatingWindow {
 
                                         UiText {
                                             text: parent.modelData.label
-                                            color: Theme.inkMuted
-                                            font.pixelSize: Theme.hintSize
+                                            color: Theme.inkFaint
+                                            font.pixelSize: Theme.sectionSize
+                                            font.weight: Theme.labelWeight
                                         }
 
                                         UiText {
                                             Layout.fillWidth: true
                                             text: parent.modelData.value
-                                            font.pixelSize: 18
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 15
                                         }
                                     }
                                 }
@@ -741,9 +903,8 @@ FloatingWindow {
 
                     ColumnLayout {
                         id: startupList
-                        x: Theme.space6
-                        y: Theme.space4
-                        width: parent.width - Theme.space6 * 2
+                        x: Theme.space7
+                        width: parent.width - Theme.space7 * 2
                         spacing: 0
 
                         UiText {
@@ -751,6 +912,7 @@ FloatingWindow {
                             Layout.bottomMargin: Theme.space3
                             text: "These open by themselves when you sign in. Add more in the Control Panel's Apps page."
                             color: Theme.inkMuted
+                            font.pixelSize: Theme.hintSize
                             wrapMode: Text.WordWrap
                             elide: Text.ElideNone
                         }
@@ -762,22 +924,22 @@ FloatingWindow {
 
                             UiText {
                                 Layout.fillWidth: true
-                                Layout.leftMargin: Theme.space3 + 24 + Theme.space3
+                                Layout.leftMargin: Theme.space3 + 20 + Theme.space3
                                 text: "Name"
-                                color: Theme.inkMuted
-                                font.pixelSize: Theme.hintSize
-                                font.weight: Font.DemiBold
+                                color: Theme.inkFaint
+                                font.pixelSize: Theme.sectionSize
+                                font.weight: Theme.labelWeight
                             }
 
                             UiText {
                                 Layout.preferredWidth: 140
                                 text: "Status"
-                                color: Theme.inkMuted
-                                font.pixelSize: Theme.hintSize
-                                font.weight: Font.DemiBold
+                                color: Theme.inkFaint
+                                font.pixelSize: Theme.sectionSize
+                                font.weight: Theme.labelWeight
                             }
 
-                            Item { implicitWidth: 40 + Theme.space3 }
+                            Item { implicitWidth: 36 + Theme.space3 }
                         }
 
                         Repeater {
@@ -787,10 +949,10 @@ FloatingWindow {
                                 id: startupRow
                                 required property var modelData
                                 Layout.fillWidth: true
-                                Layout.topMargin: Theme.space1
-                                implicitHeight: 48
-                                radius: Theme.radiusSm
-                                color: startupMouse.containsMouse ? Theme.surface200 : "transparent"
+                                Layout.topMargin: 2
+                                implicitHeight: 44
+                                radius: Theme.radiusRow
+                                color: startupMouse.containsMouse ? Theme.hoverRow : "transparent"
 
                                 MouseArea {
                                     id: startupMouse
@@ -805,19 +967,20 @@ FloatingWindow {
                                     spacing: Theme.space3
 
                                     IconImage {
-                                        implicitSize: 24
+                                        implicitSize: 20
                                         source: Quickshell.iconPath(startupRow.modelData.icon, "application-x-executable")
                                     }
 
                                     UiText {
                                         Layout.fillWidth: true
                                         text: startupRow.modelData.name
+                                        font.weight: Theme.labelWeight
                                     }
 
                                     UiText {
                                         Layout.preferredWidth: 140
                                         text: startupRow.modelData.on ? "Enabled" : "Disabled"
-                                        color: startupRow.modelData.on ? Theme.ink : Theme.inkMuted
+                                        color: startupRow.modelData.on ? Theme.success : Theme.inkFaint
                                     }
 
                                     ToggleSwitch {
@@ -836,7 +999,7 @@ FloatingWindow {
 
                             UiText {
                                 text: "Nothing starts when you sign in"
-                                font.weight: Font.DemiBold
+                                font.weight: Theme.labelWeight
                             }
 
                             PillButton {
@@ -866,13 +1029,13 @@ FloatingWindow {
                 id: menuBox
                 readonly property var task: root.menu ? root.menu.task : null
                 width: 228
-                height: menuColumn.implicitHeight + Theme.space1 * 2
+                height: menuColumn.implicitHeight + 5 * 2
                 // Inside the window: to the left of the pointer near the right edge, above it near the bottom.
                 x: root.menu ? Math.max(Theme.space2, Math.min(root.menu.x, parent.width - width - Theme.space2)) : 0
                 y: root.menu ? (root.menu.y + height > parent.height - Theme.space2 ? Math.max(Theme.space2, root.menu.y - height) : root.menu.y) : 0
-                radius: Theme.radiusMd
-                color: Theme.surface200
-                border.color: Theme.line
+                radius: Theme.radiusCard
+                color: Theme.panel
+                border.color: Theme.border
                 border.width: 1
 
                 MouseArea {
@@ -882,9 +1045,9 @@ FloatingWindow {
 
                 ColumnLayout {
                     id: menuColumn
-                    x: Theme.space1
-                    y: Theme.space1
-                    width: parent.width - Theme.space1 * 2
+                    x: 5
+                    y: 5
+                    width: parent.width - 5 * 2
                     spacing: 0
 
                     Repeater {
@@ -895,31 +1058,31 @@ FloatingWindow {
                             required property var modelData
                             readonly property bool usable: modelData.enabled !== false
                             Layout.fillWidth: true
-                            implicitHeight: modelData.separator ? 9 : 32
+                            implicitHeight: modelData.separator ? 9 : 30
 
                             Rectangle {
                                 visible: menuItem.modelData.separator === true
                                 anchors.verticalCenter: parent.verticalCenter
-                                x: Theme.space2
-                                width: parent.width - Theme.space2 * 2
+                                x: -5
+                                width: parent.width + 10
                                 height: 1
-                                color: Theme.line
+                                color: Theme.divider
                             }
 
                             Rectangle {
                                 visible: !menuItem.modelData.separator
                                 anchors.fill: parent
                                 radius: Theme.radiusSm
-                                color: itemMouse.containsMouse && menuItem.usable ? Theme.surface300 : "transparent"
+                                color: itemMouse.containsMouse && menuItem.usable ? (menuItem.modelData.danger ? Theme.tint(Theme.danger, 0.12) : Theme.hoverIcon) : "transparent"
 
                                 UiText {
                                     anchors.fill: parent
-                                    anchors.leftMargin: Theme.space3
+                                    anchors.leftMargin: Theme.space2 + 2
                                     verticalAlignment: Text.AlignVCenter
                                     text: menuItem.modelData.text || ""
                                     color: !menuItem.usable ? Theme.inkMuted : menuItem.modelData.danger ? Theme.danger : Theme.ink
-                                    opacity: menuItem.usable ? 1 : 0.6
-                                    font.pixelSize: Theme.actionSize
+                                    opacity: menuItem.usable ? 1 : 0.5
+                                    font.pixelSize: Theme.bodySize
                                 }
 
                                 MouseArea {

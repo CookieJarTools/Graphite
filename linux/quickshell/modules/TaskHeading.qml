@@ -1,5 +1,5 @@
-// A column's heading in the task manager's list (TaskManager.qml): its total over its name,
-// as on Windows; a click sorts by it.
+// A column's heading in the task manager's list (TaskManager.qml): its total (mono) over its
+// name (a small faint label), as on Windows; a click sorts by it.
 import QtQuick
 import QtQuick.Layouts
 import qs.config
@@ -12,9 +12,12 @@ Rectangle {
     property string key
     property bool alignRight: true
     readonly property bool sorting: key.length > 0 && manager.sortBy === key
-    implicitHeight: 52
-    radius: Theme.radiusSm
-    color: headingMouse.containsMouse && key ? Theme.surface200 : "transparent"
+    implicitHeight: 44
+    radius: Theme.radiusRow
+    color: headingMouse.containsMouse && key ? Theme.hoverRow : "transparent"
+
+    Accessible.role: Accessible.ColumnHeader
+    Accessible.name: label
 
     ColumnLayout {
         anchors.fill: parent
@@ -31,17 +34,18 @@ Rectangle {
             visible: heading.figure.length > 0
             horizontalAlignment: heading.alignRight ? Text.AlignRight : Text.AlignLeft
             text: heading.figure
-            font.pixelSize: 15
-            font.weight: Font.DemiBold
+            font.family: Theme.fontMono
+            font.pixelSize: Theme.bodySize
+            font.weight: Theme.labelWeight
         }
 
         UiText {
             Layout.fillWidth: true
             horizontalAlignment: heading.alignRight ? Text.AlignRight : Text.AlignLeft
             text: heading.label + (heading.sorting ? (manager.descending ? "  ↓" : "  ↑") : "")
-            color: heading.sorting ? Theme.ink : Theme.inkMuted
-            font.pixelSize: Theme.hintSize
-            font.weight: heading.sorting ? Font.DemiBold : Font.Normal
+            color: heading.sorting ? Theme.inkMuted : Theme.inkFaint
+            font.pixelSize: Theme.sectionSize
+            font.weight: Theme.labelWeight
         }
     }
 

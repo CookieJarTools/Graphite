@@ -1,14 +1,16 @@
-// One screen's bar, floating at the bottom, and what opens from it: quick settings and the
-// calendar at its right end, the tray icons over the chevron, a pill's window list or folder,
-// window previews, the tag panel. Its strip is kept clear of windows unless it auto-hides
-// (always, or while the focused window is maximised); then it slides away and comes back
-// when the pointer touches the bottom edge.
+// One screen's bar, a pill floating 14 px over the bottom edge, and what opens from it: quick
+// settings and the calendar at its right end, the tray icons over the chevron, a pill's window
+// list or folder, window previews, the tag panel. Its strip is kept clear of windows unless it
+// auto-hides (always, or while the focused window is maximised); then, a few seconds after
+// the shell starts, it slides down and fades, leaving a small handle at the edge, and comes
+// back when the pointer touches the bottom edge.
 //
 // One pointer area covers the pills: a click starts or brings forward, a pill with several
 // windows (or a folder) opens its list, a right click its menu, a middle click a new window;
 // hovering a running app shows its windows; dragging moves a pill, and holding it over the
 // middle of another for half a second makes a folder of the two.
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
@@ -38,8 +40,14 @@ Scope {
     }
     readonly property bool emptyHere: workspaceHere !== null && Array.from(workspaceHere.toplevels.values).length === 0
     readonly property bool autoHide: !emptyHere && (!!taskbar.alwaysAutoHide || (!!taskbar.autoHideWhenMaximised && maximisedHere))
-    property bool revealed: false
-    readonly property bool inUse: (ShellState.barBusy && (ShellState.panelScreen === screenName || (ShellState.popover && ShellState.popover.screen === screenName)
+    // Shown for a moment when the shell starts, so it can be found, then hidden if it auto-hides.
+    property bool revealed: true
+    Timer {
+        interval: 3200
+        running: true
+        onTriggered: if (!pillHover.hovered && !edgeMouse.containsMouse) scope.revealed = false
+    }
+    readonly property bool inUse: ShellState.launcherOpen || (ShellState.barBusy && (ShellState.panelScreen === screenName || (ShellState.popover && ShellState.popover.screen === screenName)
         || (ShellState.menu && ShellState.menu.screen === screenName) || (ShellState.tagPanel && ShellState.tagPanel.screen === screenName)))
         || previewRef !== "" || dragRef !== ""
     readonly property bool shown: !autoHide || revealed || inUse
@@ -49,7 +57,7 @@ Scope {
     // Brought back by the edge, it goes again once the pointer is not on it.
     Timer {
         id: hideAgain
-        interval: 800
+        interval: 700
         onTriggered: {
             if (pillHover.hovered || edgeMouse.containsMouse) return;
             scope.revealed = false;
@@ -144,32 +152,51 @@ Scope {
             left: true
             right: true
         }
-        implicitHeight: Theme.taskbarHeight + Theme.space2 * 2
-        exclusiveZone: scope.autoHide ? 0 : implicitHeight
+        // Room above the pill for its shadow; only the pill takes the pointer (mask, below).
+        implicitHeight: Theme.barTop + shadowRoom
+        readonly property real shadowRoom: 32
+        exclusiveZone: scope.autoHide ? 0 : Theme.barTop
         color: "transparent"
         WlrLayershell.namespace: "graphite-bar"
         WlrLayershell.layer: WlrLayer.Top
         // Only the bar itself takes the pointer; the strip around it shows the backdrop.
         mask: Region { item: pill }
 
+        RectangularShadow {
+            anchors.fill: pill
+            opacity: pill.opacity
+            offset.y: 16
+            blur: 40
+            spread: -8
+            radius: pill.radius
+            color: Qt.rgba(0, 0, 0, Theme.dark ? 0.5 : 0.18)
+        }
+
+        // Hiding: down 84 px and faded out; back the same way. The pill itself moves (not
+        // something around it), so the input region (mask) follows it.
         Rectangle {
             id: pill
 
             anchors.horizontalCenter: parent.horizontalCenter
-            y: parent.height - height - Theme.space2 + (scope.shown ? 0 : height + Theme.space2 * 2)
-            Behavior on y {
-                NumberAnimation {
-                    duration: Theme.durationFast
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: scope.shown ? Theme.easeEnter : Theme.easeExit
-                }
-            }
-            width: Math.min(row.implicitWidth + Theme.space2 * 2, parent.width - Theme.space2 * 2)
+            y: parent.height - height - Theme.barInset + (scope.shown ? 0 : Theme.move(84))
+            Behavior on y { NumberAnimation { duration: Theme.durationBarMove; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut } }
+            opacity: scope.shown ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Theme.durationBarFade; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut } }
+            width: Math.min(row.implicitWidth + Theme.barPadding * 2, parent.width - Theme.space4 * 2)
             height: Theme.taskbarHeight
-            radius: Theme.radiusLg
-            color: Theme.surface200
-            border.color: Theme.glassEdge
+            radius: Theme.radiusBar
+            color: Theme.glass(Theme.panel, 0.82)
+            border.color: Theme.border
             border.width: 1
+
+            // The light catching its top edge.
+            Rectangle {
+                x: pill.radius
+                y: 1
+                width: pill.width - pill.radius * 2
+                height: 1
+                color: Theme.sheen
+            }
 
             HoverHandler {
                 id: pillHover
@@ -192,15 +219,28 @@ Scope {
                 spacing: Theme.space1
 
                 BarButton {
-                    glyph: "system-search-symbolic"
+                    implicitWidth: Theme.barButton
+                    implicitHeight: Theme.barButton
+                    glyph: "view-app-grid-symbolic"
+                    label: "Launcher"
                     active: ShellState.launcherOpen
                     onClicked: ShellState.toggleLauncher()
+                }
+
+                // The dividers: 1 x 24 px hairlines.
+                Rectangle {
+                    visible: apps.visible
+                    Layout.leftMargin: 2
+                    Layout.rightMargin: 2
+                    implicitWidth: 1
+                    implicitHeight: 24
+                    color: Theme.border
                 }
 
                 Item {
                     id: apps
                     implicitWidth: pills.implicitWidth
-                    implicitHeight: 36
+                    implicitHeight: Theme.barButton
                     visible: scope.shownItems.length > 0
 
                     Row {
@@ -213,6 +253,7 @@ Scope {
 
                             TaskButton {
                                 hovered: scope.hoverRef === modelData.ref && scope.dragRef === ""
+                                pressed: pointer.pressed && pointer.pressRef === modelData.ref && scope.dragRef === ""
                                 lifted: scope.dragRef === modelData.ref
                                 mergeTarget: scope.mergeRef === modelData.ref
                                 fresh: {
@@ -321,17 +362,17 @@ Scope {
                         visible: scope.dragRef !== ""
                         x: scope.ghostX - pill.x - row.x - apps.x - width / 2
                         y: -4
-                        width: 44
-                        height: 44
-                        radius: Theme.radiusMd
-                        color: Theme.surface300
-                        border.color: Theme.glassEdge
+                        width: Theme.barButton
+                        height: Theme.barButton
+                        radius: Theme.radiusCard
+                        color: Theme.raised
+                        border.color: Theme.border
                         border.width: 1
                         opacity: 0.92
 
                         Glyph {
                             anchors.centerIn: parent
-                            implicitSize: 24
+                            implicitSize: 20
                             readonly property var item: scope.itemByRef(scope.dragRef)
                             source: item ? (item.type === "folder" ? Quickshell.iconPath("folder", "folder") : Apps.iconFor(item.key, item.icon)) : ""
                         }
@@ -339,16 +380,19 @@ Scope {
                 }
 
                 Rectangle {
-                    Layout.leftMargin: Theme.space1
-                    Layout.rightMargin: Theme.space1
+                    Layout.leftMargin: 2
+                    Layout.rightMargin: 2
                     implicitWidth: 1
                     implicitHeight: 24
-                    color: Theme.line
+                    color: Theme.border
                 }
 
                 BarButton {
                     id: chevron
+                    implicitWidth: Theme.barButton
+                    implicitHeight: Theme.barButton
                     glyph: "pan-up-symbolic"
+                    label: "Show hidden icons"
                     active: ShellState.panel === "tray" && ShellState.panelScreen === scope.screenName
                     onClicked: ShellState.togglePanel("tray", scope.screenName)
                 }
@@ -358,16 +402,50 @@ Scope {
                     onClicked: ShellState.togglePanel("quick", scope.screenName)
                 }
 
+                // Notifications live in the calendar panel, with the month.
+                BarButton {
+                    implicitWidth: Theme.barButton
+                    implicitHeight: Theme.barButton
+                    glyph: "notifications-symbolic"
+                    label: "Notifications"
+                    active: ShellState.panel === "calendar" && ShellState.panelScreen === scope.screenName
+                    onClicked: ShellState.togglePanel("calendar", scope.screenName)
+
+                    Rectangle {
+                        visible: Notifs.unseen
+                        x: parent.width / 2 + 4
+                        y: 11
+                        width: 7
+                        height: 7
+                        radius: 3.5
+                        color: Theme.accent
+                        border.color: Theme.panel
+                        border.width: 1.5
+                    }
+                }
+
                 Clock {
                     active: ShellState.panel === "calendar" && ShellState.panelScreen === scope.screenName
                     onClicked: ShellState.togglePanel("calendar", scope.screenName)
+                }
+
+                BarButton {
+                    implicitWidth: Theme.barButton
+                    implicitHeight: Theme.barButton
+                    glyph: "system-lock-screen-symbolic"
+                    label: "Lock"
+                    onClicked: {
+                        ShellState.closePanels();
+                        ShellState.locked = true;
+                    }
                 }
             }
         }
     }
 
     // While the bar auto-hides: the screen's bottom edge, which brings it back when touched
-    // (and keeps it while the pointer rests there).
+    // (and keeps it while the pointer rests there), with a handle in the middle while hidden.
+    // A few pixels only: it takes the clicks meant for windows beneath it.
     PanelWindow {
         screen: scope.modelData
         visible: scope.autoHide
@@ -376,11 +454,22 @@ Scope {
             left: true
             right: true
         }
-        implicitHeight: 2
+        implicitHeight: 4
         exclusiveZone: 0
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "graphite-bar-edge"
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            width: 56
+            height: 4
+            radius: 2
+            color: Theme.handle
+            opacity: scope.shown ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: Theme.durationBarFade } }
+        }
 
         MouseArea {
             id: edgeMouse
@@ -396,7 +485,7 @@ Scope {
 
     // Where a menu opens over the bar, at x along it.
     function at(x) {
-        return { screen: screenName, x: x, y: modelData.height - bar.implicitHeight + Theme.space2 - Theme.space1, above: true };
+        return { screen: screenName, x: x, y: modelData.height - Theme.barTop - Theme.space2, above: true };
     }
 
     function openFolder(ref, rename) {

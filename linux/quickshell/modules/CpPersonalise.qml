@@ -1,5 +1,5 @@
-// Control Panel: Personalisation. Colours, text, Home, the taskbar and how windows behave
-// (what the old Settings window held).
+// Control Panel: Personalisation. Colours and the accent, motion, blur, the wallpaper, text,
+// Home, the taskbar and how windows behave (what the old Settings window held).
 import QtQuick
 import QtQuick.Layouts
 import qs.config
@@ -13,20 +13,145 @@ ColumnLayout {
     spacing: 0
 
     CpSection {
-        title: "Look"
+        title: "Appearance"
 
         CpRow {
-            label: "Colours"
-            hint: "For the desktop and apps"
-            CpChoice {
+            label: "Theme"
+            hint: "For the desktop and apps. Auto is light from 7 in the morning to 7 in the evening."
+            CpSegments {
                 value: page.values.themeMode === "auto" ? "auto" : page.values.dark !== false ? "dark" : "light"
-                options: [{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }, { value: "auto", label: "Match time of day" }]
+                options: [{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }, { value: "auto", label: "Auto" }]
                 onPicked: value => ShellSettings.update(settings => {
                     settings.themeMode = value === "auto" ? "auto" : "";
                     if (value !== "auto") settings.dark = value === "dark";
                 })
             }
         }
+
+        CpRow {
+            label: "Accent"
+            hint: Theme.accentSet.name + ": indicators, selection and buttons"
+
+            // The accents as 24 px swatches; the chosen one is ringed and a little larger.
+            Row {
+                spacing: Theme.space2
+
+                Repeater {
+                    model: Theme.accentNames
+
+                    Item {
+                        id: swatch
+                        required property string modelData
+                        readonly property bool chosen: Theme.accentName === modelData
+                        width: 30
+                        height: 30
+                        scale: chosen ? Theme.grow(1.08) : 1
+                        Behavior on scale { NumberAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: Theme.accents[modelData].name
+                        Accessible.checked: chosen
+                        Accessible.onPressAction: Look.setAccent(modelData)
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 30
+                            height: 30
+                            radius: 15
+                            color: "transparent"
+                            border.color: Theme.ink
+                            border.width: 2
+                            visible: swatch.chosen
+                        }
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 24
+                            height: 24
+                            radius: 12
+                            color: Theme.accents[swatch.modelData].accent
+                            opacity: swatchMouse.containsMouse || swatch.chosen ? 1 : 0.85
+                        }
+
+                        MouseArea {
+                            id: swatchMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Look.setAccent(swatch.modelData)
+                        }
+                    }
+                }
+            }
+        }
+
+        CpRow {
+            label: "Window animations"
+            hint: "Off, windows and the desktop only fade, briefly"
+            ToggleSwitch {
+                on: Look.windowAnimations
+                onToggled: Look.setWindowAnimations(!Look.windowAnimations)
+            }
+        }
+
+        CpRow {
+            label: "Auto-hide taskbar"
+            hint: "It slides away; touch the bottom edge to bring it back"
+            ToggleSwitch {
+                on: !!page.values.taskbar.alwaysAutoHide
+                onToggled: ShellSettings.setTaskbar("alwaysAutoHide", !page.values.taskbar.alwaysAutoHide)
+            }
+        }
+
+        CpRow {
+            label: "Background blur"
+            hint: "Blur behind the taskbar, toasts and the launcher. Off, they turn solid."
+            ToggleSwitch {
+                on: Look.blur
+                onToggled: Look.setBlur(!Look.blur)
+            }
+        }
+
+        CpRow {
+            label: "Animation speed"
+            hint: "How quickly things open, close and move"
+
+            RowLayout {
+                spacing: Theme.space3
+
+                SliderBar {
+                    Layout.preferredWidth: 200
+                    value: (Look.speed - 0.5) / 1
+                    onMoved: value => {
+                        const speed = Math.round((0.5 + value) * 4) / 4;
+                        if (speed !== Look.speed) Look.setSpeed(speed);
+                    }
+                }
+
+                UiText {
+                    Layout.preferredWidth: 40
+                    horizontalAlignment: Text.AlignRight
+                    text: String(Look.speed) + "×"
+                    color: Theme.inkMuted
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.identifierSize
+                }
+            }
+        }
+
+        CpRow {
+            label: "Live wallpaper"
+            hint: "The glow drifts slowly while no window is open"
+            enabled: Look.windowAnimations
+            ToggleSwitch {
+                on: Look.liveWallpaper
+                onToggled: Look.setLiveWallpaper(!Look.liveWallpaper)
+            }
+        }
+    }
+
+    CpSection {
+        title: "Text and Home"
 
         CpRow {
             label: "Smoother text"
@@ -56,15 +181,6 @@ ColumnLayout {
             ToggleSwitch {
                 on: page.values.taskbar.showLabels !== false
                 onToggled: ShellSettings.setTaskbar("showLabels", page.values.taskbar.showLabels === false)
-            }
-        }
-
-        CpRow {
-            label: "Always auto-hide"
-            hint: "Move the pointer to the bottom edge to show it"
-            ToggleSwitch {
-                on: !!page.values.taskbar.alwaysAutoHide
-                onToggled: ShellSettings.setTaskbar("alwaysAutoHide", !page.values.taskbar.alwaysAutoHide)
             }
         }
 

@@ -1,4 +1,4 @@
-// One row of a small menu (an app's right-click menu on the bar).
+// One row of a small menu, or a quiet text button: 30 px, a tint under the pointer.
 import QtQuick
 import qs.config
 
@@ -9,9 +9,14 @@ Rectangle {
     signal clicked()
 
     implicitWidth: label.implicitWidth + Theme.space3 * 2
-    implicitHeight: 32
+    implicitHeight: 30
     radius: Theme.radiusSm
-    color: mouse.containsMouse ? Theme.surface300 : "transparent"
+    color: mouse.containsMouse ? Theme.hoverIcon : "transparent"
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: text
+    Accessible.onPressAction: root.clicked()
 
     UiText {
         id: label

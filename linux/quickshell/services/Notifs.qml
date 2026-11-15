@@ -10,7 +10,7 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
-    readonly property int popupMilliseconds: 6000
+    readonly property int popupMilliseconds: 5200
     readonly property int mostKept: 50
     readonly property int mostPopups: 3
 

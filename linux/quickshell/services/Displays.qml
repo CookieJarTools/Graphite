@@ -186,7 +186,7 @@ Singleton {
     function write() {
         const settings = ShellSettings.values || {};
         const lines = [
-            "-- Written by Graphite's Control Panel (services/Displays.qml): screens, mouse and keyboard.",
+            "-- Written by Graphite's Control Panel (services/Displays.qml): screens, mouse, keyboard and look.",
             "-- Changes here are replaced the next time something is changed there."
         ];
         for (const monitor of monitors) {
@@ -216,6 +216,8 @@ Singleton {
         lines.push(`hl.config({ input = { ${inputFields.join(", ")} } })`);
         // Shortcuts changed in the Control Panel, and ones that open apps (Hotkeys.qml).
         for (const line of Hotkeys.luaLines()) lines.push(line);
+        // Blur and the windows' animations, from Personalisation (Look.qml).
+        for (const line of Look.luaLines()) lines.push(line);
         desk.setText(lines.join("\n") + "\n");
         reloadSoon.restart();
     }

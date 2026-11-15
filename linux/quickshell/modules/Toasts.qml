@@ -1,4 +1,7 @@
-// Notification pop-ups, stacked down from the top-right corner of the focused screen.
+// Notification pop-ups, stacked in the top-right corner of the focused screen, 16 px in, the
+// newest at the bottom. The window keeps one height, room for the most toasts there can be
+// and their shadows: grown or shrunk as toasts came and went, Hyprland stretched what was
+// showing for a frame. Only the toasts take the pointer.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -20,31 +23,34 @@ PanelWindow {
         top: true
         right: true
     }
-    margins {
-        top: Theme.space4
-        right: Theme.space4
-    }
     exclusiveZone: 0
-    implicitWidth: Theme.toastWidth
-    implicitHeight: stack.implicitHeight
+    readonly property real shadowRoom: 40
+    implicitWidth: Theme.toastWidth + Theme.space4 + shadowRoom
+    implicitHeight: Math.min(screen ? screen.height - Theme.barTop : 900, 900)
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "graphite-toasts"
+    mask: Region { item: stack }
 
     property var shown: ({})
 
     ColumnLayout {
         id: stack
 
-        width: parent.width
-        spacing: Theme.space2
+        x: root.shadowRoom
+        y: Theme.space4
+        width: Theme.toastWidth
+        spacing: 10
 
+        // A ScriptModel keeps the toasts already up as they are when one comes or goes
+        // (rebuilt whole, each was made again, its icon and its wait starting over).
         Repeater {
-            model: Notifs.popups
+            model: ScriptModel { values: Notifs.popups.slice().reverse() }
 
             Toast {
                 Layout.fillWidth: true
-                // Only a notification not shown before slides in (the list is rebuilt whole).
+                gap: stack.spacing
+                // Only a notification not shown before slides in.
                 fresh: {
                     const id = modelData.notification ? modelData.notification.id : -1;
                     const seen = root.shown[id] === true;

@@ -19,10 +19,16 @@ Rectangle {
     readonly property bool hasBattery: battery !== null && battery.isLaptopBattery && battery.isPresent
 
     implicitWidth: glyphs.implicitWidth + Theme.space3 * 2
-    implicitHeight: 36
-    radius: Theme.radiusSm
-    color: mouse.containsMouse || active ? Theme.surface300 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
+    implicitHeight: Theme.barButton
+    radius: Theme.radiusCard
+    color: active ? Theme.activeRow : mouse.containsMouse ? Theme.hoverIcon : "transparent"
+    scale: mouse.pressed ? Theme.grow(0.94) : 1
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    Behavior on scale { NumberAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: "Quick settings"
+    readonly property color glyphTint: active || mouse.containsMouse ? Theme.ink : Theme.inkMuted
 
     PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
 
@@ -33,12 +39,20 @@ Rectangle {
 
         Glyph {
             name: Network.wired && !Network.wifiEnabled ? "network-wired-symbolic" : "network-wireless-signal-excellent-symbolic"
+            implicitSize: 18
+            tint: root.glyphTint
             opacity: Network.online ? 1 : 0.4
         }
-        Glyph { name: root.muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic" }
+        Glyph {
+            name: root.muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic"
+            implicitSize: 18
+            tint: root.glyphTint
+        }
         Glyph {
             visible: root.hasBattery
             name: root.battery ? (root.battery.iconName || "battery-good-symbolic") : ""
+            implicitSize: 18
+            tint: root.glyphTint
         }
     }
 

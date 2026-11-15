@@ -1,6 +1,7 @@
-// A panel that opens from the bar: a card above it, either lined up with the bar's right end
-// (rightInset) or centred over a point on it (centreX). It takes the keyboard while open
-// (Escape closes it) and closes on a click anywhere else.
+// A panel that opens from the bar: a card (radius 14, 14 px in) over a blur, above it, either
+// lined up with the bar's right end (rightInset) or centred over a point on it (centreX). It
+// rises in and sinks away. It takes the keyboard while open (Escape closes it) and closes on
+// a click anywhere else.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -15,7 +16,7 @@ PanelWindow {
     required property string name          // ShellState.panel while this one shows
     required property string screenName
     property var barWindow: null
-    property real panelWidth: 360
+    property real panelWidth: 300
     property real rightInset: -1
     property real centreX: -1
     default property alias content: column.data
@@ -32,7 +33,7 @@ PanelWindow {
     // than above the space the bar reserves: an auto-hiding bar reserves none, and the panel
     // then covered the bar.
     margins {
-        bottom: Theme.taskbarHeight + Theme.space2 * 3
+        bottom: Theme.barTop + Theme.space2
         right: Math.max(0, rightInset)
         left: Math.max(Theme.space2, centreX - implicitWidth / 2)
     }
@@ -55,10 +56,10 @@ PanelWindow {
         id: card
 
         width: parent.width
-        implicitHeight: column.implicitHeight + Theme.space4 * 2
+        implicitHeight: column.implicitHeight + 14 * 2
         radius: Theme.radiusLg
-        color: Theme.surface200
-        border.color: Theme.glassEdge
+        color: Theme.glass(Theme.panel, 0.94)
+        border.color: Theme.border
         border.width: 1
         opacity: frame.open ? 1 : 0
         transform: Translate {
@@ -67,7 +68,7 @@ PanelWindow {
                 NumberAnimation {
                     duration: frame.open ? Theme.durationBase : Theme.durationFast
                     easing.type: Easing.BezierSpline
-                    easing.bezierCurve: frame.open ? Theme.easeEnter : Theme.easeExit
+                    easing.bezierCurve: frame.open ? Theme.easeOut : Theme.easeIn
                 }
             }
         }
@@ -75,7 +76,7 @@ PanelWindow {
             NumberAnimation {
                 duration: frame.open ? Theme.durationBase : Theme.durationFast
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: frame.open ? Theme.easeEnter : Theme.easeExit
+                easing.bezierCurve: frame.open ? Theme.easeOut : Theme.easeIn
             }
         }
 
@@ -87,8 +88,8 @@ PanelWindow {
             ColumnLayout {
                 id: column
                 anchors.fill: parent
-                anchors.margins: Theme.space4
-                spacing: Theme.space4
+                anchors.margins: 14
+                spacing: Theme.space3
             }
         }
     }

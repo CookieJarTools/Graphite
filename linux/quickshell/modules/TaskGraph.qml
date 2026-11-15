@@ -1,5 +1,5 @@
-// A minute's line graph for the task manager (TaskManager.qml), filled beneath; with a grid
-// when large, as on Windows.
+// A minute's line graph for the task manager (TaskManager.qml): the last 30 samples, filled
+// beneath; with a faint grid when large.
 import QtQuick
 import qs.config
 
@@ -16,11 +16,11 @@ Canvas {
         const context = getContext("2d");
         context.reset();
         const tint = (alpha) => Qt.rgba(graph.colour.r, graph.colour.g, graph.colour.b, alpha);
-        context.strokeStyle = tint(graph.small ? 0.35 : 0.5);
+        context.strokeStyle = graph.small ? tint(0.3) : Theme.cardBorder;
         context.lineWidth = 1;
         context.strokeRect(0.5, 0.5, width - 1, height - 1);
         if (!graph.small) {
-            context.strokeStyle = tint(0.12);
+            context.strokeStyle = Theme.divider;
             context.beginPath();
             for (let row = 1; row < 4; row++) {
                 const y = Math.round(height * row / 4) + 0.5;
@@ -34,7 +34,7 @@ Canvas {
             }
             context.stroke();
         }
-        const points = graph.points || [];
+        const points = (graph.points || []).slice(-30);
         if (points.length < 2) return;
         const step = (width - 2) / 29;
         const x = index => width - 1 - (points.length - 1 - index) * step;
@@ -44,7 +44,7 @@ Canvas {
         points.forEach((value, index) => context.lineTo(x(index), y(value)));
         context.lineTo(x(points.length - 1), height - 1);
         context.closePath();
-        context.fillStyle = tint(0.18);
+        context.fillStyle = tint(0.16);
         context.fill();
         context.beginPath();
         points.forEach((value, index) => index ? context.lineTo(x(index), y(value)) : context.moveTo(x(index), y(value)));

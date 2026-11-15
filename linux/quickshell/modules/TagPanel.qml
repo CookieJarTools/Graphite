@@ -25,7 +25,7 @@ PanelWindow {
         left: true
     }
     margins {
-        bottom: Theme.taskbarHeight + Theme.space2 * 2
+        bottom: Theme.barTop + Theme.space2
         left: state ? Math.max(Theme.space2, Math.min(state.x, screen.width - implicitWidth - Theme.space2)) : 0
     }
     exclusiveZone: 0
@@ -56,7 +56,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radiusLg
-        color: Theme.surface200
+        color: Theme.glass(Theme.panel, 0.94)
         border.color: Theme.glassEdge
         border.width: 1
 
@@ -159,9 +159,9 @@ PanelWindow {
 
                 Rectangle {
                     implicitWidth: createLabel.implicitWidth + Theme.space4 * 2
-                    implicitHeight: 32
-                    radius: Theme.radiusSm
-                    color: createMouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
+                    implicitHeight: 30
+                    radius: Theme.radiusControl
+                    color: createMouse.containsMouse ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill
 
                     UiText {
                         id: createLabel

@@ -1,5 +1,5 @@
-// Quick settings: Wi-Fi, Bluetooth and Aeroplane mode tiles, the volume, and whatever media is
-// playing. A tile's arrow opens its list in the panel (Wi-Fi networks to join, Bluetooth
+// Quick settings: a 300 px panel of Wi-Fi, Bluetooth, Aeroplane mode and Night light tiles two
+// by two, the volume, and whatever media is playing. A tile's arrow opens its list in the panel (Wi-Fi networks to join, Bluetooth
 // devices to pair, where the sound goes), with a way back; the gear opens the Control Panel.
 import QtQuick
 import QtQuick.Layouts
@@ -14,7 +14,7 @@ PanelFrame {
     id: root
 
     name: "quick"
-    panelWidth: 380
+    panelWidth: 300
 
     // "" (the tiles), "wifi", "bluetooth" or "sound".
     property string page: ""
@@ -42,14 +42,15 @@ PanelFrame {
 
         BarButton {
             glyph: "go-previous-symbolic"
+            label: "Back"
             onClicked: root.page = ""
         }
 
         UiText {
             Layout.fillWidth: true
             text: ({ wifi: "Wi-Fi", bluetooth: "Bluetooth", sound: "Sound output" })[root.page] || ""
-            font.pixelSize: 16
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.labelSize
+            font.weight: Theme.headingWeight
         }
 
         ToggleSwitch {
@@ -170,11 +171,13 @@ PanelFrame {
 
         BarButton {
             glyph: root.audio && root.audio.muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic"
+            label: root.audio && root.audio.muted ? "Unmute" : "Mute"
             onClicked: { if (root.audio) root.audio.muted = !root.audio.muted; }
         }
 
         SliderBar {
             Layout.fillWidth: true
+            light: true
             value: root.audio ? root.audio.volume : 0
             dimmed: root.audio ? root.audio.muted : false
             onMoved: value => {
@@ -188,7 +191,7 @@ PanelFrame {
             Layout.preferredWidth: 28
             horizontalAlignment: Text.AlignRight
             text: root.audio ? Math.round(root.audio.volume * 100) : ""
-            color: Theme.inkMuted
+            color: Theme.inkFaint
             font.family: Theme.fontMono
             font.pixelSize: Theme.identifierSize
         }
@@ -196,6 +199,7 @@ PanelFrame {
         // Where the sound goes: the speakers, headphones...
         BarButton {
             glyph: "go-next-symbolic"
+            label: "Sound output"
             onClicked: root.page = "sound"
         }
     }
@@ -204,10 +208,10 @@ PanelFrame {
     Rectangle {
         Layout.fillWidth: true
         visible: root.page === "" && root.player !== null
-        implicitHeight: 72
-        radius: Theme.radiusMd
-        color: Theme.surface100
-        border.color: Theme.line
+        implicitHeight: 64
+        radius: Theme.radiusCard
+        color: Theme.cardFill
+        border.color: Theme.cardBorder
         border.width: 1
 
         RowLayout {
@@ -216,10 +220,10 @@ PanelFrame {
             spacing: Theme.space3
 
             Rectangle {
-                implicitWidth: 48
-                implicitHeight: 48
-                radius: Theme.radiusSm
-                color: Theme.surface300
+                implicitWidth: 40
+                implicitHeight: 40
+                radius: Theme.radiusControl
+                color: Theme.activeRow
                 clip: true
 
                 Image {
@@ -237,7 +241,7 @@ PanelFrame {
                 UiText {
                     Layout.fillWidth: true
                     text: root.player ? root.player.trackTitle : ""
-                    font.weight: Font.DemiBold
+                    font.weight: Theme.labelWeight
                 }
 
                 UiText {
@@ -249,17 +253,26 @@ PanelFrame {
             }
 
             BarButton {
+                implicitWidth: 28
+                implicitHeight: 28
+                label: "Previous"
                 glyph: "media-skip-backward-symbolic"
                 opacity: root.player && root.player.canGoPrevious ? 1 : 0.35
                 onClicked: { if (root.player && root.player.canGoPrevious) root.player.previous(); }
             }
 
             BarButton {
+                implicitWidth: 28
+                implicitHeight: 28
+                label: root.player && root.player.isPlaying ? "Pause" : "Play"
                 glyph: root.player && root.player.isPlaying ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
                 onClicked: { if (root.player) root.player.togglePlaying(); }
             }
 
             BarButton {
+                implicitWidth: 28
+                implicitHeight: 28
+                label: "Next"
                 glyph: "media-skip-forward-symbolic"
                 opacity: root.player && root.player.canGoNext ? 1 : 0.35
                 onClicked: { if (root.player && root.player.canGoNext) root.player.next(); }
@@ -281,12 +294,13 @@ PanelFrame {
             text: parent.hasBattery
                 ? "Battery " + Math.round(parent.battery.percentage * (parent.battery.percentage <= 1 ? 100 : 1)) + "%" + (UPower.onBattery ? "" : " · charging")
                 : ""
-            color: Theme.inkMuted
+            color: Theme.inkFaint
             font.pixelSize: Theme.hintSize
         }
 
         BarButton {
             glyph: "emblem-system-symbolic"
+            label: "Control Panel"
             onClicked: ShellState.openSettings("")
         }
     }

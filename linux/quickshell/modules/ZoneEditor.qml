@@ -279,9 +279,9 @@ PanelWindow {
 
                 Rectangle {
                     implicitWidth: saveLabel.implicitWidth + Theme.space4 * 2
-                    implicitHeight: 32
-                    radius: Theme.radiusSm
-                    color: saveMouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
+                    implicitHeight: 30
+                    radius: Theme.radiusControl
+                    color: saveMouse.containsMouse ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill
 
                     UiText {
                         id: saveLabel

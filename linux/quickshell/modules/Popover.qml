@@ -30,7 +30,7 @@ PanelWindow {
         left: true
     }
     margins {
-        bottom: Theme.taskbarHeight + Theme.space2 * 2
+        bottom: Theme.barTop + Theme.space2
         left: state ? Math.max(Theme.space2, Math.min(state.x - implicitWidth / 2, screen.width - implicitWidth - Theme.space2)) : 0
     }
     exclusiveZone: 0
@@ -96,7 +96,7 @@ PanelWindow {
         width: parent.width
         implicitHeight: column.implicitHeight + Theme.space2 * 2
         radius: Theme.radiusLg
-        color: Theme.surface200
+        color: Theme.glass(Theme.panel, 0.94)
         border.color: Theme.glassEdge
         border.width: 1
 

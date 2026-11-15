@@ -428,9 +428,9 @@ ColumnLayout {
 
             Rectangle {
                 implicitWidth: primaryText.implicitWidth + Theme.space4 * 2
-                implicitHeight: 32
-                radius: Theme.radiusSm
-                color: !row.primaryEnabled ? Theme.surface300 : primaryMouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
+                implicitHeight: 30
+                radius: Theme.radiusControl
+                color: !row.primaryEnabled ? Theme.activeRow : primaryMouse.containsMouse ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill
                 opacity: row.primaryEnabled ? 1 : 0.8
 
                 UiText {

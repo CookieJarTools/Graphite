@@ -9,7 +9,7 @@ PanelFrame {
     id: root
 
     name: "calendar"
-    panelWidth: 340
+    panelWidth: 320
 
     property date month: firstOfMonth(new Date())
 
@@ -56,8 +56,9 @@ PanelFrame {
 
         UiText {
             text: Qt.formatDate(clock.date, "dddd")
-            font.pixelSize: 22
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.headingSize
+            font.weight: Theme.headingWeight
+            font.letterSpacing: -0.2
         }
 
         UiText {
@@ -72,16 +73,22 @@ PanelFrame {
         UiText {
             Layout.fillWidth: true
             text: Qt.formatDate(root.month, "MMMM yyyy")
-            font.weight: Font.DemiBold
+            font.weight: Theme.labelWeight
         }
 
         BarButton {
+            implicitWidth: 28
+            implicitHeight: 28
             glyph: "go-previous-symbolic"
+            label: "Previous month"
             onClicked: root.month = new Date(root.month.getFullYear(), root.month.getMonth() - 1, 1)
         }
 
         BarButton {
+            implicitWidth: 28
+            implicitHeight: 28
             glyph: "go-next-symbolic"
+            label: "Next month"
             onClicked: root.month = new Date(root.month.getFullYear(), root.month.getMonth() + 1, 1)
         }
     }
@@ -100,8 +107,9 @@ PanelFrame {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData
-                color: Theme.inkMuted
-                font.pixelSize: Theme.hintSize
+                color: Theme.inkFaint
+                font.pixelSize: Theme.sectionSize
+                font.weight: Theme.labelWeight
             }
         }
 
@@ -111,19 +119,19 @@ PanelFrame {
             Rectangle {
                 required property var modelData
                 Layout.alignment: Qt.AlignHCenter
-                implicitWidth: 36
-                implicitHeight: 36
-                radius: 18
-                color: modelData.today ? Theme.accent : "transparent"
+                implicitWidth: 32
+                implicitHeight: 32
+                radius: 16
+                color: modelData.today ? Theme.accentFill : "transparent"
 
                 UiText {
                     anchors.centerIn: parent
                     text: parent.modelData.number
-                    color: parent.modelData.today ? Theme.onAccent : Theme.ink
-                    opacity: parent.modelData.inMonth ? 1 : 0.4
-                    font.family: Theme.fontMono
-                    font.pixelSize: Theme.identifierSize
-                    font.weight: parent.modelData.today ? Font.DemiBold : Font.Normal
+                    color: parent.modelData.today ? Theme.onAccent : parent.modelData.inMonth ? Theme.ink : Theme.inkFaint
+                    opacity: parent.modelData.inMonth || parent.modelData.today ? 1 : 0.6
+                    font.pixelSize: Theme.bodySize
+                    font.features: { "tnum": 1 }
+                    font.weight: parent.modelData.today ? Theme.headingWeight : Theme.bodyWeight
                 }
             }
         }
@@ -132,7 +140,7 @@ PanelFrame {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
-        color: Theme.line
+        color: Theme.divider
     }
 
     RowLayout {
@@ -141,7 +149,9 @@ PanelFrame {
         UiText {
             Layout.fillWidth: true
             text: "Notifications"
-            font.weight: Font.DemiBold
+            color: Theme.inkFaint
+            font.pixelSize: Theme.sectionSize
+            font.weight: Theme.labelWeight
         }
 
         MenuRow {
@@ -156,7 +166,8 @@ PanelFrame {
         visible: Notifs.history.length === 0
         horizontalAlignment: Text.AlignHCenter
         text: "No new notifications"
-        color: Theme.inkMuted
+        color: Theme.inkFaint
+        font.pixelSize: Theme.hintSize
     }
 
     ListView {

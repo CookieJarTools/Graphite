@@ -1,8 +1,9 @@
-// One pill on the bar (an item of Taskbar.items): an app with its icon, or a folder with a
+// One button on the bar (an item of Taskbar.items): an app with its icon, or a folder with a
 // stack of its apps' icons; the label (the tag's name, a lone window's title, or the name);
-// the number of windows or tabs; a dot while a window wants attention; the tag's colour; a
-// mark under it while running; the icon pulsing while the app is starting. The bar handles the
-// pointer for all its pills (Bar.qml).
+// the number of windows or tabs; a dot while a window wants attention; the tag's colour; the
+// running mark under it (a dot while running, a bar in the accent while in front); the icon
+// pulsing while the app is starting. It lifts under the pointer and presses in. The bar
+// handles the pointer for all its buttons (Bar.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
@@ -18,6 +19,7 @@ Rectangle {
     readonly property bool isFolder: item.type === "folder"
     readonly property bool showLabel: ShellSettings.taskbar.showLabels !== false
     property bool hovered: false
+    property bool pressed: false
     property bool lifted: false     // being dragged: its slot shows where it will land
     property bool mergeTarget: false
     property bool fresh: false      // new on the bar: grows in
@@ -26,15 +28,21 @@ Rectangle {
         : item.windows.length === 1 && item.windows[0].tabs > 1 ? item.windows[0].tabs : 0
     readonly property color tagColour: item.tag ? Taskbar.tagColour(item.tag.color) : "transparent"
 
-    implicitWidth: content.implicitWidth + (showLabel ? Theme.space3 : Theme.space2) * 2
-    implicitHeight: 36
-    radius: Theme.radiusSm
-    color: mergeTarget ? Theme.accentSoft : lifted ? Theme.surface100 : hovered || item.focused ? Theme.surface300 : "transparent"
-    border.color: lifted ? Theme.lineStrong : "transparent"
+    implicitWidth: Math.max(Theme.barButton, content.implicitWidth + Theme.space3 * 2)
+    implicitHeight: Theme.barButton
+    radius: Theme.radiusCard
+    color: mergeTarget ? Theme.accentSoft : lifted ? Theme.window : hovered ? Theme.hoverIcon : "transparent"
+    border.color: lifted ? Theme.lineStrong : mergeTarget ? Theme.accent : "transparent"
     border.width: 1
-    scale: mergeTarget ? 1.06 : 1
-    Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
-    Behavior on scale { NumberAnimation { duration: Theme.durationFast } }
+    scale: mergeTarget ? Theme.grow(1.06) : pressed ? Theme.grow(0.94) : 1
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    Behavior on scale { NumberAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    // Up 3 px under the pointer.
+    transform: Translate {
+        y: root.hovered && !root.lifted ? -Theme.move(3) : 0
+        Behavior on y { NumberAnimation { duration: Theme.durationLift; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeSpring } }
+    }
 
     // Started from the shell and no window yet: the icon pulses until one opens, for up to 30
     // seconds (Windows shows a busy pointer).
@@ -67,9 +75,9 @@ Rectangle {
         property: "opacity"
         from: 0
         to: 1
-        duration: 220
+        duration: Theme.durationBase
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: Theme.easeEnter
+        easing.bezierCurve: Theme.easeOut
     }
 
     RowLayout {
@@ -79,8 +87,8 @@ Rectangle {
         opacity: root.lifted ? 0.35 : 1
 
         Item {
-            implicitWidth: 24
-            implicitHeight: 24
+            implicitWidth: 20
+            implicitHeight: 20
 
             SequentialAnimation on scale {
                 running: root.starting
@@ -109,7 +117,7 @@ Rectangle {
 
                     IconImage {
                         required property var modelData
-                        implicitSize: 11
+                        implicitSize: 9
                         source: Apps.iconFor(modelData.key, modelData.icon)
                         opacity: modelData.running ? 1 : 0.6
                     }
@@ -126,7 +134,7 @@ Rectangle {
                 height: 9
                 radius: 4.5
                 color: root.tagColour
-                border.color: Theme.surface200
+                border.color: Theme.panel
                 border.width: 1.5
             }
 
@@ -139,7 +147,7 @@ Rectangle {
                 height: 8
                 radius: 4
                 color: Theme.danger
-                border.color: Theme.surface200
+                border.color: Theme.panel
                 border.width: 1.5
             }
         }
@@ -151,6 +159,7 @@ Rectangle {
             color: root.item.focused ? Theme.ink : Theme.inkMuted
             font.pixelSize: Theme.stripSize
             font.weight: Theme.stripWeight
+            Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
         }
 
         UiText {
@@ -162,15 +171,18 @@ Rectangle {
         }
     }
 
+    // Running: none while closed, a dot while running, a bar in the accent (or the tag's
+    // colour) while in front.
     Rectangle {
-        visible: root.item.running && !root.lifted
+        visible: width > 0 && !root.lifted
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 2
-        width: root.item.focused ? 12 : 6
-        height: 2
-        radius: 1
-        color: root.item.tag ? root.tagColour : root.item.focused ? Theme.ink : Theme.inkMuted
-        Behavior on width { NumberAnimation { duration: Theme.durationFast } }
+        anchors.bottomMargin: 3
+        width: !root.item.running ? 0 : root.item.focused ? 16 : 4
+        height: 3
+        radius: 1.5
+        color: root.item.tag ? root.tagColour : root.item.focused ? Theme.accent : Theme.runningDot
+        Behavior on width { NumberAnimation { duration: Theme.durationIndicator; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeSpring } }
+        Behavior on color { ColorAnimation { duration: Theme.durationIndicator } }
     }
 }

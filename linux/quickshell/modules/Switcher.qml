@@ -128,7 +128,7 @@ PanelWindow {
         width: Math.min(cards.implicitWidth, root.width - Theme.space10 * 2) + Theme.space4 * 2
         height: cards.implicitHeight + Theme.space4 * 2
         radius: Theme.radiusLg
-        color: Theme.surface200
+        color: Theme.glass(Theme.panel, 0.94)
         border.color: Theme.glassEdge
         border.width: 1
 

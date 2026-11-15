@@ -7,8 +7,9 @@
 # and for window zones a drag keeps going when Shift or Ctrl goes down, the shell hears clicks
 # on the bars, and `hyprctl titlebars` says which windows have one; graphite-minimize.cpp:
 # apps' own minimise buttons work; graphite-fonts.cpp: font settings changed since Hyprland
-# started apply when the plugin loads; and a fix for the bar's background vanishing while a
-# notification is up).
+# started apply when the plugin loads; a fix for the bar's background vanishing while a
+# notification is up; and the desktop's look: buttons as squares rounded 7 px rather than
+# circles, tinted under the pointer, and a hairline between the bar and the window).
 # hyprland.lua loads it when it was built for the running Hyprland; hyprland.lua's start-up and
 # the person's updates (system/user-update.sh) run this when it wasn't, as after an update.
 #
@@ -53,10 +54,16 @@ sed -i '/m_hidden = truthy(PWINDOW->m_ruleApplicator->m_otherProps.props.at(g_pG
 # The rounded corners' stencil, cleared with its writes allowed: Hyprland's blur (behind a
 # notification) can leave them off, and the stale stencil then hid the bar's background.
 sed -i 's/^\( *\)glClearStencil(0);/\1glStencilMask(-1);\n\1glClearStencil(0);/' barDeco.cpp
+# The look (Vesper): buttons rounded 7 px, white at 8% under the pointer, and a hairline (white
+# at 7%) along the foot of the bar.
+sed -i 's/{.round = sc<int>(std::round(scaledButtonSize \/ 2.0)), .roundingPower = 2.F}/{.round = sc<int>(std::round(7 * scale)), .roundingPower = 2.F}/' barDeco.cpp
+sed -i 's/^\( *\)auto       color = button.bgcol;/\1auto       color = (m_iButtonHoverState \& (1 << i)) ? CHyprColor(0x14FFFFFF) : button.bgcol;/' barDeco.cpp
+sed -i 's|^    // render title$|    // Graphite: a hairline along the foot of the bar, between it and the window.\n    {\n        CHyprColor line(0x12FFFFFF);\n        line.a *= a;\n        const double px = std::round(pMonitor->m_scale);\n        g_pHyprOpenGL->renderRect(ctx, CBox{titleBarBox.x, titleBarBox.y + BARBUF.y - px, titleBarBox.w, px}, line, {.round = 0});\n    }\n\n&|' barDeco.cpp
 # Drags, from the plugin's start.
 sed -i 's/^APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {/void graphiteHookDrags(HANDLE handle);\nvoid graphiteHookMinimize(HANDLE handle);\nvoid graphiteReloadFonts();\n\n&/' main.cpp
 sed -i 's/^    return {"hyprbars",/    graphiteHookDrags(PHANDLE);\n    graphiteHookMinimize(PHANDLE);\n    graphiteReloadFonts();\n\n&/' main.cpp
 grep -q 'graphiteWantsServerTitleBar(PWINDOW)' barDeco.cpp && grep -q '^    graphiteReloadFonts();' main.cpp &&
+    grep -q 'std::round(7 \* scale)' barDeco.cpp && grep -q 'CHyprColor(0x14FFFFFF)' barDeco.cpp && grep -q 'CHyprColor line(0x12FFFFFF)' barDeco.cpp &&
     [ "$(grep -c 'glStencilMask(-1);' barDeco.cpp)" -ge 3 ] ||
     { echo "hyprbars has changed: Graphite's additions no longer fit." >&2; exit 1; }
 make -s SRC="main.cpp barDeco.cpp BarPassElement.cpp graphite-decorations.cpp graphite-drags.cpp graphite-minimize.cpp graphite-fonts.cpp" \

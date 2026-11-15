@@ -77,7 +77,7 @@ Scope {
             width: content.implicitWidth + Theme.space4 * 2
             height: 44
             radius: 22
-            color: Theme.surface200
+            color: Theme.glass(Theme.panel, 0.94)
             border.color: Theme.glassEdge
             border.width: 1
             opacity: root.showing ? 1 : 0

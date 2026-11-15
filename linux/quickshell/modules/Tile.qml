@@ -1,6 +1,6 @@
-// A quick-settings tile: a glyph, a name and a line of detail; filled with the accent while on.
-// A click on it switches it; with `more`, its right end (an arrow) opens its list instead
-// (networks, devices), as on Windows.
+// A quick-settings tile: a glyph over its name and a line of detail; filled with the accent
+// while on. A click on it switches it; with `more`, the arrow in its corner opens its list
+// instead (networks, devices), as on Windows.
 import QtQuick
 import QtQuick.Layouts
 import qs.config
@@ -17,14 +17,21 @@ Rectangle {
     signal toggled()
     signal moreClicked()
 
-    implicitHeight: 56
-    radius: Theme.radiusMd
-    color: on ? Theme.accent : (mouse.containsMouse ? Theme.surface300 : Theme.surface100)
-    border.color: on ? Theme.accent : Theme.line
-    border.width: 1
+    readonly property color inkOn: Theme.onAccent
+
+    implicitHeight: content.implicitHeight + Theme.space3 * 2
+    radius: Theme.radiusCard
+    color: on ? (mouse.containsMouse ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill) : (mouse.containsMouse ? Theme.hoverIcon : Theme.tileOff)
     opacity: available ? 1 : 0.5
-    clip: true
-    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+    scale: mouse.pressed ? Theme.grow(0.97) : 1
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    Behavior on scale { NumberAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: label
+    Accessible.checkable: true
+    Accessible.checked: on
+    Accessible.onToggleAction: root.toggled()
 
     MouseArea {
         id: mouse
@@ -34,66 +41,66 @@ Rectangle {
         onClicked: root.toggled()
     }
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: Theme.space3
-        spacing: Theme.space3
+    ColumnLayout {
+        id: content
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: Theme.space3
+        spacing: 0
 
         Glyph {
+            Layout.bottomMargin: Theme.space2
             name: root.glyph
-            tint: root.on ? Theme.onAccent : Theme.ink
+            implicitSize: 18
+            tint: root.on ? root.inkOn : Theme.ink
         }
 
-        ColumnLayout {
+        UiText {
             Layout.fillWidth: true
-            spacing: 0
-
-            UiText {
-                Layout.fillWidth: true
-                text: root.label
-                font.weight: Font.DemiBold
-                color: root.on ? Theme.onAccent : Theme.ink
-            }
-
-            UiText {
-                Layout.fillWidth: true
-                text: root.detail
-                font.pixelSize: Theme.hintSize
-                color: root.on ? Theme.onAccent : Theme.inkMuted
-                opacity: root.on ? 0.8 : 1
-            }
+            text: root.label
+            font.weight: Theme.labelWeight
+            color: root.on ? root.inkOn : Theme.ink
         }
 
-        // The way into the tile's list.
-        Rectangle {
-            visible: root.more
-            Layout.fillHeight: true
-            implicitWidth: 36
-            color: moreMouse.containsMouse ? (root.on ? Qt.darker(Theme.accent, 1.12) : Theme.surface300) : "transparent"
+        UiText {
+            Layout.fillWidth: true
+            text: root.detail
+            font.pixelSize: Theme.hintSize
+            color: root.on ? root.inkOn : Theme.inkMuted
+            opacity: root.on ? 0.8 : 1
+        }
+    }
 
-            Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: parent.height - Theme.space4 * 2
-                color: root.on ? Theme.onAccent : Theme.line
-                opacity: 0.3
-            }
+    // The way into the tile's list.
+    Rectangle {
+        visible: root.more
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: Theme.space2
+        width: 28
+        height: 28
+        radius: Theme.radiusRow
+        color: moreMouse.containsMouse ? (root.on ? Theme.tint("#ffffff", 0.16) : Theme.hoverIcon) : "transparent"
+        Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
-            UiText {
-                anchors.centerIn: parent
-                text: "›"
-                font.pixelSize: 20
-                color: root.on ? Theme.onAccent : Theme.ink
-            }
+        Accessible.role: Accessible.Button
+        Accessible.name: root.label + " list"
+        Accessible.onPressAction: root.moreClicked()
 
-            MouseArea {
-                id: moreMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                enabled: root.available
-                onClicked: root.moreClicked()
-            }
+        Glyph {
+            anchors.centerIn: parent
+            name: "go-next-symbolic"
+            implicitSize: 14
+            tint: root.on ? root.inkOn : Theme.inkMuted
+        }
+
+        MouseArea {
+            id: moreMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: root.available
+            onClicked: root.moreClicked()
         }
     }
 }

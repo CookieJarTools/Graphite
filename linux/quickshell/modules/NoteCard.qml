@@ -13,11 +13,12 @@ Rectangle {
     required property var modelData
     readonly property var notification: modelData.notification
 
-    implicitHeight: lines.implicitHeight + Theme.space2 * 2
-    radius: Theme.radiusSm
-    color: mouse.containsMouse ? Theme.surface300 : Theme.surface100
-    border.color: Theme.line
+    implicitHeight: lines.implicitHeight + Theme.space3 * 2
+    radius: Theme.radiusCard
+    color: mouse.containsMouse ? Theme.hoverRow : Theme.cardFill
+    border.color: Theme.cardBorder
     border.width: 1
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
     function ago(time) {
         const minutes = Math.round((Date.now() - time) / 60000);
@@ -38,8 +39,7 @@ Rectangle {
     ColumnLayout {
         id: lines
         anchors.fill: parent
-        anchors.margins: Theme.space2
-        anchors.leftMargin: Theme.space3
+        anchors.margins: Theme.space3
         spacing: 2
 
         RowLayout {
@@ -56,20 +56,22 @@ Rectangle {
             UiText {
                 Layout.fillWidth: true
                 text: root.notification ? (root.notification.appName || "Notification") : ""
-                color: Theme.inkMuted
-                font.pixelSize: Theme.hintSize
+                color: Theme.inkFaint
+                font.pixelSize: Theme.sectionSize
+                font.weight: Theme.labelWeight
             }
 
             UiText {
                 text: root.ago(root.modelData.time)
-                color: Theme.inkMuted
-                font.pixelSize: Theme.hintSize
+                color: Theme.inkFaint
+                font.pixelSize: Theme.sectionSize
             }
 
             BarButton {
-                implicitWidth: 20
-                implicitHeight: 20
+                implicitWidth: 22
+                implicitHeight: 22
                 glyph: "window-close-symbolic"
+                label: "Dismiss"
                 opacity: mouse.containsMouse ? 1 : 0.5
                 onClicked: { if (root.notification) Notifs.dismiss(root.notification); }
             }
@@ -78,7 +80,7 @@ Rectangle {
         UiText {
             Layout.fillWidth: true
             text: root.notification ? root.notification.summary : ""
-            font.weight: Font.DemiBold
+            font.weight: Theme.headingWeight
         }
 
         UiText {

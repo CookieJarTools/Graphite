@@ -9,6 +9,13 @@ const root = path.join(__dirname, '..');
 const source = path.join(root, 'design', 'graphite', 'tokens.json');
 const target = path.join(root, 'linux', 'quickshell', 'config', 'Theme.qml');
 
+// The Linux shell now has its own look (Vesper), written by hand in Theme.qml: this would put
+// Graphite's tokens back over it, so it stops unless the file is still a generated one.
+if (fs.existsSync(target) && !fs.readFileSync(target, 'utf8').includes('generated from design/graphite/tokens.json')) {
+  console.error('linux/quickshell/config/Theme.qml is written by hand now (Vesper); not replaced.');
+  process.exit(1);
+}
+
 const tokens = JSON.parse(fs.readFileSync(source, 'utf8'));
 
 // "surface-200" -> "surface200", "ease-enter" -> "easeEnter"

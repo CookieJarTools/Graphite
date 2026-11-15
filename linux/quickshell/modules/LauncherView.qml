@@ -128,12 +128,16 @@ FocusScope {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: root.compact ? 52 : 60
+            Layout.preferredHeight: root.mode === "home" ? 60 : 54
             Layout.leftMargin: Theme.space4
             Layout.rightMargin: Theme.space4
             spacing: Theme.space3
 
-            Glyph { name: "system-search-symbolic" }
+            Glyph {
+                name: "system-search-symbolic"
+                implicitSize: root.mode === "home" ? 20 : 18
+                tint: Theme.inkFaint
+            }
 
             TextInput {
                 id: input
@@ -142,9 +146,12 @@ FocusScope {
                 focus: true
                 color: Theme.ink
                 selectionColor: Theme.accentSoft
+                selectedTextColor: Theme.ink
                 font.family: Theme.fontSans
-                font.pixelSize: root.mode === "home" ? 22 : 18
+                font.pixelSize: root.mode === "home" ? 20 : 15
                 clip: true
+                Accessible.role: Accessible.EditableText
+                Accessible.name: "Search"
                 onTextChanged: {
                     root.query = text;
                     root.selected = text.trim() ? 0 : (root.mode === "launcher" ? 0 : -1);
@@ -188,7 +195,7 @@ FocusScope {
                     anchors.fill: parent
                     visible: input.text.length === 0
                     text: root.mode === "home" ? "Search apps, files, settings and the web" : root.compact ? "Search" : "Search apps, files and commands"
-                    color: Theme.inkMuted
+                    color: Theme.inkFaint
                     font.pixelSize: input.font.pixelSize
                 }
             }
@@ -212,9 +219,10 @@ FocusScope {
                     implicitWidth: chip.implicitWidth + Theme.space3 * 2
                     implicitHeight: 26
                     radius: 13
-                    color: on ? Theme.accentSoft : chipMouse.containsMouse ? Theme.surface300 : "transparent"
-                    border.color: on ? Theme.accent : Theme.line
+                    color: on ? Theme.accentSoft : chipMouse.containsMouse ? Theme.hoverRow : "transparent"
+                    border.color: on ? Theme.tint(Theme.accent, 0.5) : Theme.cardBorder
                     border.width: 1
+                    Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
                     RowLayout {
                         id: chip
@@ -224,7 +232,8 @@ FocusScope {
                         UiText {
                             text: parent.parent.modelData
                             font.pixelSize: Theme.hintSize
-                            color: parent.parent.on ? Theme.ink : Theme.inkMuted
+                            font.weight: Theme.labelWeight
+                            color: parent.parent.on ? Theme.accentText : Theme.inkMuted
                         }
 
                         UiText {
@@ -253,7 +262,7 @@ FocusScope {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
-            color: Theme.line
+            color: Theme.divider
             visible: root.mode !== "home"
         }
 
@@ -279,14 +288,26 @@ FocusScope {
                 spacing: 2
 
                 // Nothing found: Enter searches the web.
-                UiText {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    Layout.margins: Theme.space4
+                    Layout.margins: Theme.space6
                     visible: root.searching && root.rows.length === 0
-                    horizontalAlignment: Text.AlignHCenter
-                    textFormat: Text.StyledText
-                    text: `Nothing matches “${Search.mark(root.trimmed, "")}”. <font color="${Theme.inkMuted}">Enter searches the web.</font>`
-                    wrapMode: Text.Wrap
+                    spacing: Theme.space1
+
+                    UiText {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "Nothing matches that search."
+                        color: Theme.inkMuted
+                    }
+
+                    UiText {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "Enter searches the web for “" + root.trimmed + "”."
+                        color: Theme.inkFaint
+                        font.pixelSize: Theme.hintSize
+                    }
                 }
 
                 // Places, launcher only, while idle.
@@ -311,17 +332,22 @@ FocusScope {
                             required property int index
                             implicitWidth: placeRow.implicitWidth + Theme.space3 * 2
                             implicitHeight: 30
-                            radius: Theme.radiusSm
-                            color: placeMouse.containsMouse ? Theme.surface300 : Theme.surface100
-                            border.color: Theme.line
+                            radius: Theme.radiusControl
+                            color: placeMouse.containsMouse ? Theme.hoverIcon : Theme.cardFill
+                            border.color: Theme.cardBorder
                             border.width: 1
+                            Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
                             RowLayout {
                                 id: placeRow
                                 anchors.centerIn: parent
                                 spacing: Theme.space2
 
-                                Glyph { name: "folder-symbolic" }
+                                Glyph {
+                                    name: "folder-symbolic"
+                                    implicitSize: 14
+                                    tint: Theme.accentText
+                                }
                                 UiText { text: place.modelData.name }
                                 KeyChip {
                                     visible: root.altHeld
@@ -355,7 +381,7 @@ FocusScope {
                     Layout.bottomMargin: Theme.space2
                     visible: !root.searching && root.mode === "launcher" && Search.pinnedApps().length === 0
                     text: "Right-click any app in the results and choose Pin."
-                    color: Theme.inkMuted
+                    color: Theme.inkFaint
                     font.pixelSize: Theme.hintSize
                 }
 
@@ -374,16 +400,17 @@ FocusScope {
                             id: tile
                             required property var modelData
                             Layout.fillWidth: true
-                            implicitHeight: 84
-                            radius: Theme.radiusMd
-                            color: tileMouse.containsMouse ? Theme.surface300 : "transparent"
+                            implicitHeight: 80
+                            radius: Theme.radiusCard
+                            color: tileMouse.containsMouse ? Theme.hoverRow : "transparent"
+                            Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
 
                             UiText {
                                 anchors.top: parent.top
                                 anchors.right: parent.right
                                 anchors.margins: Theme.space1
                                 text: tile.modelData.alias
-                                color: Theme.inkMuted
+                                color: Theme.inkFaint
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.identifierSize
                             }
@@ -395,7 +422,7 @@ FocusScope {
 
                                 IconImage {
                                     Layout.alignment: Qt.AlignHCenter
-                                    implicitSize: 32
+                                    implicitSize: 28
                                     source: Quickshell.iconPath(tile.modelData.icon, "application-x-executable")
                                 }
 
@@ -403,6 +430,7 @@ FocusScope {
                                     Layout.fillWidth: true
                                     horizontalAlignment: Text.AlignHCenter
                                     text: tile.modelData.name
+                                    color: Theme.inkMuted
                                     font.pixelSize: Theme.hintSize
                                 }
                             }
@@ -478,7 +506,7 @@ FocusScope {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
-            color: Theme.line
+            color: Theme.divider
             visible: root.mode !== "home"
         }
 
@@ -495,20 +523,24 @@ FocusScope {
                 implicitWidth: 28
                 implicitHeight: 28
                 radius: 14
-                color: Theme.accent
+                color: Theme.accentSoft
+                border.color: Theme.accent
+                border.width: 1
 
                 UiText {
                     anchors.centerIn: parent
                     text: root.userName.slice(0, 1).toUpperCase()
-                    color: Theme.onAccent
-                    font.weight: Font.DemiBold
+                    color: Theme.accentText
+                    font.pixelSize: Theme.hintSize
+                    font.weight: Theme.headingWeight
                 }
             }
 
             UiText {
                 visible: !root.compact
                 text: root.pendingPower ? "Press again to " + root.powerActions.find(power => power.action === root.pendingPower).name.toLowerCase() : root.userName
-                color: root.pendingPower ? Theme.accent : Theme.ink
+                color: root.pendingPower ? Theme.accentText : Theme.ink
+                font.weight: Theme.labelWeight
             }
 
             Item { Layout.fillWidth: true }
@@ -526,7 +558,7 @@ FocusScope {
                     KeyChip { text: parent.modelData[0] }
                     UiText {
                         text: parent.modelData[1]
-                        color: Theme.inkMuted
+                        color: Theme.inkFaint
                         font.pixelSize: Theme.hintSize
                     }
                 }
@@ -534,9 +566,8 @@ FocusScope {
 
             // The Control Panel (settings) and the task manager.
             BarButton {
-                implicitWidth: 32
-                implicitHeight: 32
                 glyph: "emblem-system-symbolic"
+                label: "Control Panel"
                 onClicked: {
                     root.done();
                     ShellState.openSettings("");
@@ -545,9 +576,8 @@ FocusScope {
 
             BarButton {
                 visible: !root.compact
-                implicitWidth: 32
-                implicitHeight: 32
                 glyph: "utilities-system-monitor-symbolic"
+                label: "Task Manager"
                 onClicked: {
                     root.done();
                     ShellState.openTaskManager();
@@ -558,7 +588,7 @@ FocusScope {
                 visible: !root.compact
                 implicitWidth: 1
                 implicitHeight: 20
-                color: Theme.line
+                color: Theme.border
             }
 
             Repeater {
@@ -566,9 +596,8 @@ FocusScope {
 
                 BarButton {
                     required property var modelData
-                    implicitWidth: 32
-                    implicitHeight: 32
                     glyph: modelData.glyph
+                    label: modelData.name
                     active: root.pendingPower === modelData.action
                     onClicked: root.pressPower(modelData)
                 }
@@ -621,17 +650,17 @@ FocusScope {
 
         UiText {
             text: parent.title
-            color: Theme.inkMuted
-            font.pixelSize: Theme.hintSize
-            font.weight: Font.DemiBold
+            color: Theme.inkFaint
+            font.pixelSize: Theme.sectionSize
+            font.weight: Theme.labelWeight
         }
 
         UiText {
             visible: parent.count >= 0
             text: parent.count
-            color: Theme.inkMuted
+            color: Theme.inkFaint
             font.family: Theme.fontMono
-            font.pixelSize: Theme.identifierSize
+            font.pixelSize: Theme.sectionSize
         }
 
         Item { Layout.fillWidth: true }
@@ -639,8 +668,8 @@ FocusScope {
         UiText {
             visible: !!parent.note
             text: parent.note
-            color: Theme.inkMuted
-            font.pixelSize: Theme.hintSize
+            color: Theme.inkFaint
+            font.pixelSize: Theme.sectionSize
         }
     }
 }

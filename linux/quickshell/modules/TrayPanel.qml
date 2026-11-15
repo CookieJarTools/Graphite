@@ -39,8 +39,8 @@ PanelFrame {
                 required property var modelData
                 implicitWidth: 36
                 implicitHeight: 36
-                radius: Theme.radiusSm
-                color: area.containsMouse ? Theme.surface300 : "transparent"
+                radius: Theme.radiusRow
+                color: area.containsMouse ? Theme.hoverIcon : "transparent"
 
                 IconImage {
                     anchors.centerIn: parent

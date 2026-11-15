@@ -12,6 +12,12 @@ pragma Singleton
 //   quickLinks   folders listed as Places in the launcher (~ for home)
 //   showHome     Home on an empty screen
 //   dark         the dark colours (the light ones otherwise)
+//   accent       "indigo", "blue", "mint", "amber" or "rose" (config/Theme.qml)
+//   blur         see-through taskbar, toasts and launcher over a blur (solid otherwise)
+//   animationSpeed   0.5 to 1.5: every animation's duration is divided by it
+//   windowAnimations   off, windows and the shell only fade, briefly (Look.qml writes the
+//              Hyprland side into desk.lua)
+//   liveWallpaper   the wallpaper's glow drifts while no window is open (Backdrop.qml)
 //   tiling       windows tile (Hyprland's way) rather than float (Windows' way)
 //   smoothText   MacType-like text: FreeType's stem darkening
 //   paletteHotkey   Alt+Space opens the compact search
@@ -67,6 +73,11 @@ Singleton {
             quickLinks: ["~", "~/Downloads", "~/Documents", "~/Pictures", "~/.config"],
             showHome: true,
             dark: true,
+            accent: "indigo",
+            blur: true,
+            animationSpeed: 1,
+            windowAnimations: true,
+            liveWallpaper: true,
             tiling: false,
             smoothText: true,
             paletteHotkey: true,

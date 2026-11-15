@@ -312,7 +312,7 @@ Singleton {
         const value = String(text);
         const index = match ? value.toLowerCase().indexOf(match.toLowerCase()) : -1;
         if (index < 0) return escape(value);
-        return escape(value.slice(0, index)) + `<font color="${Theme.accent}">` + escape(value.slice(index, index + match.length)) + "</font>" + escape(value.slice(index + match.length));
+        return escape(value.slice(0, index)) + `<font color="${Theme.accentText}">` + escape(value.slice(index, index + match.length)) + "</font>" + escape(value.slice(index + match.length));
     }
 
     // "now", "5m", "3h", "Yesterday", "4d", "12 Oct".

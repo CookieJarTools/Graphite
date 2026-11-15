@@ -1,7 +1,9 @@
-// The shell's menus (ShellState.menu): rows with ticks, separators and submenus that open
-// beside their row on hover. One per screen, over everything; a click outside, Escape, or
+// The shell's menus (ShellState.menu): 220 px cards of 30 px rows with ticks, shortcuts (mono,
+// at the right), separators and submenus that open beside their row on hover; destructive rows
+// in red. One per screen, over everything; a click outside, Escape, or
 // choosing a row closes it. Arrows and Enter work too.
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
@@ -94,17 +96,27 @@ PanelWindow {
         property var items: []
         property bool isSide: false
 
-        width: Math.max(200, column.implicitWidth + Theme.space1 * 2)
-        height: column.implicitHeight + Theme.space1 * 2
-        radius: Theme.radiusMd
-        color: Theme.surface200
-        border.color: Theme.glassEdge
+        width: Math.max(220, column.implicitWidth + 5 * 2)
+        height: column.implicitHeight + 5 * 2
+        radius: Theme.radiusCard
+        color: Theme.glass(Theme.panel, 0.94)
+        border.color: Theme.border
         border.width: 1
+
+        RectangularShadow {
+            z: -1
+            anchors.fill: parent
+            offset.y: 12
+            blur: 32
+            spread: -6
+            radius: parent.radius
+            color: Qt.rgba(0, 0, 0, Theme.dark ? 0.45 : 0.16)
+        }
 
         ColumnLayout {
             id: column
             anchors.fill: parent
-            anchors.margins: Theme.space1
+            anchors.margins: 5
             spacing: 0
 
             Repeater {
@@ -119,21 +131,23 @@ PanelWindow {
 
                     Layout.fillWidth: true
                     implicitWidth: line.implicitWidth + Theme.space3 * 2
-                    implicitHeight: modelData.separator ? Theme.space2 + 1 : 32
+                    implicitHeight: modelData.separator ? 9 : 30
 
+                    // 1 px, with 4 px above and below.
                     Rectangle {
                         visible: row.modelData.separator === true
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
+                        x: -5
+                        width: parent.width + 10
                         height: 1
-                        color: Theme.line
+                        color: Theme.divider
                     }
 
                     Rectangle {
                         visible: !row.modelData.separator
                         anchors.fill: parent
                         radius: Theme.radiusSm
-                        color: row.highlighted || (!box.isSide && root.submenu !== null && root.submenu === row.modelData.submenu) ? Theme.surface300 : "transparent"
+                        color: row.highlighted || (!box.isSide && root.submenu !== null && root.submenu === row.modelData.submenu) ? (row.modelData.danger ? Theme.tint(Theme.danger, 0.12) : Theme.hoverIcon) : "transparent"
 
                         RowLayout {
                             id: line
@@ -151,6 +165,8 @@ PanelWindow {
                                     anchors.centerIn: parent
                                     visible: row.modelData.checked === true
                                     name: "object-select-symbolic"
+                                    implicitSize: 14
+                                    tint: Theme.accentText
                                 }
 
                                 Rectangle {
@@ -173,14 +189,16 @@ PanelWindow {
                             UiText {
                                 visible: !!row.modelData.hint
                                 text: row.modelData.hint || ""
-                                color: Theme.inkMuted
+                                color: Theme.inkFaint
                                 font.family: Theme.fontMono
-                                font.pixelSize: Theme.identifierSize
+                                font.pixelSize: Theme.sectionSize
                             }
 
                             Glyph {
                                 visible: !!row.modelData.submenu
                                 name: "go-next-symbolic"
+                                implicitSize: 14
+                                tint: Theme.inkFaint
                             }
                         }
                     }

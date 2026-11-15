@@ -1,8 +1,10 @@
-// What the login screen (greeter.qml) and the lock screen (LockScreen.qml) show:
-//   Locked: a large clock and the date. Any key (Space) or a click lifts the clock away while
-//     the picture, the name and the password box rise in one after another.
-//   Checking: an amber line sweeps around the picture.
-//   Right: the ring closes into a full amber circle, the form lifts away, the backdrop's glow
+// What the login screen (greeter.qml) and the lock screen (LockScreen.qml) show, on the
+// wallpaper with a slightly stronger glow:
+//   Arriving: a large clock and the date at the top, and the person at the bottom (their
+//     initial, their name and a pill-shaped password box), each rising into place as a blur
+//     clears, the person a moment after the clock. Any key (Space) or a click goes to the box.
+//   Checking: a line in the accent sweeps around the picture.
+//   Right: the ring closes into a full circle, the clock and the form lift away, the glow
 //     spreads and "Good evening, Joe" rises in; then `done` (unlock, or start the desktop).
 //   Wrong: the ring flashes red, the box shakes and settles, "That password is incorrect. 2
 //     tries left." fades in, and what was typed is selected to type over. After three, the box
@@ -13,6 +15,7 @@
 // back to the clock. It only shows: the screen using it checks the password (greetd or PAM),
 // sets busy, and calls refuse("") for a wrong password, refuse(text) for anything else.
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 import Quickshell
@@ -134,20 +137,23 @@ FocusScope {
         whenWelcomed = null;
         form.opacity = 1;
         formRise.y = 0;
+        clockBlock.opacity = 1;
         greeting.opacity = 0;
         greetingRise.y = 24;
         corners.opacity = 1;
         ring.sweep = 0;
         glow.spread = 1;
         message = "";
+        enter();
     }
+
+    Component.onCompleted: enter()
 
     // ---------- the curtain ----------
 
     function lift(text) {
         if (!curtain) return;
         curtain = false;
-        rise.restart();
         field.forceActiveFocus();
         if (text) field.text += text;
         idle.restart();
@@ -233,6 +239,7 @@ FocusScope {
     BackdropGlow {
         id: glow
         anchors.fill: parent
+        strength: Theme.dark ? 0.3 : 0.16
     }
 
     MouseArea {
@@ -249,95 +256,115 @@ FocusScope {
         precision: SystemClock.Minutes
     }
 
-    // ---------- the clock ----------
+    // ---------- arriving ----------
+
+    // The clock and the person each rise 16 px into place as an 8 px blur clears, the person a
+    // moment after the clock: when it locks, and when the login screen first shows.
+    function enter() {
+        entry.restart();
+    }
+
+    ParallelAnimation {
+        id: entry
+        ScriptAction {
+            script: {
+                for (const block of [clockBlock, form]) {
+                    block.opacity = 0;
+                    block.lift = Theme.move(16);
+                    block.haze = Theme.reducedMotion ? 0 : 1;
+                }
+            }
+        }
+        NumberAnimation { target: clockBlock; property: "opacity"; from: 0; to: 1; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+        NumberAnimation { target: clockBlock; property: "lift"; from: Theme.move(16); to: 0; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+        NumberAnimation { target: clockBlock; property: "haze"; from: Theme.reducedMotion ? 0 : 1; to: 0; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+        SequentialAnimation {
+            PauseAnimation { duration: Theme.lockStagger }
+            ParallelAnimation {
+                NumberAnimation { target: form; property: "opacity"; from: 0; to: 1; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+                NumberAnimation { target: form; property: "lift"; from: Theme.move(16); to: 0; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+                NumberAnimation { target: form; property: "haze"; from: Theme.reducedMotion ? 0 : 1; to: 0; duration: Theme.durationLock; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+            }
+        }
+    }
+
+    // ---------- the clock, at the top ----------
 
     ColumnLayout {
         id: clockBlock
+        property real lift: 0
+        property real haze: 0   // 1 is an 8 px blur
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.36 + (root.curtain ? 0 : -64)
-        opacity: root.curtain ? 1 : 0
-        visible: opacity > 0
-        spacing: Theme.space1
-        Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.BezierSpline; easing.bezierCurve: root.curtain ? Theme.easeEnter : Theme.easeExit } }
-        Behavior on opacity { NumberAnimation { duration: 300 } }
+        y: parent.height * 0.1 + lift
+        spacing: 0
+        layer.enabled: haze > 0
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blurMax: 16
+            blur: clockBlock.haze * 0.5
+        }
 
         UiText {
             Layout.alignment: Qt.AlignHCenter
             text: Qt.formatDateTime(clock.date, "HH:mm")
-            font.pixelSize: 112
+            font.pixelSize: Theme.clockSize
             font.weight: Font.Light
+            font.letterSpacing: -Theme.clockSize * 0.04
+            font.features: { "tnum": 1 }
         }
 
         UiText {
             Layout.alignment: Qt.AlignHCenter
             text: Qt.formatDate(clock.date, "dddd d MMMM")
             color: Theme.inkMuted
-            font.pixelSize: 20
+            font.pixelSize: 18
         }
     }
 
-    // ---------- the picture, the name and the password ----------
-
-    // The three rise in one after another as the clock lifts away.
-    SequentialAnimation {
-        id: rise
-        ScriptAction {
-            script: {
-                for (const part of [picture, nameText, box]) {
-                    part.opacity = 0;
-                    part.lift = 24;
-                }
-            }
-        }
-        PauseAnimation { duration: 120 }
-        ParallelAnimation {
-            Rising { target: picture; delay: 0 }
-            Rising { target: nameText; delay: 80 }
-            Rising { target: box; delay: 160 }
-        }
-    }
-
-    component Rising: SequentialAnimation {
-        id: rising
-        property Item target
-        property int delay
-        PauseAnimation { duration: rising.delay }
-        ParallelAnimation {
-            NumberAnimation { target: rising.target; property: "opacity"; to: 1; duration: 320; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeEnter }
-            NumberAnimation { target: rising.target; property: "lift"; to: 0; duration: 420; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeEnter }
-        }
-    }
+    // ---------- the person and the password, at the bottom ----------
 
     ColumnLayout {
         id: form
+        property real lift: 0
+        property real haze: 0
 
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.3
-        spacing: Theme.space3
-        visible: !root.curtain
-        transform: Translate { id: formRise }
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: parent.height * 0.1
+        spacing: 0
+        transform: [
+            Translate { y: form.lift },
+            Translate { id: formRise }
+        ]
+        layer.enabled: haze > 0
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blurMax: 16
+            blur: form.haze * 0.5
+        }
 
         Item {
             id: picture
-            property real lift: 0
             Layout.alignment: Qt.AlignHCenter
-            implicitWidth: 120
-            implicitHeight: 120
-            transform: Translate { y: picture.lift }
+            implicitWidth: 84
+            implicitHeight: 84
 
+            // The initial on the accent at 16%, ringed in the accent.
             Rectangle {
                 anchors.centerIn: parent
-                width: 96
-                height: 96
-                radius: 48
-                color: Theme.accent
+                width: 64
+                height: 64
+                radius: 32
+                color: Theme.accentSoft
+                border.color: Theme.accent
+                border.width: 1
 
                 UiText {
                     anchors.centerIn: parent
                     text: root.displayName.slice(0, 1).toUpperCase()
-                    color: Theme.onAccent
-                    font.pixelSize: 40
-                    font.weight: Font.DemiBold
+                    color: Theme.accentText
+                    font.pixelSize: 24
+                    font.weight: Theme.headingWeight
                 }
             }
 
@@ -354,15 +381,15 @@ FocusScope {
 
                 ShapePath {
                     strokeColor: ring.tint
-                    strokeWidth: 3
+                    strokeWidth: 2.5
                     fillColor: "transparent"
                     capStyle: ShapePath.RoundCap
 
                     PathAngleArc {
-                        centerX: 60
-                        centerY: 60
-                        radiusX: 56
-                        radiusY: 56
+                        centerX: 42
+                        centerY: 42
+                        radiusX: 38
+                        radiusY: 38
                         startAngle: -90
                         sweepAngle: ring.sweep
                     }
@@ -408,25 +435,20 @@ FocusScope {
 
         UiText {
             id: nameText
-            property real lift: 0
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Theme.space2
             text: root.displayName
-            font.pixelSize: 22
-            font.weight: Font.DemiBold
-            transform: Translate { y: nameText.lift }
+            font.pixelSize: 15
+            font.weight: Theme.labelWeight
         }
 
         // The box, and the lines under it.
         ColumnLayout {
             id: box
-            property real lift: 0
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.space2
+            Layout.topMargin: Theme.space4
             spacing: Theme.space2
-            transform: [
-                Translate { y: box.lift },
-                Translate { id: nudge }
-            ]
+            transform: Translate { id: nudge }
 
             SequentialAnimation {
                 id: shake
@@ -437,87 +459,115 @@ FocusScope {
                 NumberAnimation { target: nudge; property: "x"; to: 0; duration: 40 }
             }
 
-            Rectangle {
+            // A 300 x 46 pill, the submit button inside its right end.
+            Item {
                 Layout.alignment: Qt.AlignHCenter
-                implicitWidth: 340
-                implicitHeight: 48
-                radius: Theme.radiusLg
-                color: Theme.surface200
-                opacity: root.lockedFor > 0 ? 0.6 : 1
-                border.color: root.messageIsError && root.message ? Theme.danger : field.activeFocus ? Theme.accent : Theme.glassEdge
-                border.width: field.activeFocus ? 2 : 1
-                clip: true
-                Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+                implicitWidth: 300
+                implicitHeight: 46
 
-                RowLayout {
+                // The focus ring: 2 px in the accent's text colour, 2 px out.
+                Rectangle {
                     anchors.fill: parent
-                    anchors.leftMargin: Theme.space4
-                    anchors.rightMargin: Theme.space1
-                    spacing: Theme.space2
+                    anchors.margins: -4
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.accentText
+                    visible: field.activeFocus && !(root.messageIsError && root.message)
+                }
 
-                    TextInput {
-                        id: field
+                Rectangle {
+                    id: pillField
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: Theme.tint(Theme.panel, 0.7)
+                    opacity: root.lockedFor > 0 ? 0.6 : 1
+                    border.color: root.messageIsError && root.message ? Theme.danger : Theme.border
+                    border.width: 1
+                    Behavior on border.color { ColorAnimation { duration: Theme.durationInstant } }
 
-                        Layout.fillWidth: true
-                        enabled: !root.busy && !root.welcomed && root.lockedFor === 0
-                        echoMode: TextInput.Password
-                        passwordCharacter: "●"
-                        color: Theme.ink
-                        selectionColor: Theme.accentSoft
-                        selectedTextColor: Theme.ink
-                        font.family: Theme.fontSans
-                        font.pixelSize: 16
-                        clip: true
-                        // A PIN: digits only, and it goes as soon as the fourth is typed.
-                        maximumLength: root.usePin ? 4 : 32767
-                        validator: RegularExpressionValidator { regularExpression: root.usePin ? /[0-9]*/ : /.*/ }
-                        inputMethodHints: root.usePin ? Qt.ImhDigitsOnly : Qt.ImhNone
-                        onTextChanged: if (root.usePin && text.length === 4 && enabled) root.submit(text)
-                        Keys.onReturnPressed: if (text.length && enabled) root.submit(text)
-                        Keys.onEnterPressed: if (text.length && enabled) root.submit(text)
-                        Keys.onEscapePressed: root.reset()
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 18
+                        anchors.rightMargin: 5
+                        spacing: Theme.space2
 
-                        UiText {
-                            anchors.fill: parent
-                            visible: field.text.length === 0
-                            text: root.lockedFor > 0 ? "Try again in " + root.lockedFor + " s" : root.usePin ? "PIN" : "Password"
-                            color: Theme.inkMuted
-                            font.pixelSize: 16
+                        TextInput {
+                            id: field
+
+                            Layout.fillWidth: true
+                            enabled: !root.busy && !root.welcomed && root.lockedFor === 0
+                            echoMode: TextInput.Password
+                            passwordCharacter: "●"
+                            color: Theme.ink
+                            selectionColor: Theme.accentSoft
+                            selectedTextColor: Theme.ink
+                            font.family: Theme.fontSans
+                            font.pixelSize: 15
+                            clip: true
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: root.usePin ? "PIN" : "Password"
+                            // A PIN: digits only, and it goes as soon as the fourth is typed.
+                            maximumLength: root.usePin ? 4 : 32767
+                            validator: RegularExpressionValidator { regularExpression: root.usePin ? /[0-9]*/ : /.*/ }
+                            inputMethodHints: root.usePin ? Qt.ImhDigitsOnly : Qt.ImhNone
+                            onTextChanged: if (root.usePin && text.length === 4 && enabled) root.submit(text)
+                            // Clicked into while the clock is up: the same as a key.
+                            onActiveFocusChanged: if (activeFocus) root.lift("")
+                            Keys.onReturnPressed: if (text.length && enabled) root.submit(text)
+                            Keys.onEnterPressed: if (text.length && enabled) root.submit(text)
+                            Keys.onEscapePressed: root.reset()
+
+                            UiText {
+                                anchors.fill: parent
+                                visible: field.text.length === 0
+                                text: root.lockedFor > 0 ? "Try again in " + root.lockedFor + " s" : root.usePin ? "PIN" : "Password"
+                                color: Theme.inkFaint
+                                font.pixelSize: 15
+                            }
                         }
-                    }
 
-                    Rectangle {
-                        visible: !root.usePin // a PIN goes by itself
-                        implicitWidth: 40
-                        implicitHeight: 40
-                        radius: Theme.radiusMd
-                        color: field.text.length && field.enabled ? (goMouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent) : "transparent"
+                        Rectangle {
+                            visible: !root.usePin // a PIN goes by itself
+                            implicitWidth: 36
+                            implicitHeight: 36
+                            radius: 18
+                            color: goMouse.containsMouse && field.text.length ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill
+                            opacity: field.text.length && field.enabled ? 1 : 0.45
+                            scale: goMouse.pressed ? Theme.grow(0.94) : 1
+                            Behavior on opacity { NumberAnimation { duration: Theme.durationInstant } }
+                            Behavior on scale { NumberAnimation { duration: Theme.durationInstant } }
 
-                        Glyph {
-                            anchors.centerIn: parent
-                            name: "go-next-symbolic"
-                            tint: field.text.length && field.enabled ? Theme.onAccent : Theme.ink
-                            opacity: field.text.length ? 1 : 0.4
-                        }
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Sign in"
 
-                        MouseArea {
-                            id: goMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: if (field.text.length && field.enabled) root.submit(field.text)
+                            Glyph {
+                                anchors.centerIn: parent
+                                name: "go-next-symbolic"
+                                tint: Theme.onAccent
+                            }
+
+                            MouseArea {
+                                id: goMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: if (field.text.length && field.enabled) root.submit(field.text)
+                            }
                         }
                     }
                 }
 
-                // The lock-out: a thin red bar along the bottom, draining.
+                // The lock-out: a thin red bar under the pill, draining.
                 Rectangle {
                     id: lockBar
                     property real fraction: 0
                     visible: root.lockedFor > 0
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    width: parent.width * fraction
-                    height: 3
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.bottom
+                    anchors.topMargin: 6
+                    width: (parent.width - parent.height) * fraction
+                    height: 2
+                    radius: 1
                     color: Theme.danger
                 }
             }
@@ -525,9 +575,11 @@ FocusScope {
             UiText {
                 id: messageLine
                 Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: Theme.space1
                 Layout.preferredHeight: 20
                 text: root.message || (root.capsLock ? "Caps Lock is on" : "")
                 color: root.messageIsError ? Theme.danger : Theme.inkMuted
+                font.pixelSize: Theme.hintSize
                 NumberAnimation { id: messageFade; target: messageLine; property: "opacity"; from: 0; to: 1; duration: 260 }
             }
 
@@ -536,6 +588,7 @@ FocusScope {
                 visible: root.showHint && root.hint.length > 0
                 text: "Hint: " + root.hint
                 color: Theme.inkMuted
+                font.pixelSize: Theme.hintSize
             }
 
             // PIN or password, the other way in.
@@ -543,7 +596,8 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 visible: root.hasPin && !root.pinResting && root.lockedFor === 0
                 text: root.usePin ? "Use my password instead" : "Use my PIN instead"
-                color: switchMouse.containsMouse ? Theme.ink : Theme.inkMuted
+                color: switchMouse.containsMouse ? Theme.accentText : Theme.inkMuted
+                font.pixelSize: Theme.hintSize
                 font.underline: switchMouse.containsMouse
 
                 MouseArea {
@@ -559,7 +613,7 @@ FocusScope {
         // Others who can sign in.
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.space4
+            Layout.topMargin: Theme.space3
             visible: root.users.length > 1
             spacing: Theme.space2
 
@@ -571,10 +625,10 @@ FocusScope {
                     required property var modelData
                     readonly property bool on: modelData.name === root.user
                     implicitWidth: chipRow.implicitWidth + Theme.space3 * 2
-                    implicitHeight: 36
-                    radius: 18
-                    color: on ? Theme.accentSoft : chipMouse.containsMouse ? Theme.surface300 : Theme.surface200
-                    border.color: on ? Theme.accent : Theme.glassEdge
+                    implicitHeight: 34
+                    radius: 17
+                    color: on ? Theme.accentSoft : chipMouse.containsMouse ? Theme.hoverIcon : Theme.tint(Theme.panel, 0.7)
+                    border.color: on ? Theme.tint(Theme.accent, 0.6) : Theme.border
                     border.width: 1
 
                     RowLayout {
@@ -586,18 +640,23 @@ FocusScope {
                             implicitWidth: 22
                             implicitHeight: 22
                             radius: 11
-                            color: Theme.accent
+                            color: Theme.accentSoft
+                            border.color: Theme.accent
+                            border.width: 1
 
                             UiText {
                                 anchors.centerIn: parent
                                 text: (chip.modelData.full || chip.modelData.name).slice(0, 1).toUpperCase()
-                                color: Theme.onAccent
+                                color: Theme.accentText
                                 font.pixelSize: 11
-                                font.weight: Font.DemiBold
+                                font.weight: Theme.headingWeight
                             }
                         }
 
-                        UiText { text: chip.modelData.full || chip.modelData.name }
+                        UiText {
+                            text: chip.modelData.full || chip.modelData.name
+                            font.weight: Theme.labelWeight
+                        }
                     }
 
                     MouseArea {
@@ -629,7 +688,8 @@ FocusScope {
         opacity: 0
         text: root.greetingText()
         font.pixelSize: 40
-        font.weight: Font.DemiBold
+        font.weight: Theme.headingWeight
+        font.letterSpacing: -0.8
         transform: Translate { id: greetingRise; y: 24 }
     }
 
@@ -646,6 +706,7 @@ FocusScope {
         PauseAnimation { duration: 160 }
         ParallelAnimation {
             NumberAnimation { target: form; property: "opacity"; to: 0; duration: 380; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeExit }
+            NumberAnimation { target: clockBlock; property: "opacity"; to: 0; duration: 380; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeExit }
             NumberAnimation { target: formRise; property: "y"; to: -40; duration: 420; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeExit }
             NumberAnimation { target: glow; property: "spread"; to: 1.8; duration: 900; easing.type: Easing.OutCubic }
             NumberAnimation { target: corners; property: "opacity"; to: 0; duration: 300 }
@@ -688,6 +749,9 @@ FocusScope {
 
             BarButton {
                 visible: root.showPower
+                implicitWidth: 36
+                implicitHeight: 36
+                label: "Power"
                 glyph: "system-shutdown-symbolic"
                 active: root.powerMenu
                 onClicked: root.powerMenu = !root.powerMenu
@@ -699,11 +763,11 @@ FocusScope {
             anchors.right: parent.right
             anchors.bottom: cornerButtons.top
             anchors.margins: Theme.space4
-            implicitWidth: powerItems.implicitWidth + Theme.space2 * 2
-            implicitHeight: powerItems.implicitHeight + Theme.space2 * 2
-            radius: Theme.radiusMd
-            color: Theme.surface200
-            border.color: Theme.glassEdge
+            implicitWidth: powerItems.implicitWidth + 5 * 2
+            implicitHeight: powerItems.implicitHeight + 5 * 2
+            radius: Theme.radiusCard
+            color: Theme.panel
+            border.color: Theme.border
             border.width: 1
 
             ColumnLayout {

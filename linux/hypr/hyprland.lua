@@ -2,8 +2,9 @@
 -- ~/.config/hypr/hyprland.lua; Hyprland reloads it on save.
 --
 -- The shell (Quickshell, linux/quickshell) draws the desktop, the bar, the launcher, Alt+Tab
--- and notifications; this file starts it, styles windows in the same Graphite look, and
--- hands it its keys as global shortcuts ("quickshell:<name>", see modules/Shortcuts.qml).
+-- and notifications; this file starts it, styles windows in the same look (Vesper, as
+-- config/Theme.qml), and hands it its keys as global shortcuts ("quickshell:<name>", see
+-- modules/Shortcuts.qml).
 
 local shell = "qs -c graphite"
 
@@ -115,14 +116,15 @@ if keyboardFile then
     keyboardFile:close()
 end
 
--- ---------- look: Graphite (design/graphite/tokens.json) ----------
+-- ---------- look: Vesper (linux/quickshell/config/Theme.qml) ----------
 
-local accent = "0xffe3ab4f"        -- accent
-local edge = "0xff35363a"          -- line
-local surface = "0xff2e2f32"       -- surface-200
-local surfaceRaised = "0xff3b3c40" -- surface-300
-local ink = "0xffededec"           -- ink
-local inkMuted = "0xffa6a7aa"      -- ink-muted
+local edge = "0x17ffffff"          -- border: white at 9%, around every window
+local edgeFocused = "0x24ffffff"   -- a touch brighter around the window in front
+local surface = "0xff0f1012"       -- bg.window: the title bar is the window's own colour
+local surfaceRaised = "0xff16171b" -- bg.raised: the chosen tab
+local ink = "0xffedeef0"           -- text
+local inkMuted = "0xffa0a3ab"      -- text.muted: titles
+local inkFaint = "0xff8a8f98"      -- text.faint: the title bar's buttons
 
 hl.config({
     general = {
@@ -133,25 +135,32 @@ hl.config({
         layout = "dwindle",
         allow_tearing = true, -- only for windows with the "immediate" rule: games (below)
         col = {
-            active_border = accent,
+            active_border = edgeFocused,
             inactive_border = edge,
         },
     },
 
     decoration = {
-        rounding = 12,     -- radius-md
+        rounding = 12,     -- a window's radius
         active_opacity = 1.0,
         inactive_opacity = 1.0,
+        -- Behind the shell's see-through surfaces (layer rules below): heavy, a little more
+        -- saturated (the design's 20-24 px blur at 140%). Personalisation can turn it off.
         blur = {
             enabled = true,
             size = 8,
-            passes = 2,
+            passes = 3,
+            vibrancy = 0.4,
+            noise = 0.01,
         },
+        -- The window shadow: 0 24px 64px at 55% black.
         shadow = {
             enabled = true,
-            range = 32,    -- shadow-card: soft and wide
+            range = 56,
             render_power = 3,
-            color = "0x47000000",
+            offset = { 0, 24 },
+            color = "0x8c000000",
+            color_inactive = "0x66000000",
         },
     },
 
@@ -177,20 +186,20 @@ hl.config({
         merge_floated_into_tiled_on_groupbar = true,
         insert_after_current = true,
         col = {
-            border_active = accent,
+            border_active = edgeFocused,
             border_inactive = edge,
         },
         groupbar = {
             enabled = true,
-            height = 22,
+            height = 24,
             font_family = "Inter",
-            font_size = 11,
-            font_weight_active = "semibold",
+            font_size = 12,
+            font_weight_active = "medium",
             render_titles = true,
             middle_click_close = true,
             gradients = true,
-            gradient_rounding = 6, -- radius-sm
-            rounding = 6,
+            gradient_rounding = 7, -- a row's radius
+            rounding = 7,
             indicator_height = 0,
             gaps_in = 4,
             gaps_out = 4,
@@ -212,7 +221,7 @@ hl.config({
         focus_on_activate = true,
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
-        background_color = "0x141516", -- backdrop, should the shell not be running
+        background_color = "0x08090b", -- the wallpaper's colour, should the shell not be running
     },
 
     -- VMware's cursor plane is unreliable; the cursor is drawn by Hyprland instead.
@@ -226,8 +235,10 @@ hl.config({
 -- ---------- title bars ----------
 
 -- Apps that leave their title bar to the desktop (Kitty, GTK 3 dialogs, Qt apps) get one, as on
--- Windows: the title on the left, minimise, maximise and close on the right; drag it to move the
--- window, double-click it to maximise. It's Hyprland's hyprbars plugin, built for this version of
+-- Windows: 32 px in the window's own colour, the title on the left (12 px, medium, muted), and
+-- minimise, maximise and close on the right as 24 px buttons with a tint under the pointer
+-- (titlebars/build.sh: rounded 7 px rather than round); drag it to move the window,
+-- double-click it to maximise. It's Hyprland's hyprbars plugin, built for this version of
 -- Hyprland by titlebars/build.sh (at start-up, above, when it isn't yet); apps that draw their own
 -- title bar keep it, without a second one.
 if exists(titlebars) then pcall(hl.plugin.load, titlebars) end
@@ -238,13 +249,13 @@ if hl.plugin.hyprbars then
             hyprbars = {
                 bar_height = 32,
                 bar_color = surface,
-                col = { text = ink },
+                col = { text = inkMuted },
                 bar_text_font = "Inter",
-                bar_text_size = 11,
+                bar_text_size = 12,
                 bar_text_weight = "medium",
                 bar_text_align = "left",
-                bar_padding = 12,
-                bar_button_padding = 12,
+                bar_padding = 6,
+                bar_button_padding = 4,
                 bar_part_of_window = true,
                 bar_precedence_over_border = true,
                 on_double_click = maximise,
@@ -253,9 +264,9 @@ if hl.plugin.hyprbars then
     })
     -- Right to left. Minimised windows wait on the shell's "minimized" workspace (services/Taskbar.qml).
     local clear = "0x00000000"
-    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "✕", action = "hyprctl dispatch 'hl.dsp.window.close()'" })
-    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "□", action = maximise })
-    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = ink, size = 16, icon = "—", action = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:minimized", follow = false })']] })
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = inkFaint, size = 24, icon = "✕", action = "hyprctl dispatch 'hl.dsp.window.close()'" })
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = inkFaint, size = 24, icon = "□", action = maximise })
+    hl.plugin.hyprbars.add_button({ bg_color = clear, fg_color = inkFaint, size = 24, icon = "—", action = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:minimized", follow = false })']] })
     -- Steam draws its own and doesn't say so.
     hl.window_rule({ match = { class = "^steam$" }, ["hyprbars:no_bar"] = true })
     -- Nor do the apps whose bar was hidden from the taskbar's menu (Taskbar.setTitleBar).
@@ -308,20 +319,47 @@ hl.window_rule({ match = { class = "^(steam_app_.*|.*\\.exe|Minecraft.*|minecraf
 -- Hyprland doesn't tell the shell which window belongs to which, but it knows a modal one.
 hl.window_rule({ match = { modal = true }, tag = "+graphite-dialog" })
 
--- Animations as quick as Windows' (speed is in tenths of a second; Hyprland's own fallback is
--- most of a second), on the design's curves: ease-enter for what arrives, ease-exit for what goes.
-hl.curve("enter", { type = "bezier", points = { {0.16, 1}, {0.3, 1} } })
-hl.curve("exit", { type = "bezier", points = { {0.4, 0}, {1, 1} } })
-hl.animation({ leaf = "global", enabled = true, speed = 2.2, bezier = "enter" })
-hl.animation({ leaf = "windowsIn", enabled = true, speed = 2.2, bezier = "enter", style = "popin 92%" })
-hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.4, bezier = "exit", style = "popin 92%" })
-hl.animation({ leaf = "windowsMove", enabled = true, speed = 2, bezier = "enter" })
-hl.animation({ leaf = "fadeIn", enabled = true, speed = 1.8, bezier = "enter" })
-hl.animation({ leaf = "fadeOut", enabled = true, speed = 1.2, bezier = "exit" })
-hl.animation({ leaf = "layersIn", enabled = true, speed = 1.6, bezier = "enter", style = "fade" })
-hl.animation({ leaf = "layersOut", enabled = true, speed = 1.2, bezier = "exit", style = "fade" })
-hl.animation({ leaf = "workspaces", enabled = true, speed = 2.4, bezier = "enter", style = "slide" })
-hl.animation({ leaf = "border", enabled = true, speed = 1.6, bezier = "enter" })
+-- Motion, on the design's curves (speed is in tenths of a second): a window opens in 280 ms,
+-- growing from 96% as it fades in; it closes in 160 ms, easing in, shrinking to 97% as it
+-- fades. Entrances are slower than exits. look() runs again below with the speed and the
+-- window-animations choice from Personalisation (desk.lua): every duration divided by the
+-- speed; with window animations off, windows and the shell's surfaces only fade, briefly.
+hl.curve("vesperOut", { type = "bezier", points = { {0.2, 0.9}, {0.2, 1} } })
+hl.curve("vesperIn", { type = "bezier", points = { {0.42, 0}, {1, 1} } })
+hl.curve("vesperStandard", { type = "bezier", points = { {0.4, 0}, {0.2, 1} } })
+
+local function look(speed, motion)
+    local function ds(milliseconds) return milliseconds / 100 / speed end
+    -- (Each leaf set on its own: one set earlier keeps its own setting over its parent's.)
+    if not motion then
+        hl.animation({ leaf = "global", enabled = true, speed = 1.2, bezier = "vesperStandard" })
+        for _, leaf in ipairs({ "windows", "windowsIn", "windowsOut", "windowsMove" }) do
+            hl.animation({ leaf = leaf, enabled = false })
+        end
+        hl.animation({ leaf = "fadeIn", enabled = true, speed = 1.2, bezier = "vesperStandard" })
+        hl.animation({ leaf = "fadeOut", enabled = true, speed = 1.2, bezier = "vesperStandard" })
+        for _, leaf in ipairs({ "layers", "layersIn", "layersOut" }) do
+            hl.animation({ leaf = leaf, enabled = true, speed = 1.2, bezier = "vesperStandard", style = "fade" })
+        end
+        hl.animation({ leaf = "workspaces", enabled = true, speed = 1.2, bezier = "vesperStandard", style = "fade" })
+        hl.animation({ leaf = "border", enabled = true, speed = 1.2, bezier = "vesperStandard" })
+        return
+    end
+    hl.animation({ leaf = "global", enabled = true, speed = ds(280), bezier = "vesperOut" })
+    hl.animation({ leaf = "windows", enabled = true, speed = ds(280), bezier = "vesperOut" })
+    hl.animation({ leaf = "windowsIn", enabled = true, speed = ds(280), bezier = "vesperOut", style = "popin 96%" })
+    hl.animation({ leaf = "windowsOut", enabled = true, speed = ds(160), bezier = "vesperIn", style = "popin 97%" })
+    hl.animation({ leaf = "windowsMove", enabled = true, speed = ds(280), bezier = "vesperOut" })
+    hl.animation({ leaf = "fadeIn", enabled = true, speed = ds(280), bezier = "vesperOut" })
+    hl.animation({ leaf = "fadeOut", enabled = true, speed = ds(160), bezier = "vesperIn" })
+    -- The shell's surfaces move by themselves (QML); Hyprland only fades them on and off.
+    hl.animation({ leaf = "layers", enabled = true, speed = ds(180), bezier = "vesperOut", style = "fade" })
+    hl.animation({ leaf = "layersIn", enabled = true, speed = ds(180), bezier = "vesperOut", style = "fade" })
+    hl.animation({ leaf = "layersOut", enabled = true, speed = ds(160), bezier = "vesperIn", style = "fade" })
+    hl.animation({ leaf = "workspaces", enabled = true, speed = ds(280), bezier = "vesperOut", style = "slide" })
+    hl.animation({ leaf = "border", enabled = true, speed = ds(140), bezier = "vesperStandard" })
+end
+look(1, true)
 
 -- In VirtualBox everything is drawn by the CPU (see LIBGL_ALWAYS_SOFTWARE above), so the
 -- costly effects go: blur, shadows and Hyprland's own window animations. Real hardware keeps them.
@@ -332,8 +370,10 @@ if inVirtualBox then
     })
 end
 
--- The shell's surfaces: blur behind the see-through ones, nothing behind fully clear pixels.
-hl.layer_rule({ match = { namespace = "graphite-(panel|menu|toasts|launcher|switcher)" }, blur = true, ignore_alpha = 0.5 })
+-- The shell's surfaces: blur behind the see-through ones (the taskbar at 82%, toasts, menus and
+-- panels over 90%), and not behind what is fainter: the shadows, and the launcher's dimming
+-- (at 50%, so it dims without blurring).
+hl.layer_rule({ match = { namespace = "graphite-(bar|panel|menu|toasts|launcher|switcher)" }, blur = true, ignore_alpha = 0.6 })
 -- The bar slides by itself; a reload of the shell (as an update to it brings) puts it back at
 -- once rather than fading it out and in.
 hl.layer_rule({ match = { namespace = "graphite-bar.*" }, no_anim = true })
@@ -450,7 +490,17 @@ hl.bind("CTRL + SHIFT + Escape", hl.dsp.global("quickshell:taskmanager"))
 
 -- ---------- the Control Panel's choices ----------
 
--- Screens, the mouse and touchpad, and the keyboard layout as chosen in the Control Panel
--- (services/Displays.qml writes this file), over everything above.
+-- Screens, the mouse and touchpad, the keyboard layout and the look as chosen in the Control
+-- Panel (services/Displays.qml writes this file), over everything above. The look comes as
+-- graphite_look = { speed, window_animations, blur } (services/Look.qml).
 local desk = loadfile((os.getenv("HOME") or "") .. "/.config/graphite/desk.lua")
 if desk then pcall(desk) end
+if type(graphite_look) == "table" then
+    local speed = tonumber(graphite_look.speed) or 1
+    if speed ~= 1 or graphite_look.window_animations == false then
+        look(math.max(0.5, math.min(1.5, speed)), graphite_look.window_animations ~= false)
+    end
+    if graphite_look.blur == false then
+        hl.config({ decoration = { blur = { enabled = false } } })
+    end
+end

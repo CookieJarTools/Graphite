@@ -1,4 +1,5 @@
-// The time and date on the bar, with a dot while a notification is unseen; opens the calendar.
+// The time over the date on the bar ("Tue 10 Nov"), right aligned in even-width figures;
+// opens the calendar. (The bell beside it carries the dot for an unseen notification.)
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -12,10 +13,15 @@ Rectangle {
     signal clicked()
 
     implicitWidth: lines.implicitWidth + Theme.space3 * 2
-    implicitHeight: 36
-    radius: Theme.radiusSm
-    color: mouse.containsMouse || active ? Theme.surface300 : "transparent"
-    Behavior on color { ColorAnimation { duration: Theme.durationInstant } }
+    implicitHeight: Theme.barButton
+    radius: Theme.radiusCard
+    color: active ? Theme.activeRow : mouse.containsMouse ? Theme.hoverIcon : "transparent"
+    scale: mouse.pressed ? Theme.grow(0.94) : 1
+    Behavior on color { ColorAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+    Behavior on scale { NumberAnimation { duration: Theme.durationInstant; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.ease } }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: Qt.formatDateTime(clock.date, "HH:mm, dddd d MMMM")
 
     SystemClock {
         id: clock
@@ -31,26 +37,17 @@ Rectangle {
             Layout.alignment: Qt.AlignRight
             text: Qt.formatDateTime(clock.date, "HH:mm")
             font.pixelSize: Theme.stripSize
-            font.weight: Theme.stripWeight
+            font.weight: Theme.headingWeight
+            font.features: { "tnum": 1 }
         }
 
         UiText {
             Layout.alignment: Qt.AlignRight
-            text: Qt.formatDateTime(clock.date, Qt.locale().dateFormat(Locale.ShortFormat))
-            font.pixelSize: Theme.hintSize
+            text: Qt.formatDateTime(clock.date, "ddd d MMM")
+            font.pixelSize: Theme.sectionSize
+            font.features: { "tnum": 1 }
             color: Theme.inkMuted
         }
-    }
-
-    Rectangle {
-        visible: Notifs.unseen
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 5
-        width: 6
-        height: 6
-        radius: 3
-        color: Theme.accent
     }
 
     MouseArea {
