@@ -174,7 +174,8 @@ case "$verb" in
             exfat) mkfs.exfat -L "${label:-Drive}" "$device" >/dev/null ;;
             ntfs) mkfs.ntfs -Q -F -L "${label:-Drive}" "$device" >/dev/null ;;
             fat32) mkfs.fat -F 32 -n "${label:-DRIVE}" "$device" >/dev/null ;;
-            ext4) mkfs.ext4 -q -F -L "${label:-Drive}" -E "root_owner=$owner:$(id -g "$owner" 2>/dev/null || echo 0)" "$device" ;;
+            # None of it held back for the system (-m 0, normally 5%): never the system's drive.
+            ext4) mkfs.ext4 -q -F -m 0 -L "${label:-Drive}" -E "root_owner=$owner:$(id -g "$owner" 2>/dev/null || echo 0)" "$device" ;;
         esac
         ;;
     package-install)
