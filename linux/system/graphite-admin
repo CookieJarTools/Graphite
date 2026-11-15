@@ -26,6 +26,11 @@
 #   dynamic-to-basic DISK                a Windows dynamic disk with one volume made a basic disk,
 #                                        its files kept
 #   ntfs-repair PARTITION                a Windows partition Windows left marked in use, cleared
+#   steam-prefixes                       the asker's Steam libraries on exFAT and FAT drives
+#                                        given a place for Proton's Windows set-ups that works
+#                                        (no password: 50-graphite.rules)
+#   steam-prefixes-release PARTITION     that place let go on one partition, before it's
+#                                        disconnected (no password either)
 #   install                              Graphite's system parts again, from /opt/graphite-desk
 set -euo pipefail
 
@@ -49,6 +54,29 @@ not_system_drive() {
         [ "$source_disk" = "$1" ] && { echo "That's the drive Graphite runs from." >&2; exit 2; }
     done
     return 0
+}
+# Proton builds each game's Windows set-up (its prefix, in the library's steamapps/compatdata)
+# from links, which exFAT and FAT don't have, and stops before the game starts. So a Steam
+# library on such a drive gets a folder of its owner's on the system drive in place of its
+# compatdata (steam-prefixes). That folder keeps the drive in use, so it's let go first
+# whenever the drive is disconnected, formatted or erased. Only ever a folder put there by
+# steam-prefixes, and only on the device given (a partition, or a whole drive and all its parts).
+release_steam_prefixes() {
+    local device mount target
+    while IFS= read -r device; do
+        while IFS= read -r mount; do
+            [ -n "$mount" ] || continue
+            while IFS= read -r target; do
+                case "$target" in
+                    "$mount"/steamapps/compatdata | "$mount"/*/steamapps/compatdata)
+                        case "$(findmnt -no FSROOT -M "$target")" in
+                            */proton-prefixes) umount "$target" || true ;;
+                        esac
+                        ;;
+                esac
+            done < <(findmnt -lno TARGET | sort -r)
+        done < <(findmnt -lno TARGET -S "$device" 2>/dev/null)
+    done < <(lsblk -lnpo NAME "$1" 2>/dev/null)
 }
 # Tools from Arch's own packages, installed the first time they're needed.
 needs() {
@@ -157,6 +185,7 @@ case "$verb" in
         [ "$verb" = erase ] && needs sgdisk gptfdisk
         [ "$fs" = ntfs ] && needs mkfs.ntfs ntfsprogs
         # Nothing on it in use.
+        release_steam_prefixes "$disk"
         for part in $(lsblk -lnpo NAME "$disk"); do
             umount -q "$part" 2>/dev/null || true
         done
@@ -293,6 +322,63 @@ case "$verb" in
         findmnt -rn -S "$part" >/dev/null && { echo "Disconnect it first." >&2; exit 2; }
         needs ntfsfix ntfsprogs
         ntfsfix -d "$part" >/dev/null
+        ;;
+    steam-prefixes)
+        # For the person asking, through pkexec from the shell (system/steam-prefixes.sh, when a
+        # drive connects or Steam's libraries change): each of their Steam libraries on an exFAT
+        # or FAT drive gets ~/.local/share/proton-prefixes, on the system drive, in place of its
+        # steamapps/compatdata. One folder serves every such library, as a game's number is the
+        # same wherever it's installed. Only their own folder, put onto their own drive: every
+        # file on an exFAT or FAT drive belongs to whoever connected it (never /boot, root's).
+        uid="${PKEXEC_UID:-}"
+        [[ "$uid" =~ ^[0-9]+$ ]] || { echo "Only for the person asking." >&2; exit 2; }
+        person="$(id -nu "$uid" 2>/dev/null)" || { echo "No such person." >&2; exit 2; }
+        person_ok "$person"
+        home="$(getent passwd "$person" | cut -d: -f6)"
+        exec 9>/run/graphite-steam-prefixes.lock
+        flock 9
+        prefixes="$home/.local/share/proton-prefixes"
+        runuser -u "$person" -- mkdir -p "$prefixes"
+        prefixes="$(realpath -e "$prefixes")"
+        [ "$(stat -c %u "$prefixes")" = "$uid" ] || { echo "That folder isn't theirs." >&2; exit 2; }
+        while IFS= read -r library; do
+            library="$(realpath -e "$library" 2>/dev/null)" || continue
+            [ -d "$library/steamapps" ] || continue
+            case "$(findmnt -no FSTYPE -T "$library/steamapps")" in
+                exfat | vfat | msdos) ;;
+                *) continue ;;
+            esac
+            target="$library/steamapps/compatdata"
+            # Kept out of Files' list of drives, which would show it as one: a note for it in
+            # the system's list of mounts (/run/mount/utab, written without mounting anything).
+            hide() {
+                findmnt --mtab -no OPTIONS -M "$target" | grep -q x-gvfs-hide ||
+                    mount --fake --bind -o x-gvfs-hide "$prefixes" "$target" || true
+            }
+            if mountpoint -q "$target"; then
+                [[ "$(findmnt -no FSROOT -M "$target")" == */proton-prefixes ]] && hide
+                continue
+            fi
+            runuser -u "$person" -- mkdir -p "$target" 2>/dev/null || continue
+            # Both folders held open, checked as they are, and joined through what's held (the
+            # kernel's own mount call, which follows the held folders, never a path read again),
+            # so neither can be swapped for another (a link, another drive) in between.
+            exec 7<"$prefixes" 8<"$target" || continue
+            held_prefixes="/proc/$$/fd/7" held_target="/proc/$$/fd/8"
+            if [ -d "$held_prefixes" ] && [ -d "$held_target" ] &&
+                [ "$(stat -L -c %u "$held_prefixes")" = "$uid" ] && [ "$(stat -L -c %u "$held_target")" = "$uid" ] &&
+                [[ "$(stat -f -L -c %T "$held_target")" =~ ^(exfat|msdos|vfat)$ ]] &&
+                ! mountpoint -q "$held_target"; then
+                LIBMOUNT_FORCE_MOUNT2=always mount --no-canonicalize --bind "$held_prefixes" "$held_target" && hide
+            fi
+            exec 7<&- 8<&-
+        done < <(runuser -u "$person" -- cat "$home/.local/share/Steam/steamapps/libraryfolders.vdf" 2>/dev/null |
+            sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p')
+        ;;
+    steam-prefixes-release)
+        part="${1:-}"
+        [[ "$part" =~ ^/dev/[a-z0-9]+$ ]] && [ -b "$part" ] || { echo "Not a partition." >&2; exit 2; }
+        release_steam_prefixes "$part"
         ;;
     install)
         bash /opt/graphite-desk/linux/system/install.sh

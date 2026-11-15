@@ -2,7 +2,19 @@
 // password, as on Windows: install updates, set the time zone, the clock, the computer's name
 // and the keyboard, and connect the computer's own drives.
 polkit.addRule(function (action, subject) {
-    if (!subject.local || !subject.active || !subject.isInGroup("wheel")) return polkit.Result.NOT_HANDLED;
+    if (!subject.local || !subject.active) return polkit.Result.NOT_HANDLED;
+    // And for anyone at the computer: their Steam games on exFAT and FAT drives given a place
+    // for Proton's Windows set-ups that works, when a drive connects, and that place let go
+    // before it disconnects (graphite-admin steam-prefixes, from the shell). Only ever their
+    // own folder, onto their own drive.
+    if (action.id == "org.graphite.admin") {
+        var line = action.lookup("command_line") || "";
+        if (line == "/usr/local/lib/graphite/graphite-admin steam-prefixes" ||
+            /^\/usr\/local\/lib\/graphite\/graphite-admin steam-prefixes-release \/dev\/[a-z0-9]+$/.test(line)) {
+            return polkit.Result.YES;
+        }
+    }
+    if (!subject.isInGroup("wheel")) return polkit.Result.NOT_HANDLED;
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
         action.lookup("unit") == "graphite-update.service" &&
         action.lookup("verb") == "start") {

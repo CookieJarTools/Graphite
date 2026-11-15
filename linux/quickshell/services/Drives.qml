@@ -212,13 +212,34 @@ Singleton {
 
     function unmount(path) {
         forget([path]);
-        run(["udisksctl", "unmount", "-b", path], "Safe to remove");
+        run(["sh", "-c", `bash "$1" release "$2"; udisksctl unmount -b "$2"`, "sh", steamPrefixes, path], "Safe to remove");
     }
 
     function eject(disk) {
         forget(disk.parts.map(part => part.path));
-        const parts = disk.parts.filter(part => part.mount).map(part => `udisksctl unmount -b ${part.path} >/dev/null &&`).join(" ");
-        run(["sh", "-c", `${parts} udisksctl power-off -b ${disk.path}`], "You can take it out now");
+        const parts = disk.parts.filter(part => part.mount).map(part => `bash "$1" release ${part.path}; udisksctl unmount -b ${part.path} >/dev/null &&`).join(" ");
+        run(["sh", "-c", `${parts} udisksctl power-off -b ${disk.path}`, "sh", steamPrefixes], "You can take it out now");
+    }
+
+    // Steam games on exFAT and FAT drives: Proton's Windows set-ups kept on the system drive
+    // instead, which those drives can't hold (system/steam-prefixes.sh). Checked when a drive
+    // connects and when Steam's libraries or games change, and let go before one disconnects.
+    readonly property string steamPrefixes: Quickshell.shellDir + "/../system/steam-prefixes.sh"
+
+    FileView {
+        path: Quickshell.env("HOME") + "/.local/share/Steam/steamapps/libraryfolders.vdf"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: {
+            reload();
+            steamSoon.restart();
+        }
+    }
+
+    Timer {
+        id: steamSoon
+        interval: 2000
+        onTriggered: Quickshell.execDetached(["bash", root.steamPrefixes])
     }
 
     function open(mount) {
@@ -305,6 +326,7 @@ Singleton {
         interval: 1500
         onTriggered: {
             Quickshell.execDetached(["bash", Quickshell.shellDir + "/../files/drives.sh"]);
+            steamSoon.restart();
             root.refresh();
         }
     }
