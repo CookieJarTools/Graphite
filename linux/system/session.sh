@@ -11,7 +11,9 @@
 #   - a keyring for apps' saved sign-ins (Unity Hub, VS Code), as Windows' Credential Manager:
 #     without one they sign out whenever they close. It has no password of its own, so it opens
 #     whether the person signed in with the PIN or the password, and never asks; the keyring
-#     service starts when an app first needs it.
+#     service starts when an app first needs it. Chromium and Electron apps (Claude, VS Code,
+#     Chrome) don't know this desktop and so don't use it, keeping no sign-in at all: they're
+#     told to, in the flags file each one's launcher reads;
 mkdir -p "$HOME/.local/share/flatpak/exports/share/applications" "$HOME/.local/share/applications"
 
 keyrings="$HOME/.local/share/keyrings"
@@ -21,6 +23,11 @@ if command -v gnome-keyring-daemon >/dev/null && [ ! -e "$keyrings/default" ]; t
         printf '[keyring]\ndisplay-name=Login\nctime=%s\nmtime=0\nlock-on-idle=false\nlock-after=false\n' "$(date +%s)" > "$keyrings/login.keyring"
     echo login > "$keyrings/default"
 fi
+for app in claude-desktop:claude-desktop code:code chromium:chromium google-chrome-stable:chrome electron:electron; do
+    flags="$HOME/.config/${app#*:}-flags.conf"
+    command -v "${app%%:*}" >/dev/null && ! grep -qs -- '--password-store' "$flags" &&
+        echo "--password-store=gnome-libsecret" >> "$flags"
+done
 
 portals="$HOME/.config/xdg-desktop-portal/hyprland-portals.conf"
 if [ ! -f "$portals" ]; then
