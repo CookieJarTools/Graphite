@@ -130,6 +130,7 @@ Singleton {
         // Graphite's Hyprland plugin: hypr/titlebars/graphite-minimize.cpp.)
         function onRawEvent(event) {
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "windowtitle", "windowtitlev2", "activewindowv2", "fullscreen", "changefloatingmode", "togglegroup", "moveintogroup", "moveoutofgroup", "urgent", "workspace", "focusedmon"].includes(event.name)) root.refresh();
+            if (event.name === "urgent") root.gameAsks(root.addressOf({ address: event.data }), false);
             if (event.name === "activewindowv2" && event.data) root.fullscreenInFront(root.addressOf({ address: event.data }));
         }
         function onActiveToplevelChanged() { root.refresh(); }
@@ -167,6 +168,28 @@ Singleton {
         Hyprland.dispatch(`hl.dsp.window.alter_zorder({ mode = "top", window = "address:${hwnd}" })`);
     }
 
+    // A game may not take the keyboard back by itself (hypr/hyprland.lua): it asks for it the
+    // moment another window is chosen. A window of the game in use still gets it when it asks:
+    // its popups, or its main window again once a popup closes (the same process).
+    readonly property var gameClass: /^(steam_app_.*|.*\.exe|Minecraft.*|minecraft.*|gamescope)$/
+
+    function gameAsks(hwnd, again) {
+        const asking = toplevelFor(hwnd);
+        const ipc = asking && asking.lastIpcObject;
+        if (!ipc || !ipc.class) {
+            // A window that has only just opened: asked again once Hyprland has told of it.
+            if (!again) {
+                gameAsksAgain.hwnd = hwnd;
+                gameAsksAgain.restart();
+            }
+            return;
+        }
+        const active = Hyprland.activeToplevel;
+        const activeIpc = active && active.lastIpcObject;
+        if (!gameClass.test(ipc.class) || !activeIpc || addressOf(active) === hwnd) return;
+        if (activeIpc.pid === ipc.pid) focusWindow(hwnd);
+    }
+
     // A full-screen window (a game) that's clicked or chosen again covers the windows picked
     // over it, as on Windows. Hyprland keeps a window picked while a game has the screen drawn
     // over it even after the game is clicked, until the game goes full screen again: so it
@@ -198,6 +221,13 @@ Singleton {
                 Hyprland.dispatch(`hl.dsp.window.fullscreen_state({ internal = 2, ${target} })`);
             }
         }
+    }
+
+    Timer {
+        id: gameAsksAgain
+        property string hwnd
+        interval: 300
+        onTriggered: root.gameAsks(hwnd, true)
     }
 
     function minimize(hwnd) {

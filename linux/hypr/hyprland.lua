@@ -296,6 +296,12 @@ end
 -- Games (Steam and Proton, Minecraft): frames go out as soon as they are drawn (tearing
 -- allowed), for the least input lag.
 hl.window_rule({ match = { class = "^(steam_app_.*|Minecraft.*|minecraft.*|gamescope)$" }, immediate = true })
+-- Nor may a game (Steam's and Proton's, or another Windows one) take the keyboard back by
+-- itself: it asks for it again the moment another window is chosen from the taskbar, Task
+-- View or Alt+Tab, which left that window shown over the game but unusable. Its own popups
+-- still get the keyboard while the game has it (services/Taskbar.qml, gameAsks), and the game
+-- comes back from the taskbar like any window.
+hl.window_rule({ match = { class = "^(steam_app_.*|.*\\.exe|Minecraft.*|minecraft.*|gamescope)$" }, suppress_event = "activatefocus" })
 
 -- Animations as quick as Windows' (speed is in tenths of a second; Hyprland's own fallback is
 -- most of a second), on the design's curves: ease-enter for what arrives, ease-exit for what goes.
