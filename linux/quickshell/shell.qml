@@ -50,6 +50,11 @@ ShellRoot {
         value: !!ShellSettings.values && ShellSettings.values.windowAnimations === false
     }
     onDarkChanged: Desktop.applyLook(dark)
+    // The apps take the accent too.
+    Connections {
+        target: Theme
+        function onAccentNameChanged() { Desktop.applyLook(root.dark); }
+    }
     Component.onCompleted: {
         Desktop.applyLook(dark);
         Desktop.register(); // downloaded apps open in the installer

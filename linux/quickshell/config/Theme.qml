@@ -1,7 +1,8 @@
 // The shell's look: Vesper (graphite surfaces, 1px hairlines, tight Inter type, one accent,
 // short purposeful motion). Every surface draws its colours, type, spacing, radii and timings
 // from here. Written by hand: it no longer comes from design/graphite/tokens.json, which still
-// styles the Windows version.
+// styles the Windows version. The apps' dark GTK colours (scripts/gen-gtk-theme.js) and the
+// terminal's (linux/kitty/vesper.conf) copy these; services/Desktop.qml hands them the accent.
 //
 // shell.qml sets the four choices below from the Control Panel's Personalisation page
 // (settings.json); the login screen keeps their defaults.

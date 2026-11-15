@@ -7,6 +7,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.config
 
 Singleton {
     id: root
@@ -409,8 +410,14 @@ Singleton {
         }
     }
 
+    // The apps' colours (gtk/apply.sh): the scheme, and the shell's accent, worked out here for
+    // that scheme (Theme may not have changed over to it yet): its fill, its text colour, the
+    // words on the fill, and the terminal's selection (the accent at 30% over its background).
     function applyLook(dark) {
-        Quickshell.execDetached(["bash", linux + "/gtk/apply.sh", dark ? "dark" : "light"]);
+        const accent = Theme.accentSet;
+        const text = dark ? accent.text : Qt.darker(accent.fill, 1.25).toString();
+        const selection = Qt.tint("#0b0c0e", "#4d" + accent.accent.slice(1)).toString();
+        Quickshell.execDetached(["bash", linux + "/gtk/apply.sh", dark ? "dark" : "light", accent.fill, text, accent.onFill, selection]);
     }
 
     function register() {
