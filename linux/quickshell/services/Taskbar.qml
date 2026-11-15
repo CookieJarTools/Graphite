@@ -130,6 +130,7 @@ Singleton {
         // Graphite's Hyprland plugin: hypr/titlebars/graphite-minimize.cpp.)
         function onRawEvent(event) {
             if (["openwindow", "closewindow", "movewindow", "movewindowv2", "windowtitle", "windowtitlev2", "activewindowv2", "fullscreen", "changefloatingmode", "togglegroup", "moveintogroup", "moveoutofgroup", "urgent", "workspace", "focusedmon"].includes(event.name)) root.refresh();
+            if (event.name === "activewindowv2" && event.data) root.fullscreenInFront(root.addressOf({ address: event.data }));
         }
         function onActiveToplevelChanged() { root.refresh(); }
     }
@@ -164,6 +165,39 @@ Singleton {
         if (window && window.minimized) restore(hwnd);
         Hyprland.dispatch(`hl.dsp.focus({ window = "address:${hwnd}" })`);
         Hyprland.dispatch(`hl.dsp.window.alter_zorder({ mode = "top", window = "address:${hwnd}" })`);
+    }
+
+    // A full-screen window (a game) that's clicked or chosen again covers the windows picked
+    // over it, as on Windows. Hyprland keeps a window picked while a game has the screen drawn
+    // over it even after the game is clicked, until the game goes full screen again: so it
+    // does, in Hyprland's own reckoning only (the game isn't told it ever left full screen).
+    function fullscreenInFront(hwnd) {
+        coverCheck.hwnd = hwnd;
+        coverCheck.running = true;
+    }
+
+    Process {
+        id: coverCheck
+        property string hwnd
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let clients = [];
+                try {
+                    clients = JSON.parse(this.text);
+                } catch (error) {
+                    return;
+                }
+                const game = clients.find(client => client.address === coverCheck.hwnd);
+                if (!game || game.fullscreen !== 2) return;
+                const covered = clients.some(client => client.address !== game.address && client.workspace.id === game.workspace.id
+                    && client.allowedOverFullscreen && !client.pinned);
+                if (!covered) return;
+                const target = `client = ${game.fullscreenClient}, window = "address:${game.address}"`;
+                Hyprland.dispatch(`hl.dsp.window.fullscreen_state({ internal = 0, ${target} })`);
+                Hyprland.dispatch(`hl.dsp.window.fullscreen_state({ internal = 2, ${target} })`);
+            }
+        }
     }
 
     function minimize(hwnd) {
