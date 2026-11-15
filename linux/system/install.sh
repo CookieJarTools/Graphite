@@ -50,6 +50,8 @@ udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=block 
 install -m 644 "$here/zram-generator.conf" /etc/systemd/zram-generator.conf
 install -m 644 "$here/99-graphite-memory.conf" /etc/sysctl.d/
 sysctl -q -p /etc/sysctl.d/99-graphite-memory.conf 2>/dev/null || true
+# And apps that set up their own place in the system carry on too, from the next sign-in.
+install -D -m 644 "$here/user-manager.conf" /etc/systemd/user.conf.d/50-graphite.conf
 # What was installed, so the Updates page can tell when the repository's copy has moved on.
 cat "$here"/graphite-admin "$here"/system-update "$here"/aur-update "$here"/pin-check "$here"/boot-setup.sh "$here"/*.service "$here"/*.timer "$here"/*.policy "$here"/*.rules "$here"/*.conf | sha256sum | cut -d' ' -f1 > /var/lib/graphite/system-parts
 chmod 644 /var/lib/graphite/system-parts
