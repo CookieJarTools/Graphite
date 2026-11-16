@@ -31,9 +31,9 @@ first.
 4. Press Restart at the end; once the screen goes dark, take out the stick. The computer starts
    at Graphite's login screen.
 
-Graphite lives in `/opt/graphite-desk` (the repository, owned by you): change it there,
-`git pull` and `git push` as usual (sign in to GitHub first, as the repository is private), or
-use Settings, **Update everything**.
+Graphite lives in `/opt/graphite-desk` (the repository, owned by you). Control Panel ›
+Updates keeps it up to date with everything else. You can also change it there and `git pull`
+as usual; pushing your own changes needs a GitHub sign-in.
 
 ## Trying it in a VM first
 
